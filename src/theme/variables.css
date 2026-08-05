@@ -1,18 +1,206 @@
-/*
- * Ionic theme variables.
- *
- * MOB2 replaces these placeholders with the full BridgeCare mapping (navy #0d3058,
- * gold #c59437 with its #3a2a08 contrast colour, cream surfaces, the
- * --ion-color-step-* ramp). Two rules that must survive that work:
- *
- *   1. `--ion-color-*-rgb` values MUST be literal triplets. Ionic does colour maths
- *      on them and cannot resolve `var()` inside `rgba()`. This is the #1 Ionic
- *      theming trap.
- *   2. `--ion-color-gold-contrast` MUST be #3a2a08, never #ffffff. White on gold is
- *      2.74:1 and fails AA. That token is how the rule is enforced inside Ionic
- *      components — ion-button/ion-chip/ion-badge derive their text colour from it.
- */
+/* ==========================================================================
+BridgeCare -> Ionic variable mapping.
+
+Every value here is DERIVED from hpd-tokens.css, not invented. Shades and tints
+follow Ionic's own convention (shade = 12% black, tint = 10% white) except where
+BridgeCare already has a named tone, which wins:
+  primary-shade = --hpd-color-primary-deep  (#092239)
+  primary-tint  = --hpd-color-primary-hover (#12406f)
+  gold-tint     = --hpd-color-gold-bright   (#ddb868)
+
+TRAP 1 — `--ion-color-*-rgb` MUST be literal comma-separated triplets, never
+var(). Ionic does colour maths on these (rgba(var(--ion-color-primary-rgb),0.1))
+and cannot resolve a var() inside rgba(). This is the single most common Ionic
+theming mistake and it fails silently, as a missing background rather than an
+error.
+
+TRAP 2 — `--ion-color-gold-contrast` is #3a2a08, NEVER #ffffff. White on gold is
+2.74:1 and fails AA. Ionic derives button/chip/badge text colour from the
+-contrast variable, so this token is what enforces the rule inside components
+that we never style directly. hpd-theme.spec.ts asserts it.
+
+Measured ratios (all AA at normal text size):
+  white on navy 13.28 · #3a2a08 on gold 5.06 · white on success 5.57
+  white on warning 5.28 · white on danger 5.69 · ink on surface 14.43
+========================================================================== */
+
 :root {
   color-scheme: light;
+
+  /* ---- brand ---------------------------------------------------------- */
+  --ion-color-primary: #0d3058;
+  --ion-color-primary-rgb: 13, 48, 88;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #092239;
+  --ion-color-primary-tint: #12406f;
+
+  /* Custom Ionic colour, usable as color="gold" on any Ionic component. */
+  --ion-color-gold: #c59437;
+  --ion-color-gold-rgb: 197, 148, 55;
+  --ion-color-gold-contrast: #3a2a08;
+  --ion-color-gold-contrast-rgb: 58, 42, 8;
+  --ion-color-gold-shade: #ad8230;
+  --ion-color-gold-tint: #ddb868;
+
+  /* Ionic's `secondary`/`tertiary` slots are aliased to the brand rather than
+     left on Ionic's stock blues, so a component that defaults to them cannot
+     introduce an off-palette colour. */
+  --ion-color-secondary: #12406f;
+  --ion-color-secondary-rgb: 18, 64, 111;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #103859;
+  --ion-color-secondary-tint: #29537f;
+
+  --ion-color-tertiary: #c59437;
+  --ion-color-tertiary-rgb: 197, 148, 55;
+  --ion-color-tertiary-contrast: #3a2a08;
+  --ion-color-tertiary-contrast-rgb: 58, 42, 8;
+  --ion-color-tertiary-shade: #ad8230;
+  --ion-color-tertiary-tint: #ddb868;
+
+  /* ---- status --------------------------------------------------------- */
+  --ion-color-success: #2a7554;
+  --ion-color-success-rgb: 42, 117, 84;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #25674a;
+  --ion-color-success-tint: #3f8365;
+
+  --ion-color-warning: #96600f;
+  --ion-color-warning-rgb: 150, 96, 15;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #84540d;
+  --ion-color-warning-tint: #a07027;
+
+  --ion-color-danger: #b3402f;
+  --ion-color-danger-rgb: 179, 64, 47;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #9e3829;
+  --ion-color-danger-tint: #bb5344;
+
+  --ion-color-medium: #5b6470;
+  --ion-color-medium-rgb: 91, 100, 112;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #505863;
+  --ion-color-medium-tint: #6b747e;
+
+  --ion-color-light: #f2f0ea;
+  --ion-color-light-rgb: 242, 240, 234;
+  --ion-color-light-contrast: #16202c;
+  --ion-color-light-contrast-rgb: 22, 32, 44;
+  --ion-color-light-shade: #d5d3ce;
+  --ion-color-light-tint: #f3f2ec;
+
+  --ion-color-dark: #16202c;
+  --ion-color-dark-rgb: 22, 32, 44;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #131c27;
+  --ion-color-dark-tint: #2d3641;
+
+  /* ---- surfaces and text ---------------------------------------------- */
+  --ion-background-color: #f2f0ea;
+  --ion-background-color-rgb: 242, 240, 234;
+  --ion-text-color: #16202c;
+  --ion-text-color-rgb: 22, 32, 44;
+  --ion-toolbar-background: #f7f4ee;
+  --ion-toolbar-color: #16202c;
+  --ion-item-background: #ffffff;
+  --ion-card-background: #ffffff;
+  --ion-border-color: #e6e2d9;
   --ion-font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+
+  /* Greyscale ramp interpolated from --ion-background-color to --ion-text-color.
+     Without this Ionic keeps its stock blue-grey ramp, which reads subtly cold
+     against cream — visible in placeholder text, dividers and disabled states. */
+  --ion-color-step-50: #e7e6e0;
+  --ion-color-step-100: #dcdbd7;
+  --ion-color-step-150: #d1d1ce;
+  --ion-color-step-200: #c6c6c4;
+  --ion-color-step-250: #bbbcba;
+  --ion-color-step-300: #b0b2b1;
+  --ion-color-step-350: #a5a7a8;
+  --ion-color-step-400: #9a9d9e;
+  --ion-color-step-450: #8f9295;
+  --ion-color-step-500: #84888b;
+  --ion-color-step-550: #797e82;
+  --ion-color-step-600: #6e7378;
+  --ion-color-step-650: #63696e;
+  --ion-color-step-700: #585e65;
+  --ion-color-step-750: #4d545c;
+  --ion-color-step-800: #424a52;
+  --ion-color-step-850: #373f48;
+  --ion-color-step-900: #2c353f;
+  --ion-color-step-950: #212a36;
+}
+
+/* Registers `gold` as a first-class Ionic colour: color="gold" on ion-button,
+   ion-badge, ion-chip, ion-note ... Text colour comes from -contrast, which is
+   how the never-white-on-gold rule reaches components we never touch. */
+.ion-color-gold {
+  --ion-color-base: var(--ion-color-gold);
+  --ion-color-base-rgb: var(--ion-color-gold-rgb);
+  --ion-color-contrast: var(--ion-color-gold-contrast);
+  --ion-color-contrast-rgb: var(--ion-color-gold-contrast-rgb);
+  --ion-color-shade: var(--ion-color-gold-shade);
+  --ion-color-tint: var(--ion-color-gold-tint);
+}
+
+/* ==========================================================================
+Component-level shape. Ionic components do not read --hpd-r-*, so the radius
+and shadow scale is applied per component.
+========================================================================== */
+
+ion-card {
+  border-radius: var(--hpd-r);
+  box-shadow: var(--hpd-sh-sm);
+  border: 1px solid var(--hpd-color-border);
+  margin-inline: 0;
+}
+
+ion-button {
+  --border-radius: var(--hpd-r-sm);
+  --box-shadow: none;
+  min-height: 44px; /* iOS HIG tap-target floor */
+  text-transform: none;
+  font-weight: 700;
+}
+
+ion-modal {
+  --border-radius: var(--hpd-r-lg);
+  --backdrop-opacity: 0.4;
+}
+
+ion-searchbar {
+  --border-radius: var(--hpd-r-sm);
+  --box-shadow: none;
+  --background: #ffffff;
+}
+
+ion-item {
+  --border-color: var(--hpd-color-border);
+  --min-height: 52px;
+}
+
+ion-list-header {
+  color: var(--hpd-color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+ion-toolbar {
+  --border-color: var(--hpd-color-border);
+}
+
+ion-badge {
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }

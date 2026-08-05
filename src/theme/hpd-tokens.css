@@ -1,0 +1,94 @@
+/* ==========================================================================
+HealthConnect / Abofonsa BridgeCare design tokens
+
+COPIED VERBATIM from web/src/main/webapp/content/scss/global.scss lines 37-81
+at web/ commit 48a12fc. This is a copy, not a shared package — the accepted
+trade-off in mobile-app-plan.md. If either side changes, change both, and
+update the drift log in CLAUDE.md.
+
+Token contract — Abofonsa_BridgeCare_Professional_Demo.html at the workspace
+root is the source of truth; see web/professional-web.md §3 for the full token
+table and the verified WCAG ratios. Two text tones were darkened from the demo
+values to reach AA 4.5:1 on their tint backgrounds (measured): success text
+#2E7D5B -> #2A7554 (4.39 -> 4.89 on #E7F3ED), warning text #B4741A -> #96600F
+(3.50 -> 4.80 on #FDF3E2). The demo's original hues remain available as the
+*-accent tokens for non-text uses only (borders, bars, chart fills).
+
+| Token                               | Value                       | Tailwind class(es)         |
+|-------------------------------------|-----------------------------|----------------------------|
+| --hpd-color-primary(-blue)          | #0d3058                     | bg/text-hpd-primary        |
+| --hpd-color-primary-hover           | #12406f                     | bg-hpd-primary-hover       |
+| --hpd-color-primary-deep            | #092239                     | bg-hpd-primary-deep        |
+| --hpd-color-gold(-bright/-tint)     | #c59437 / #ddb868 / #fbf4e6 | bg-hpd-gold*               |
+| --hpd-color-cream                   | #f7f4ee                     | bg-hpd-cream               |
+| --hpd-color-surface                 | #f2f0ea                     | bg-hpd-surface             |
+| --hpd-color-border                  | #e6e2d9                     | border-hpd-border          |
+| --hpd-color-text-primary            | #16202c                     | text-hpd-primary-dark      |
+| --hpd-color-text-muted              | #5b6470                     | text-hpd-muted             |
+| --hpd-color-text-subtle             | #8b939e                     | text-hpd-subtle            |
+| --hpd-color-success(-accent/-tint)  | #2a7554 / #2e7d5b / #e7f3ed | *-hpd-success*             |
+| --hpd-color-warning(-accent/-tint)  | #96600f / #b4741a / #fdf3e2 | *-hpd-warning*             |
+| --hpd-color-danger(-tint)           | #b3402f / #fbeae7           | *-hpd-danger*              |
+| --hpd-r-sm/r/r-lg/r-xl              | 8/14/20/28px                | rounded-hpd-sm etc.        |
+| --hpd-sh-sm/sh/sh-lg                | navy-tinted                 | shadow-hpd-sm etc.         |
+
+THE ONE HARD RULE: never white text on gold (#c59437 on #ffffff is 2.74:1 and
+fails AA). Use #3a2a08. On mobile this is enforced through
+--ion-color-gold-contrast in variables.css, because Ionic components derive
+their text colour from it. There is a spec asserting both.
+
+Tokens carried over but NOT used on mobile (kept so the two files stay
+diffable): the --hpd-color-on-navy-* sidebar tones and --hpd-color-chart-*
+series colours. The mobile shell has no navy sidebar and no Chart.js.
+========================================================================== */
+
+:root {
+  --hpd-color-primary-blue: #0d3058;
+  --hpd-color-primary: #0d3058;
+  --hpd-color-primary-hover: #12406f;
+  --hpd-color-primary-deep: #092239;
+  --hpd-color-gold: #c59437;
+  --hpd-color-gold-bright: #ddb868;
+  --hpd-color-gold-tint: #fbf4e6;
+  --hpd-color-cream: #f7f4ee;
+  --hpd-color-border: #e6e2d9;
+  --hpd-color-surface: #f2f0ea;
+  --hpd-color-card-urgent: #fbeae7;
+  --hpd-color-card-open: #fdf3e2;
+  --hpd-color-card-closed: #e7f3ed;
+  --hpd-color-text-on-dark: #ffffff;
+  --hpd-color-text-primary: #16202c;
+  --hpd-color-text-muted: #5b6470;
+  --hpd-color-text-subtle: #8b939e;
+  --hpd-color-on-navy-muted: #cbd9e9;
+  --hpd-color-on-navy-soft: #9db2cb;
+  --hpd-color-on-navy-faint: #93aac6;
+  --hpd-color-chart-blue: #8ba9c4;
+  --hpd-color-chart-navy: #0d3058;
+  --hpd-color-chart-gold: #c59437;
+  --hpd-color-success: #2a7554;
+  --hpd-color-success-accent: #2e7d5b;
+  --hpd-color-success-tint: #e7f3ed;
+  --hpd-color-warning: #96600f;
+  --hpd-color-warning-accent: #b4741a;
+  --hpd-color-warning-tint: #fdf3e2;
+  --hpd-color-danger: #b3402f;
+  --hpd-color-danger-tint: #fbeae7;
+  --hpd-color-row-urgent: #fbeae7;
+  --hpd-color-row-open: #fdf3e2;
+  --hpd-color-row-closed: #e7f3ed;
+  --hpd-font-body: Inter, ui-sans-serif, system-ui, sans-serif;
+  --hpd-focus-ring: 0 0 0 3px rgb(13 48 88 / 45%);
+  --hpd-r-sm: 8px;
+  --hpd-r: 14px;
+  --hpd-r-lg: 20px;
+  --hpd-r-xl: 28px;
+  --hpd-sh-sm: 0 1px 2px rgb(13 48 88 / 6%), 0 1px 3px rgb(13 48 88 / 5%);
+  --hpd-sh: 0 2px 6px rgb(13 48 88 / 6%), 0 8px 24px rgb(13 48 88 / 7%);
+  --hpd-sh-lg: 0 12px 40px rgb(13 48 88 / 16%);
+
+  /* Mobile-only. The gold text tone from web's .hpd-btn-gold, promoted to a
+     token because mobile needs it in three places (the class, the Ionic
+     contrast variable, and the spec that asserts them). */
+  --hpd-color-on-gold: #3a2a08;
+}

@@ -1,0 +1,148 @@
+/* ==========================================================================
+BridgeCare shared component classes.
+
+COPIED from web/src/main/webapp/content/scss/global.scss lines 99-113 and
+227-320 at web/ commit 48a12fc, with three deliberate omissions:
+
+  - the `@media print` block — mobile shares via the OS share sheet, not print
+  - the `::-webkit-scrollbar` chrome — mobile has no persistent scrollbars
+  - `.hpd-auth-brand` — the split-screen auth panel is a desktop layout; the
+    mobile login screen (MOB5) is a single column
+
+Variants match the demo: primary (navy), gold, ghost, danger. Never put white
+text on gold (2.74:1, fails AA) — use var(--hpd-color-on-gold).
+========================================================================== */
+
+.hpd-surface {
+  border-radius: 1rem;
+  background: var(--hpd-color-surface);
+  color: var(--hpd-color-text-primary);
+}
+
+.hpd-focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--hpd-focus-ring);
+}
+
+.hpd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: var(--hpd-r-sm);
+  font-weight: 700;
+  font-size: 14.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.hpd-btn:active {
+  transform: translateY(1px);
+}
+
+.hpd-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.hpd-btn-primary {
+  background: var(--hpd-color-primary);
+  color: #fff;
+  box-shadow: 0 2px 10px rgb(13 48 88 / 22%);
+}
+
+.hpd-btn-primary:hover {
+  background: var(--hpd-color-primary-hover);
+  color: #fff;
+}
+
+.hpd-btn-gold {
+  background: var(--hpd-color-gold);
+  color: var(--hpd-color-on-gold);
+  box-shadow: 0 2px 10px rgb(197 148 55 / 30%);
+}
+
+.hpd-btn-gold:hover {
+  background: var(--hpd-color-gold-bright);
+  color: var(--hpd-color-on-gold);
+}
+
+.hpd-btn-ghost {
+  background: #fff;
+  border: 1.5px solid var(--hpd-color-border);
+  color: var(--hpd-color-text-primary);
+}
+
+.hpd-btn-ghost:hover {
+  border-color: var(--hpd-color-primary);
+  color: var(--hpd-color-text-primary);
+}
+
+.hpd-btn-danger {
+  background: var(--hpd-color-danger);
+  color: #fff;
+}
+
+.hpd-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--hpd-color-text-muted);
+}
+
+.hpd-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--hpd-color-border);
+  border-radius: var(--hpd-r-sm);
+  background: #fff;
+  font-size: 15px;
+}
+
+.hpd-input:focus {
+  outline: none;
+  border-color: var(--hpd-color-primary);
+  box-shadow: 0 0 0 3.5px rgb(13 48 88 / 10%);
+}
+
+/* ==========================================================================
+Mobile-only additions. Not present in web/ — do not "sync" these back.
+========================================================================== */
+
+/*
+ * Tap targets. web/ is a pointer-driven desktop app; a 44x44 CSS-pixel minimum
+ * is the iOS HIG floor (Android Material asks 48dp). `.hpd-btn`'s 12px padding
+ * on a 14.5px line box lands at roughly 43px, i.e. just under, so the floor is
+ * set explicitly rather than left to arithmetic.
+ */
+.hpd-btn {
+  min-height: 44px;
+}
+
+/*
+ * Full-bleed buttons are the norm on a phone form factor, where web/ would use
+ * an inline-flex button in a toolbar.
+ */
+.hpd-btn-block {
+  display: flex;
+  width: 100%;
+}
+
+/*
+ * Safe-area helpers. Ionic handles insets for ion-header/ion-tab-bar itself,
+ * but any custom fixed element still needs them — the same reason
+ * web/'s tabbar carries pb-[env(safe-area-inset-bottom)].
+ */
+.hpd-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.hpd-safe-top {
+  padding-top: env(safe-area-inset-top);
+}

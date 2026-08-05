@@ -1,10 +1,11 @@
 /*
- * Tailwind v4, wired the same way as `web/src/main/webapp/content/css/tailwind.css`.
+ * Tailwind v4, wired the same way as web/src/main/webapp/content/css/tailwind.css
+ * (web/ commit 48a12fc).
  *
  * CRITICAL: import ONLY `theme` and `utilities` — never the `tailwindcss` bundle,
  * which pulls in preflight. Ionic ships its own reset (normalize/structure/
  * typography); Tailwind preflight layered on top breaks `ion-*` sizing and button
- * styling. `web/` has the same constraint for a different reason and gets it right;
+ * styling. web/ has the same constraint for a different reason and gets it right;
  * copy the import pair exactly and do not "tidy" it into a single import.
  */
 @import 'tailwindcss/theme';
@@ -12,16 +13,56 @@
 
 /*
  * v4 content auto-detection does not reach the app sources from here, so the
- * source root is declared explicitly. (`web/` needs '../../app' because of the
+ * source root is declared explicitly. (web/ needs '../../app' because of the
  * JHipster layout; here it is one level up.)
  */
 @source '../app';
 
 /*
- * MOB2 ports the `--hpd-*` -> `--color-hpd-*` @theme block from
- * `web/src/main/webapp/content/css/tailwind.css`. Kept empty here so MOB1 proves
- * the pipeline without pre-empting the design-system work package.
+ * The @theme block below mirrors web's, so a class copied from a web template
+ * resolves to the same colour here. Values reference the --hpd-* custom
+ * properties defined in hpd-tokens.css, which must therefore be imported
+ * BEFORE this file — see global.css.
+ *
+ * The three sidebar --color-hpd-on-navy-* aliases and the chart series are
+ * intentionally omitted: the mobile shell has no navy sidebar and no Chart.js.
+ * Everything else is present so `text-hpd-muted`, `bg-hpd-danger-tint`,
+ * `rounded-hpd`, `shadow-hpd-sm` and friends behave identically to web/.
  */
 @theme {
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --color-hpd-primary: var(--hpd-color-primary-blue);
+  --color-hpd-primary-hover: var(--hpd-color-primary-hover);
+  --color-hpd-primary-deep: var(--hpd-color-primary-deep);
+  --color-hpd-gold: var(--hpd-color-gold);
+  --color-hpd-gold-bright: var(--hpd-color-gold-bright);
+  --color-hpd-gold-tint: var(--hpd-color-gold-tint);
+  --color-hpd-on-gold: var(--hpd-color-on-gold);
+  --color-hpd-cream: var(--hpd-color-cream);
+  --color-hpd-surface: var(--hpd-color-surface);
+  --color-hpd-urgent: var(--hpd-color-card-urgent);
+  --color-hpd-open: var(--hpd-color-card-open);
+  --color-hpd-closed: var(--hpd-color-card-closed);
+  --color-hpd-success: var(--hpd-color-success);
+  --color-hpd-success-accent: var(--hpd-color-success-accent);
+  --color-hpd-success-tint: var(--hpd-color-success-tint);
+  --color-hpd-warning: var(--hpd-color-warning);
+  --color-hpd-warning-accent: var(--hpd-color-warning-accent);
+  --color-hpd-warning-tint: var(--hpd-color-warning-tint);
+  --color-hpd-danger: var(--hpd-color-danger);
+  --color-hpd-danger-tint: var(--hpd-color-danger-tint);
+  --color-hpd-muted: var(--hpd-color-text-muted);
+  --color-hpd-subtle: var(--hpd-color-text-subtle);
+  --color-hpd-primary-dark: var(--hpd-color-text-primary);
+  --color-hpd-border: var(--hpd-color-border);
+  --color-hpd-row-urgent: var(--hpd-color-row-urgent);
+  --color-hpd-row-open: var(--hpd-color-row-open);
+  --color-hpd-row-closed: var(--hpd-color-row-closed);
+  --radius-hpd-sm: var(--hpd-r-sm);
+  --radius-hpd: var(--hpd-r);
+  --radius-hpd-lg: var(--hpd-r-lg);
+  --radius-hpd-xl: var(--hpd-r-xl);
+  --shadow-hpd-sm: var(--hpd-sh-sm);
+  --shadow-hpd: var(--hpd-sh);
+  --shadow-hpd-lg: var(--hpd-sh-lg);
 }

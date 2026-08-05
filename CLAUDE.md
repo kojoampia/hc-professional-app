@@ -87,9 +87,14 @@ Capacitor 8 uses Swift Package Manager for iOS rather than CocoaPods, so `npx ca
 
 Per the plan's accepted trade-off, this repo copies from `web/` rather than sharing a package. When either side changes, both must change. Record every copy here with the `web/` commit it came from.
 
-| Copied into `mobile/`                        | From `web/src/main/webapp/` | `web/` commit | Copied on |
-| -------------------------------------------- | --------------------------- | ------------- | --------- |
-| _(nothing yet — MOB2 starts the token port)_ |                             |               |           |
+| Copied into `mobile/`                    | From `web/src/main/webapp/`                 | `web/` commit | Copied on  | Notes                                                                                                                    |
+| ---------------------------------------- | ------------------------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `src/theme/hpd-tokens.css` `:root`       | `content/scss/global.scss` L37-81           | `48a12fc`     | 2026-08-05 | Verbatim, plus one mobile-only addition: `--hpd-color-on-gold: #3a2a08`                                                  |
+| `src/theme/hpd-components.css`           | `content/scss/global.scss` L99-113, 227-312 | `48a12fc`     | 2026-08-05 | Dropped `@media print`, `::-webkit-scrollbar`, `.hpd-auth-brand`. Added `.hpd-btn-block`, `.hpd-safe-*`, 44px min-height |
+| `src/theme/tailwind.css` `@theme`        | `content/css/tailwind.css`                  | `48a12fc`     | 2026-08-05 | Omitted the `--color-hpd-on-navy-*` sidebar aliases and chart series; added `--color-hpd-on-gold`                        |
+| `src/global.css` body/form-control rules | `content/scss/global.scss` L167-185         | `48a12fc`     | 2026-08-05 | The font-inherit rule for form controls is required for the same reason as in `web/` — preflight is not imported         |
+
+**When `web/`'s token block changes**, diff it against `hpd-tokens.css` and update both this table and the file. `hpd-theme.spec.ts` will catch a contrast regression but it cannot know that `web/` moved.
 
 Restating the `web/` design rules that apply verbatim: **never raw hex, never stock Tailwind palette classes** (`slate-*`, `indigo-*`, …) — colours come from `--hpd-*` tokens; **one font, Inter**, self-hosted here (not Google Fonts, so a cold start in airplane mode does not fall back to a system font); **light mode only**; **never white text on gold**.
 

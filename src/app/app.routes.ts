@@ -10,5 +10,11 @@ export const routes: Routes = [
     path: 'diagnostics',
     loadComponent: () => import('./shell/diagnostics.page').then(m => m.DiagnosticsPage),
   },
+  {
+    // MOB2 design-system gallery: every BridgeCare surface on one screen, for
+    // comparison against web/ and for the manual dark-mode check.
+    path: 'theme',
+    loadComponent: () => import('./shell/theme-gallery.page').then(m => m.ThemeGalleryPage),
+  },
   { path: '**', redirectTo: 'diagnostics' },
 ];
