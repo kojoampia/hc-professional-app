@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-`hc-professional-app` — the **BridgeCare Professional** clinician mobile app: an Ionic + Angular + Capacitor client of the **live production gateway** at `https://professional.abofonsa.com`.
+`hc-professional-app` — the **Abofonsa BridgeCare Professional** clinician mobile app: an Ionic + Angular + Capacitor client of the **live production gateway** at `https://professional.abofonsa.com`.
 
 It builds no server, ships no Docker image, and is **not part of `deploy/`**. It is one more client of the same API the web dashboard uses. It lives in the `hc-professional` multi-repo workspace alongside `gateway/`, `api/`, `web/` and `deploy/`.
 
@@ -19,6 +19,28 @@ Four tabs: **Today** (duty roster), **Messages**, **Documents**, **Me**. Every e
 **Dashboard, Patients and Cases are Phase 2 and are blocked**, not merely unbuilt: `api/` has no `Patient` entity, no `ClinicalCase` entity and no `/api/dashboard/*` endpoints, and every entity collection GET returns a bare unpaginated `List<T>` that a phone on mobile data cannot download. See `MOB-P2-PRE` in the plan. Do not start those screens.
 
 Also deliberately out of scope: the **applicant onboarding wizard** (this app is for _active_ clinicians — any application status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal), **composing new conversations** (no role-scoped directory endpoint exists; reply-only in v1), and **offline writes**.
+
+## The brand name
+
+**The product is "Abofonsa BridgeCare" — never "BridgeCare" on its own.** This
+product is **Abofonsa BridgeCare Professional**. Abofonsa is the company; dropping it
+makes the name read as an unrelated product.
+
+**Where space forces a choice, use "Abofonsa", not "BridgeCare".** That applies to
+the home-screen launcher label, the Android biometric dialog title, and anywhere else
+the platform truncates hard. Everything with room — splash, page titles, `<title>`,
+store listing, permission usage strings, error copy — gets the full name.
+
+Currently short-form by necessity:
+
+| Surface                        | Value             | Why                                           |
+| ------------------------------ | ----------------- | --------------------------------------------- |
+| Android `app_name` (launcher)  | `Abofonsa`        | Home-screen labels truncate at ~12 characters |
+| iOS `CFBundleDisplayName`      | `Abofonsa`        | Same                                          |
+| Android biometric dialog title | `Unlock Abofonsa` | System dialog, tight                          |
+
+The bundle id `com.abofonsa.bridgecare.professional` already carries it and is
+**immutable on both stores** — never change it.
 
 ## Commands
 
@@ -158,7 +180,7 @@ All native access lives in `src/app/core/native/`: `BiometricService`, `SecureTo
 
 ### The style pipeline
 
-`src/global.css` is **plain CSS, not SCSS** — Tailwind v4 is CSS-first, the BridgeCare token block is nothing but custom properties, and Dart Sass has deprecated `@import`. Component styles are still SCSS; that is independent.
+`src/global.css` is **plain CSS, not SCSS** — Tailwind v4 is CSS-first, the Abofonsa BridgeCare token block is nothing but custom properties, and Dart Sass has deprecated `@import`. Component styles are still SCSS; that is independent.
 
 Three rules that are load-bearing:
 

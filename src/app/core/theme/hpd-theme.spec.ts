@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { AA_LARGE, AA_NORMAL, contrastRatio, parseHex, relativeLuminance } from './contrast';
 
 /**
- * Guards the BridgeCare design system port (MOB2).
+ * Guards the Abofonsa BridgeCare design system port (MOB2).
  *
  * These assertions read the REAL stylesheets rather than a duplicated table of
  * values — a spec that restates the constants would pass happily while the

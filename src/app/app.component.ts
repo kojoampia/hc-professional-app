@@ -21,11 +21,11 @@ import { NetworkService } from './core/native/network.service';
     <ion-app>
       @if (outcome() === null || outcome() === 'locked' || outcome() === 'offline') {
         <div class="hpd-boot">
-          <h1 class="text-2xl font-bold text-hpd-primary">BridgeCare</h1>
+          <h1 class="text-2xl font-bold text-hpd-primary">Abofonsa BridgeCare</h1>
 
           @switch (outcome()) {
             @case ('offline') {
-              <p class="text-hpd-muted">Could not reach BridgeCare. Your session is still valid.</p>
+              <p class="text-hpd-muted">Could not reach Abofonsa BridgeCare. Your session is still valid.</p>
               <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="retry()">Try again</button>
               <button class="hpd-btn hpd-btn-ghost hpd-focusable" (click)="signInInstead()">Sign in with password</button>
             }

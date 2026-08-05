@@ -1,7 +1,7 @@
 {
   "name": "hc-professional-app",
   "version": "0.1.0",
-  "description": "BridgeCare Professional — clinician mobile app (Ionic + Capacitor client of professional.abofonsa.com)",
+  "description": "Abofonsa BridgeCare Professional — clinician mobile app (Ionic + Capacitor client of professional.abofonsa.com)",
   "private": true,
   "license": "UNLICENSED",
   "engines": {

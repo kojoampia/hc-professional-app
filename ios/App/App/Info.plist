@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>BridgeCare uses the camera so you can photograph your professional licence and certificates when they need renewing.</string>
+	<string>Abofonsa BridgeCare uses the camera so you can photograph your professional licence and certificates when they need renewing.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>BridgeCare needs access to your photos so you can upload an existing scan of your licence or certificates.</string>
+	<string>Abofonsa BridgeCare needs access to your photos so you can upload an existing scan of your licence or certificates.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>BridgeCare uses Face ID to unlock your session so you do not have to retype your password at the start of every shift.</string>
+	<string>Abofonsa BridgeCare uses Face ID to unlock your session so you do not have to retype your password at the start of every shift.</string>
   <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>BridgeCare Professional</string>
+        <string>Abofonsa</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

@@ -1,7 +1,7 @@
 /**
  * WCAG 2.1 relative-luminance and contrast-ratio maths.
  *
- * Exists so the BridgeCare colour rules are enforced by a test rather than by
+ * Exists so the Abofonsa BridgeCare colour rules are enforced by a test rather than by
  * convention — above all "never white text on gold", which is the one pairing in
  * this palette that looks fine and fails badly (2.74:1).
  *

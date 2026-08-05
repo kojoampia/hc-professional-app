@@ -38,7 +38,7 @@ Needs a real account on `professional.abofonsa.com`.
 
 21. Cold start with nothing stored lands on the **sign-in** screen, not a spinner.
 22. Sign in with correct credentials → reaches the signed-in screen, which shows your login and authorities.
-23. Sign in with a **wrong password** → "That username and password did not match." Sign in with the **device in airplane mode** → "Could not reach BridgeCare." The two messages must differ; conflating them makes a network blip look like a lockout.
+23. Sign in with a **wrong password** → "That username and password did not match." Sign in with the **device in airplane mode** → "Could not reach Abofonsa BridgeCare." The two messages must differ; conflating them makes a network blip look like a lockout.
 24. Force-quit and relaunch → biometric prompt appears, and unlocking reaches the signed-in screen **in under 2 seconds** without retyping a password.
 25. Cancel the biometric prompt → "Use password" path reaches the sign-in screen.
 26. Fail biometrics three times → the stored session is discarded and you must sign in with a password.
@@ -60,7 +60,7 @@ Needs a real account on `professional.abofonsa.com`.
 39. **Turn on airplane mode and reopen Today.** The roster is still there, with a banner reading "Offline — showing saved data · updated N ago". It must not be blank and must not error.
 40. Still offline, pull to refresh: the banner stays, the data stays. Nothing disappears.
 41. Come back online and refresh: the banner clears.
-42. Sign out, then inspect the app's storage (Android Studio Device Explorer / Xcode container). There must be **no** BridgeCare cache rows left.
+42. Sign out, then inspect the app's storage (Android Studio Device Explorer / Xcode container). There must be **no** Abofonsa BridgeCare cache rows left.
 43. Sign in as a **different clinician** on the same device: you see their roster immediately, never the previous user's.
 
 ## MOB7 — Messages and the live socket
@@ -93,7 +93,7 @@ Needs a second account (or the web dashboard) to send from.
 64. Try a **PDF over 5 MB**: refused locally with a size message.
 65. Photograph something very large and detailed (a dense page in bright light). It should still upload — and if it genuinely cannot be compressed enough, the message must suggest reframing, not quote bytes.
 66. Upload with **airplane mode on**: fails visibly with a retry, and nothing is silently queued.
-67. First camera use prompts for permission with **BridgeCare-specific wording** about photographing licences — not a generic string.
+67. First camera use prompts for permission with **Abofonsa BridgeCare-specific wording** about photographing licences — not a generic string.
 
 ## MOB9+ — added as each work package lands
 

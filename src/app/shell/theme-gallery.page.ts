@@ -23,7 +23,7 @@ import {
 } from '@ionic/angular/standalone';
 
 /**
- * MOB2 deliverable: every BridgeCare surface on one screen, so the port can be
+ * MOB2 deliverable: every Abofonsa BridgeCare surface on one screen, so the port can be
  * compared against `web/` and against the demo mockup at the workspace root
  * without hunting through the app.
  *

@@ -2,7 +2,7 @@
  * Global stylesheet. Deliberately plain CSS, not SCSS.
  *
  * Tailwind v4 is CSS-first (`@theme`, `@source`, `@utility` are CSS at-rules),
- * the BridgeCare token block is nothing but custom properties, and Dart Sass has
+ * the Abofonsa BridgeCare token block is nothing but custom properties, and Dart Sass has
  * deprecated `@import` — so routing this file through Sass would buy nothing and
  * cost a deprecation warning on every build. Component styles are still SCSS
  * (`inlineStyleLanguage: scss`); that is independent of this file.
@@ -15,7 +15,7 @@
  *
  * NOTE the deliberate absence of `@ionic/angular/css/palettes/dark.system.css`.
  * The Ionic starter includes it; leaving it in makes iOS/Android dark mode invert
- * the whole BridgeCare navy/cream system. This app is light-mode only, matching
+ * the whole Abofonsa BridgeCare navy/cream system. This app is light-mode only, matching
  * web/. Do not restore that import — hpd-theme.spec.ts guards it.
  */
 @import '@ionic/angular/css/core.css';

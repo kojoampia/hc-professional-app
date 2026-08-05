@@ -61,10 +61,10 @@ describe('BiometricService', () => {
   });
 
   it('always allows the device credential as a fallback when prompting', async () => {
-    await service.authenticate('Unlock BridgeCare Professional');
+    await service.authenticate('Unlock Abofonsa BridgeCare Professional');
 
     expect(plugin.authenticate).toHaveBeenCalledWith(
-      expect.objectContaining({ reason: 'Unlock BridgeCare Professional', allowDeviceCredential: true }),
+      expect.objectContaining({ reason: 'Unlock Abofonsa BridgeCare Professional', allowDeviceCredential: true }),
     );
   });
 

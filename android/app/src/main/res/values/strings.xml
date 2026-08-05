@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">BridgeCare Professional</string>
-    <string name="title_activity_main">BridgeCare Professional</string>
+    <string name="app_name">Abofonsa</string>
+    <string name="title_activity_main">Abofonsa BridgeCare Professional</string>
     <string name="package_name">com.abofonsa.bridgecare.professional</string>
     <string name="custom_url_scheme">com.abofonsa.bridgecare.professional</string>
 </resources>

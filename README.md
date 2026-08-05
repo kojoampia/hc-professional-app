@@ -1,4 +1,4 @@
-# BridgeCare Professional — mobile app
+# Abofonsa BridgeCare Professional — mobile app
 
 Clinician companion app for the Abofonsa BridgeCare professional portal. Ionic + Angular 19 + Capacitor, targeting Android and iOS.
 

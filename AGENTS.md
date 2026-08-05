@@ -4,12 +4,16 @@
 
 ## What this is
 
-`hc-professional-app` — the BridgeCare Professional clinician mobile app (Ionic + Angular 19 + Capacitor), a client of the live `https://professional.abofonsa.com` gateway. No server, no Docker image, not part of `deploy/`.
+`hc-professional-app` — the Abofonsa BridgeCare Professional clinician mobile app (Ionic + Angular 19 + Capacitor), a client of the live `https://professional.abofonsa.com` gateway. No server, no Docker image, not part of `deploy/`.
 
 The authoritative plan is **`mobile-app-plan.md` at the workspace root** (`MOB<N>` work packages and their gates).
 
 ## Invariants
 
+0. **The brand is "Abofonsa BridgeCare", never "BridgeCare" alone.** This product is
+   "Abofonsa BridgeCare Professional". Where a caption is genuinely space-constrained
+   (launcher label, system dialog title), use **"Abofonsa"** — never the bare
+   "BridgeCare". See CLAUDE.md § The brand name.
 1. **Never persist an access token.** Memory only. Only the refresh token reaches the OS keystore, and never `localStorage`/`sessionStorage` on any platform. `SecureTokenStore` enforces this; specs assert it.
 2. **Never import `@capacitor/*` or `@aparajita/capacitor-*` outside `src/app/core/native/`.** An eslint rule enforces it. Wrappers exist so the app is testable without a device and a plugin swap is one file.
 3. **Never restore the Ionic dark palette import.** Light mode only. Dark mode must render identically to light.

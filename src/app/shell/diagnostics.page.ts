@@ -44,7 +44,7 @@ interface Probe {
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>BridgeCare Professional</ion-title>
+        <ion-title>Abofonsa BridgeCare</ion-title>
       </ion-toolbar>
     </ion-header>
 

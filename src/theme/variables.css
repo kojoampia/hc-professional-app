@@ -1,9 +1,9 @@
 /* ==========================================================================
-BridgeCare -> Ionic variable mapping.
+Abofonsa BridgeCare -> Ionic variable mapping.
 
 Every value here is DERIVED from hpd-tokens.css, not invented. Shades and tints
 follow Ionic's own convention (shade = 12% black, tint = 10% white) except where
-BridgeCare already has a named tone, which wins:
+Abofonsa BridgeCare already has a named tone, which wins:
   primary-shade = --hpd-color-primary-deep  (#092239)
   primary-tint  = --hpd-color-primary-hover (#12406f)
   gold-tint     = --hpd-color-gold-bright   (#ddb868)

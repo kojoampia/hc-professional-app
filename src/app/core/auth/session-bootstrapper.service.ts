@@ -63,7 +63,7 @@ export class SessionBootstrapper {
 
     if (prompt && protection !== 'none') {
       try {
-        await this.biometrics.authenticate('Unlock BridgeCare Professional');
+        await this.biometrics.authenticate('Unlock Abofonsa BridgeCare Professional');
         this.failures = 0;
       } catch {
         this.failures += 1;

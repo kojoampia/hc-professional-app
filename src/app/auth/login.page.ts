@@ -15,7 +15,7 @@ import { AccountService } from '../core/auth/account.service';
     <ion-content>
       <div class="flex min-h-full flex-col justify-center px-6 py-10">
         <header class="mb-8 text-center">
-          <h1 class="text-2xl font-bold text-hpd-primary">BridgeCare</h1>
+          <h1 class="text-2xl font-bold text-hpd-primary">Abofonsa BridgeCare</h1>
           <p class="text-hpd-muted">Professional</p>
         </header>
 
@@ -66,7 +66,7 @@ import { AccountService } from '../core/auth/account.service';
 
         @if (unprotectedDevice()) {
           <p class="mt-6 text-center text-hpd-muted">
-            This device has no screen lock, so BridgeCare will ask for your password each time you open it.
+            This device has no screen lock, so Abofonsa BridgeCare will ask for your password each time you open it.
           </p>
         }
       </div>
@@ -120,7 +120,7 @@ export class LoginPage {
         this.error.set(
           err instanceof HttpErrorResponse && err.status === 401
             ? 'That username and password did not match.'
-            : 'Could not reach BridgeCare. Check your connection and try again.',
+            : 'Could not reach Abofonsa BridgeCare. Check your connection and try again.',
         );
       },
     });
