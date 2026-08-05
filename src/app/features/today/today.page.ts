@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, TitleCasePipe } from '@angular/common';
-import { Router } from '@angular/router';
 import {
   IonBadge,
   IonCard,
@@ -19,6 +18,7 @@ import {
   IonRefresherContent,
   IonTitle,
   IonToolbar,
+  NavController,
 } from '@ionic/angular/standalone';
 
 import { shiftWindowText } from '../../core/api/duty-roster-api.service';
@@ -161,7 +161,7 @@ export class TodayPage implements OnInit {
   readonly store = inject(TodayStore);
   readonly network = inject(NetworkService);
   private readonly accounts = inject(AccountService);
-  private readonly router = inject(Router);
+  private readonly nav = inject(NavController);
 
   readonly upcoming = this.store.upcoming;
   readonly expiring = this.store.expiringDocuments;
@@ -219,7 +219,6 @@ export class TodayPage implements OnInit {
   }
 
   openMessages(): void {
-    // MOB7 replaces this with the Messages tab.
-    void this.router.navigate(['/diagnostics']);
+    void this.nav.navigateForward('/messages');
   }
 }

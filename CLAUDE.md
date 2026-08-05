@@ -14,6 +14,8 @@ It builds no server, ships no Docker image, and is **not part of `deploy/`**. It
 
 Four tabs: **Today** (duty roster), **Messages**, **Documents**, **Me**. Every endpoint behind them already exists and is deployed.
 
+**Composing a new conversation is not implemented.** `POST /api/messaging/conversations` needs `recipientIds[]` or `recipientRole`, and the only directory endpoint is the gateway's `PublicUserResource`, which returns every gateway user unfiltered — not something to put behind a recipient picker on a clinical app. Reply-only until a role-scoped directory endpoint exists. Related: there is **no per-conversation read endpoint**, only `/read-all`, so opening one thread clears the badge for every unread message. Both belong on the Phase 2 backend list.
+
 **Dashboard, Patients and Cases are Phase 2 and are blocked**, not merely unbuilt: `api/` has no `Patient` entity, no `ClinicalCase` entity and no `/api/dashboard/*` endpoints, and every entity collection GET returns a bare unpaginated `List<T>` that a phone on mobile data cannot download. See `MOB-P2-PRE` in the plan. Do not start those screens.
 
 Also deliberately out of scope: the **applicant onboarding wizard** (this app is for _active_ clinicians — any application status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal), **composing new conversations** (no role-scoped directory endpoint exists; reply-only in v1), and **offline writes**.
@@ -99,6 +101,16 @@ moving between app areas** (sign-in, sign-out, boot). Two related requirements:
   wearing the costume of a performance optimisation.
 - The offline interceptor short-circuits **GETs only**. There is no offline write
   queue, so a mutation must fail visibly rather than vanish into a synthetic error.
+
+### The message socket
+
+- **The path is `/websocket/messages`**, not `/services/professionalservice/...`. Both nginx layers forward `Upgrade`/`Connection` only on their dedicated `/websocket` location; routed the other way the socket is silently downgraded to plain HTTP and rejected, which presents as an inbox that renders but never updates.
+- **The token goes on the CONNECT frame**, not the handshake — a WebSocket upgrade cannot carry an Authorization header. The server permits the handshake and authenticates the CONNECT.
+- **The broker URL comes from `environment.wsBaseUrl`**, not `window.location`. web derives it from the page origin; on a device that origin is `capacitor://localhost` and would produce a nonsense URL.
+- **The socket reconnects whenever the access token changes.** Mobile access tokens live 15 minutes, so a client that captured one at construction stops being able to reconnect within the hour. `beforeConnect` re-reads from the store on every attempt, and an effect on the token signal forces a reconnect after each refresh.
+- **The socket is dropped 30 s after backgrounding**, not immediately — a glance at the notification shade should not cost a reconnect. Past that, push covers the gap (MOB10).
+- **Notifications carry identifiers only**; the store then fetches the message over HTTP. That second hop is not redundant: the read goes through the same authorization check as any other request, so a frame naming something the caller may not read simply yields nothing.
+- **Both push and STOMP always fire** for every message — the server cannot know whether a socket is live, and guessing produces missed notifications. The client dedupes on a bounded list of the last 200 message ids.
 
 ### jsdom has no `crypto.subtle`
 

@@ -63,6 +63,21 @@ Needs a real account on `professional.abofonsa.com`.
 42. Sign out, then inspect the app's storage (Android Studio Device Explorer / Xcode container). There must be **no** BridgeCare cache rows left.
 43. Sign in as a **different clinician** on the same device: you see their roster immediately, never the previous user's.
 
-## MOB7+ — added as each work package lands
+## MOB7 — Messages and the live socket
 
-_(Messages, documents/camera, push. Each MOB adds its steps here as part of its gate.)_
+Needs a second account (or the web dashboard) to send from.
+
+44. Open **Messages**: threads are listed newest first, with the unread count as a gold badge in the toolbar.
+45. Tap a thread: it opens as a bottom sheet. Your own messages sit right-aligned in navy; everyone else's are left-aligned in white.
+46. **Send a message from the web dashboard to this clinician while the app is open and on the Messages screen.** It must appear within about 2 seconds without any manual refresh. This is the whole point of the socket — if it does not arrive, check that nginx is forwarding `Upgrade` on `/websocket` rather than assuming the app is at fault.
+47. Reply from the phone; the message appears in the thread and the web dashboard shows it.
+48. Reply with **airplane mode on**: an error appears under the box and **your draft is not lost**. There is no offline send queue, so it must fail visibly.
+49. Background the app for under 30 seconds and return — messages still arrive live, with no reconnect delay.
+50. Background it for more than a minute, return, and send a message from the web: the unread count is correct on resume and the socket is live again.
+51. **Leave the app open and idle for more than 15 minutes**, then have someone send a message. It must still arrive — the access token has rotated by then and the socket has to reconnect with the new one. This is the failure that looks like "messages just stopped working after a while".
+52. Sign out: the socket closes. Watch the server logs if you can — nothing should keep dialling with the revoked token.
+53. Open a thread while offline: previously read messages are still there.
+
+## MOB8+ — added as each work package lands
+
+_(Documents/camera, push. Each MOB adds its steps here as part of its gate.)_

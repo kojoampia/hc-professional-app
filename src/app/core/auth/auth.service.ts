@@ -6,6 +6,7 @@ import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/ope
 import { ApplicationConfigService } from '../config/application-config.service';
 import { PushService } from '../native/push.service';
 import { SecureTokenStore } from '../native/secure-token-store.service';
+import { MessageSocketService } from '../api/message-socket.service';
 import { CacheStore } from '../offline/cache-store.service';
 import { DeviceService } from './device.service';
 import type { MobileTokenResponse, SignOutReason } from './session.model';
@@ -40,6 +41,7 @@ export class AuthService {
   private readonly device = inject(DeviceService);
   private readonly push = inject(PushService);
   private readonly cache = inject(CacheStore);
+  private readonly socket = inject(MessageSocketService);
 
   /** Why the last session ended — the login screen reads this to explain itself. */
   private readonly signOutReasonSignal = signal<SignOutReason | null>(null);
@@ -169,6 +171,10 @@ export class AuthService {
     } catch {
       // Push teardown must never block sign-out.
     }
+    // Drop the socket before the token goes: a live session must not outlive the
+    // credential that authorised it, and deactivate() also stops the reconnect timer
+    // that would otherwise keep dialling with a revoked token.
+    this.socket.disconnect();
     // Cache before credentials: clearing the keystore first would destroy the AES
     // key and leave the encrypted rows behind, unreadable but present.
     try {
