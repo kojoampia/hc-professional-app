@@ -1,0 +1,7 @@
+android
+ios
+dist
+target
+coverage
+node_modules
+package-lock.json

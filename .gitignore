@@ -48,3 +48,62 @@ Thumbs.db
 *.mov
 *.wmv
 
+# ---------------------------------------------------------------------------
+# Appended in MOB1 (repo bootstrap). Everything above is the original 2022
+# Bitbucket boilerplate, kept intact so `git log --follow` stays honest.
+# ---------------------------------------------------------------------------
+
+# Angular
+.angular/
+/out-tsc
+/tmp
+coverage/
+
+# The native projects ARE committed — Info.plist usage strings (MOB8),
+# AndroidManifest permissions and notification channels (MOB10) and the signing
+# config (MOB12) all need to be version controlled. Only their build output and
+# the web assets Capacitor copies in are ignored.
+
+# Capacitor — generated/copied artefacts
+/android/app/src/main/assets/public/
+/android/app/src/main/assets/capacitor.config.json
+/android/app/src/main/assets/capacitor.plugins.json
+/android/app/capacitor.build.gradle
+/android/capacitor.settings.gradle
+/ios/App/App/public/
+/ios/App/App/capacitor.config.json
+
+# Android build
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/captures/
+*.apk
+*.aab
+
+# iOS / Xcode build
+/ios/App/Pods/
+/ios/App/build/
+/ios/App/output/
+/ios/App/CapApp-SPM/.build/
+/ios/DerivedData/
+xcuserdata/
+*.xcuserstate
+*.ipa
+*.dSYM.zip
+
+# Signing material and service credentials — MUST never be committed.
+# These live in CI secrets and on the build machine only (see mobile-app-plan.md § MOB12).
+*.keystore
+*.jks
+*.mobileprovision
+*.p8
+*.p12
+*.cer
+google-services.json
+GoogleService-Info.plist
+.env
+.env.*
+!.env.example
+

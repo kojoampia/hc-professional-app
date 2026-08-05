@@ -1,0 +1,18 @@
+/*
+ * Ionic theme variables.
+ *
+ * MOB2 replaces these placeholders with the full BridgeCare mapping (navy #0d3058,
+ * gold #c59437 with its #3a2a08 contrast colour, cream surfaces, the
+ * --ion-color-step-* ramp). Two rules that must survive that work:
+ *
+ *   1. `--ion-color-*-rgb` values MUST be literal triplets. Ionic does colour maths
+ *      on them and cannot resolve `var()` inside `rgba()`. This is the #1 Ionic
+ *      theming trap.
+ *   2. `--ion-color-gold-contrast` MUST be #3a2a08, never #ffffff. White on gold is
+ *      2.74:1 and fails AA. That token is how the rule is enforced inside Ionic
+ *      components — ion-button/ion-chip/ion-badge derive their text colour from it.
+ */
+:root {
+  color-scheme: light;
+  --ion-font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
