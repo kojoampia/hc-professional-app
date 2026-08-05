@@ -16,7 +16,7 @@ Planning lives at the workspace root in `mobile-app-plan.md`. Contributor guidan
 nvm use                  # Node 22, per .nvmrc
 npm ci
 npm test                 # Jest
-npm start                # browser at http://localhost:4200
+npm start                # browser at http://localhost:4300 (4200 belongs to web/)
 npm run sync             # production build + copy into android/ and ios/
 ```
 

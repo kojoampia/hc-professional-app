@@ -21,7 +21,7 @@ Also deliberately out of scope: the **applicant onboarding wizard** (this app is
 ## Commands
 
 ```bash
-npm start                 # ng serve — browser, dev config (absolute API base, see below)
+npm start                 # ng serve on :4300 — NOT 4200, which web/ already uses
 npm test                  # Jest, whole suite
 npx ng test --test-path-pattern="<regex>"   # ONE spec — the only form that works, same as web/
 npm run lint              # eslint (flat config)

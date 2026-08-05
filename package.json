@@ -9,7 +9,7 @@
   },
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --port 4300",
     "build": "ng build",
     "build:prod": "ng build --configuration production",
     "test": "ng test",
