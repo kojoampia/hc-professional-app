@@ -116,7 +116,7 @@ import { TodayStore } from './today.store';
               </ion-item>
             }
             @for (entry of expiring(); track entry.document.id) {
-              <ion-item>
+              <ion-item button="true" (click)="openDocuments()">
                 <ion-label>
                   {{ entry.document.otherLabel ?? 'Licence' }}
                   <p class="text-hpd-muted">{{ entry.lapsed ? 'Expired' : 'Expires' }} {{ entry.document.expiryDate }}</p>
@@ -220,5 +220,11 @@ export class TodayPage implements OnInit {
 
   openMessages(): void {
     void this.nav.navigateForward('/messages');
+  }
+
+  openDocuments(): void {
+    // An expiring licence is actionable: the point of surfacing it is that the
+    // clinician can photograph the renewal there and then.
+    void this.nav.navigateForward('/documents');
   }
 }

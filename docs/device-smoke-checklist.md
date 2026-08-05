@@ -78,6 +78,23 @@ Needs a second account (or the web dashboard) to send from.
 52. Sign out: the socket closes. Watch the server logs if you can — nothing should keep dialling with the revoked token.
 53. Open a thread while offline: previously read messages are still there.
 
-## MOB8+ — added as each work package lands
+## MOB8 — Documents and camera
 
-_(Documents/camera, push. Each MOB adds its steps here as part of its gate.)_
+54. Open **Documents**: your documents list with type, expiry and a verification badge (pending amber, verified green, rejected red).
+55. From **Today**, tapping an expiring licence takes you here — the warning has to be actionable.
+56. Tap **Add or renew**, choose LICENSE, and try to continue **without an expiry date**: it is refused locally, with a clear reason. The server would reject it anyway; this saves a round trip and an opaque 400.
+57. Choose OTHER without a label: likewise refused.
+58. **Take a photo of a licence on an iPhone.** iOS captures HEIC; it must upload successfully and appear as **pending**. If it fails, the re-encode is not running — the server takes only PDF/PNG/JPEG and checks magic bytes.
+59. Progress renders during the upload, not a static spinner. On a ward's signal a 3 MB upload takes long enough that a frozen spinner reads as a hang and people retry, producing duplicates in the review queue.
+60. **Take a photo somewhere with location services on, then have an administrator download it from the review queue and inspect its EXIF.** There must be **no GPS tags and no camera metadata**. This is the one step that cannot be checked from the phone.
+61. Photograph a document in **portrait**: it must appear upright in the review queue, not rotated.
+62. Upload a **PDF** from the file picker: it goes through unchanged and keeps its filename.
+63. Try to pick a **HEIC or WebP** from the library: refused with "Only PDF, PNG and JPEG", not a server error.
+64. Try a **PDF over 5 MB**: refused locally with a size message.
+65. Photograph something very large and detailed (a dense page in bright light). It should still upload — and if it genuinely cannot be compressed enough, the message must suggest reframing, not quote bytes.
+66. Upload with **airplane mode on**: fails visibly with a retry, and nothing is silently queued.
+67. First camera use prompts for permission with **BridgeCare-specific wording** about photographing licences — not a generic string.
+
+## MOB9+ — added as each work package lands
+
+_(Push. Each MOB adds its steps here as part of its gate.)_

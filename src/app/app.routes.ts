@@ -3,8 +3,8 @@ import { Routes } from '@angular/router';
 import { unlockGuard } from './core/auth/unlock.guard';
 
 /**
- * MOB7 adds Messages. Documents and Me land in MOB8-MOB11, at which point these
- * become children of a tab bar.
+ * MOB8 adds Documents. Me lands in MOB11, at which point these become children of a
+ * tab bar.
  *
  * There is deliberately no `/unlock` route: the cold-start decision is made by
  * SessionBootstrapper behind the app shell's splash, so the router is told exactly
@@ -25,6 +25,11 @@ export const routes: Routes = [
     path: 'messages',
     canActivate: [unlockGuard],
     loadComponent: () => import('./features/messages/messages.page').then(m => m.MessagesPage),
+  },
+  {
+    path: 'documents',
+    canActivate: [unlockGuard],
+    loadComponent: () => import('./features/documents/documents.page').then(m => m.DocumentsPage),
   },
   {
     // MOB1 bootstrap probe. Kept reachable: it is the first screen the device smoke

@@ -102,6 +102,34 @@ moving between app areas** (sign-in, sign-out, boot). Two related requirements:
 - The offline interceptor short-circuits **GETs only**. There is no offline write
   queue, so a mutation must fail visibly rather than vanish into a synthetic error.
 
+### Camera captures are ALWAYS re-encoded
+
+Never upload `photo.webPath` directly. A single canvas round-trip through
+`ImageCompressor` buys four things, and each is required:
+
+1. **The output is guaranteed `image/jpeg`.** `OnboardingDocumentResource` allows
+   exactly PDF/PNG/JPEG _and_ verifies the magic bytes against the declared type, so
+   a file that merely claims to be a JPEG is rejected.
+2. **HEIC becomes JPEG.** iOS captures HEIC by default; the server does not take it.
+3. **EXIF is dropped, including GPS.** Photographing a licence at home must not
+   attach the clinician's home coordinates to a record an administrator will read.
+4. **Orientation is baked in**, so a portrait photo does not arrive sideways in the
+   review queue.
+
+The size ladder (0.85 → 0.7 → 0.55 → 0.4, stopping at the first rung under 4 MB) is
+the _least_ important reason to re-encode. It stops at 0.4 rather than going lower
+because below that small print stops being legible, and shipping a document a
+reviewer then rejects is worse than asking for a retake. `ImageCompressor` takes an
+injected `ImageCodec` so the ladder is unit-testable — jsdom has neither
+`createImageBitmap` nor a real 2D context.
+
+Picked **PDFs pass through untouched**; picked **images are re-encoded**, because a
+file from the library carries EXIF exactly like a fresh capture does.
+
+Native permissions live in `ios/App/App/Info.plist` and
+`android/app/src/main/AndroidManifest.xml`. The iOS usage strings are deliberately
+specific — Apple rejects generic copy, and a clinical app draws extra scrutiny.
+
 ### The message socket
 
 - **The path is `/websocket/messages`**, not `/services/professionalservice/...`. Both nginx layers forward `Upgrade`/`Connection` only on their dedicated `/websocket` location; routed the other way the socket is silently downgraded to plain HTTP and rejected, which presents as an inbox that renders but never updates.
