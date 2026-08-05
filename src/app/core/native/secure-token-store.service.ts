@@ -112,6 +112,32 @@ export class SecureTokenStore {
     return (await this.readRefreshToken()) !== null;
   }
 
+  /**
+   * Reads an arbitrary secret from the same protected store.
+   *
+   * Used by the offline cache for its AES key (MOB6). Keeping it here rather than
+   * in a second store means the key inherits the keystore's protection and, more
+   * usefully, is destroyed by the same {@link clear} on sign-out — a cache whose
+   * key is gone is unreadable even if its IndexedDB rows outlive the wipe.
+   */
+  async readSecret(name: string): Promise<string | null> {
+    if (!this.usesKeystore()) {
+      return this.memoryStore.get(name) ?? null;
+    }
+    await this.ensurePrefix();
+    const value = await SecureStorage.getItem(name);
+    return value ?? null;
+  }
+
+  async writeSecret(name: string, value: string): Promise<void> {
+    if (!this.usesKeystore()) {
+      this.memoryStore.set(name, value);
+      return;
+    }
+    await this.ensurePrefix();
+    await SecureStorage.setItem(name, value);
+  }
+
   /** Full credential wipe. Part of the logout sequence in mobile-app-plan.md. */
   async clear(): Promise<void> {
     this.clearAccessToken();

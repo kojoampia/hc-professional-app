@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { IonContent, IonSpinner } from '@ionic/angular/standalone';
+import { IonContent, IonSpinner, NavController } from '@ionic/angular/standalone';
 
 import { AuthService } from '../core/auth/auth.service';
 import { AccountService } from '../core/auth/account.service';
@@ -76,7 +76,7 @@ import { AccountService } from '../core/auth/account.service';
 export class LoginPage {
   private readonly auth = inject(AuthService);
   private readonly accounts = inject(AccountService);
-  private readonly router = inject(Router);
+  private readonly nav = inject(NavController);
   private readonly route = inject(ActivatedRoute);
 
   username = '';
@@ -107,7 +107,12 @@ export class LoginPage {
         this.unprotectedDevice.set(!persisted);
         this.accounts.identity(true).subscribe(() => {
           this.busy.set(false);
-          void this.router.navigateByUrl(this.returnUrl());
+          // navigateRoot, not navigateByUrl. Router alone tells ion-router-outlet
+          // nothing about stack intent, so it keeps every page it has shown — unlock
+          // and login stayed mounted and painted over the app. navigateRoot resets
+          // the stack, which is also what you want semantically: you must not be able
+          // to go "back" into a login form still holding a password.
+          void this.nav.navigateRoot(this.returnUrl(), { replaceUrl: true });
         });
       },
       error: (err: unknown) => {
@@ -124,6 +129,6 @@ export class LoginPage {
   private returnUrl(): string {
     const target = this.route.snapshot.queryParamMap.get('returnUrl');
     // Only same-app paths: an absolute URL here would be an open redirect.
-    return target?.startsWith('/') ? target : '/diagnostics';
+    return target?.startsWith('/') ? target : '/today';
   }
 }

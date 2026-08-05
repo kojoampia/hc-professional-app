@@ -6,6 +6,7 @@ import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/ope
 import { ApplicationConfigService } from '../config/application-config.service';
 import { PushService } from '../native/push.service';
 import { SecureTokenStore } from '../native/secure-token-store.service';
+import { CacheStore } from '../offline/cache-store.service';
 import { DeviceService } from './device.service';
 import type { MobileTokenResponse, SignOutReason } from './session.model';
 
@@ -38,6 +39,7 @@ export class AuthService {
   private readonly tokens = inject(SecureTokenStore);
   private readonly device = inject(DeviceService);
   private readonly push = inject(PushService);
+  private readonly cache = inject(CacheStore);
 
   /** Why the last session ended — the login screen reads this to explain itself. */
   private readonly signOutReasonSignal = signal<SignOutReason | null>(null);
@@ -166,6 +168,13 @@ export class AuthService {
       await this.push.unregister();
     } catch {
       // Push teardown must never block sign-out.
+    }
+    // Cache before credentials: clearing the keystore first would destroy the AES
+    // key and leave the encrypted rows behind, unreadable but present.
+    try {
+      await this.cache.clear();
+    } catch {
+      // A cache that will not clear must not strand the user in a signed-in state.
     }
     await this.tokens.clear();
     this.signOutReasonSignal.set(reason);

@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+
 import { Capacitor } from '@capacitor/core';
 import {
   IonBadge,
@@ -12,6 +12,7 @@ import {
   IonNote,
   IonTitle,
   IonToolbar,
+  NavController,
 } from '@ionic/angular/standalone';
 
 import { environment } from '../../environments/environment';
@@ -99,7 +100,7 @@ export class DiagnosticsPage implements OnInit {
   private readonly tokens = inject(SecureTokenStore);
   private readonly share = inject(ShareService);
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
+  private readonly nav = inject(NavController);
   readonly accounts = inject(AccountService);
 
   readonly build = signal<Probe[]>([
@@ -146,7 +147,7 @@ export class DiagnosticsPage implements OnInit {
   signOut(): void {
     this.auth.logout('user').subscribe(() => {
       this.accounts.clear();
-      void this.router.navigate(['/login'], { replaceUrl: true });
+      void this.nav.navigateRoot(['/login'], { replaceUrl: true });
     });
   }
 }

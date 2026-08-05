@@ -1,9 +1,10 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { Observable, from, of } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
 
 import { ApplicationConfigService } from '../config/application-config.service';
+import { CacheStore } from '../offline/cache-store.service';
 import type { Account } from './account.model';
 
 /**
@@ -19,6 +20,7 @@ import type { Account } from './account.model';
 export class AccountService {
   private readonly http = inject(HttpClient);
   private readonly config = inject(ApplicationConfigService);
+  private readonly cache = inject(CacheStore);
 
   private readonly accountSignal = signal<Account | null>(null);
   readonly account = this.accountSignal.asReadonly();
@@ -31,6 +33,16 @@ export class AccountService {
     }
     return this.http.get<Account>(this.config.getEndpointFor('api/account')).pipe(
       tap(account => this.accountSignal.set(account)),
+      // Reconcile the offline cache against WHO just signed in, before any store
+      // reads it. Two clinicians sharing a ward device is ordinary, and serving one
+      // of them the other's cached roster would be a data leak wearing the costume
+      // of a performance optimisation.
+      switchMap(account =>
+        from(this.cache.initialize(account.login)).pipe(
+          tap(() => undefined),
+          switchMap(() => of(account)),
+        ),
+      ),
       catchError(() => {
         this.accountSignal.set(null);
         return of(null);

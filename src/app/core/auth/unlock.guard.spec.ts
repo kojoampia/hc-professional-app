@@ -23,10 +23,13 @@ describe('unlockGuard', () => {
     expect(run('/diagnostics')).toBe(true);
   });
 
-  it('sends everyone else to /unlock', () => {
+  it('sends everyone else to /login', () => {
+    // Straight to /login, not to an unlock route: the cold-start restore runs in the
+    // app shell (SessionBootstrapper) before any route activates, so reaching the
+    // guard at all means there is no session to restore.
     const result = run('/diagnostics');
     expect(result).toBeInstanceOf(UrlTree);
-    expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toContain('/unlock');
+    expect(TestBed.inject(Router).serializeUrl(result as UrlTree)).toContain('/login');
   });
 
   it('carries the attempted URL so the user lands where they were going', () => {

@@ -48,6 +48,21 @@ Needs a real account on `professional.abofonsa.com`.
 30. Sign out from the signed-in screen → returns to sign-in; force-quit and relaunch → still signed out.
 31. After signing out, sign in again on a **second device**, then use the first one: both work independently (sessions are per-device).
 
-## MOB6+ — added as each work package lands
+## MOB6 — Today and the offline cache
 
-_(Roster, messages, documents/camera, push. Each MOB adds its steps here as part of its gate.)_
+32. After signing in you land on **Today**, not a diagnostics screen.
+33. The shift card's heading and its body describe the **same** shift — if it says "Next shift", the details underneath must be that shift, not one that finished earlier today.
+34. The window shown matches the roster: MORNING 06:00–14:00, AFTERNOON 14:00–22:00, NIGHT 22:00–06:00, DAY 08:00–17:00. A FLEXIBLE day shows no window at all.
+35. **During a night shift, after midnight**, the card still reads "On duty" — the NIGHT window wraps, and this is the case a naive same-date check gets wrong. Worth timing a check for.
+36. "Next 7 days" shows only the coming week; nothing further out appears.
+37. An expiring licence appears under "Needs attention" with days remaining; a lapsed one shows a red **lapsed** badge. A certificate expiring does **not** appear — only licences cost you access.
+38. Pull down to refresh; the list updates and any staleness banner clears.
+39. **Turn on airplane mode and reopen Today.** The roster is still there, with a banner reading "Offline — showing saved data · updated N ago". It must not be blank and must not error.
+40. Still offline, pull to refresh: the banner stays, the data stays. Nothing disappears.
+41. Come back online and refresh: the banner clears.
+42. Sign out, then inspect the app's storage (Android Studio Device Explorer / Xcode container). There must be **no** BridgeCare cache rows left.
+43. Sign in as a **different clinician** on the same device: you see their roster immediately, never the previous user's.
+
+## MOB7+ — added as each work package lands
+
+_(Messages, documents/camera, push. Each MOB adds its steps here as part of its gate.)_

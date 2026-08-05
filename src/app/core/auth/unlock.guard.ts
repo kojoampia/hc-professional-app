@@ -18,5 +18,7 @@ export const unlockGuard: CanActivateFn = (_route, state) => {
   if (auth.isAuthenticated()) {
     return true;
   }
-  return router.createUrlTree(['/unlock'], { queryParams: { returnUrl: state.url } });
+  // Straight to /login: the cold-start restore has already run in the app shell by
+  // the time any route is activated, so reaching here means there is no session.
+  return router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 };

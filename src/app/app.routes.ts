@@ -3,23 +3,27 @@ import { Routes } from '@angular/router';
 import { unlockGuard } from './core/auth/unlock.guard';
 
 /**
- * MOB5 ships the auth shell. The four Phase 1 tabs (Today, Messages, Documents, Me)
- * land in MOB6-MOB11 and will replace `/diagnostics` as the signed-in landing route.
+ * MOB6 makes Today the signed-in landing route. Messages, Documents and Me land in
+ * MOB7-MOB11, at which point these become children of a tab bar.
  *
- * `/unlock` is the entry point rather than a guard on `''`: restoring a session needs
- * a biometric prompt and a network round trip, which a guard cannot show progress for.
+ * There is deliberately no `/unlock` route: the cold-start decision is made by
+ * SessionBootstrapper behind the app shell's splash, so the router is told exactly
+ * once where to go. See AppComponent.
  */
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'diagnostics' },
-  {
-    path: 'unlock',
-    loadComponent: () => import('./auth/unlock.page').then(m => m.UnlockPage),
-  },
+  { path: '', pathMatch: 'full', redirectTo: 'today' },
   {
     path: 'login',
     loadComponent: () => import('./auth/login.page').then(m => m.LoginPage),
   },
   {
+    path: 'today',
+    canActivate: [unlockGuard],
+    loadComponent: () => import('./features/today/today.page').then(m => m.TodayPage),
+  },
+  {
+    // MOB1 bootstrap probe. Kept reachable: it is the first screen the device smoke
+    // checklist opens, and the only place that reports every native wrapper at once.
     path: 'diagnostics',
     canActivate: [unlockGuard],
     loadComponent: () => import('./shell/diagnostics.page').then(m => m.DiagnosticsPage),
@@ -30,5 +34,5 @@ export const routes: Routes = [
     path: 'theme',
     loadComponent: () => import('./shell/theme-gallery.page').then(m => m.ThemeGalleryPage),
   },
-  { path: '**', redirectTo: 'diagnostics' },
+  { path: '**', redirectTo: 'today' },
 ];

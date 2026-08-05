@@ -62,6 +62,50 @@ The one thing that _does_ legitimately appear in web storage is `CapacitorStorag
 - **The replayed request does not set its own Authorization header.** `authInterceptor` is registered _inside_ `authRefreshInterceptor` and re-attaches from the store, which `refresh()` has just updated. Setting it in the retry too would be overwritten anyway, and would misleadingly imply the retry controls the credential.
 - **Logout order matters**: revoke server-side first (while the token is still valid), then deregister push, then wipe locally. Clearing first strands a live family on the server that nothing can revoke. It never rejects — an offline sign-out must still sign the device out.
 
+### Navigation must go through NavController, not Router
+
+`ion-router-outlet` keeps every page it has shown so it can animate back. Plain
+`Router.navigateByUrl` tells it nothing about stack intent, so pages accumulate and
+stay painted on top of each other — the symptom is a screen that renders correctly
+in the DOM while an older one covers it. **Use `NavController.navigateRoot()` when
+moving between app areas** (sign-in, sign-out, boot). Two related requirements:
+
+- `{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy }` must be in
+  `app.config.ts`. A single-route app works without it, so it is easy to omit and
+  only breaks once there is a real stack.
+- **Unlocking is not a route.** `SessionBootstrapper` makes the cold-start decision
+  behind the app shell's splash and the router is told exactly once where to go. As
+  an `/unlock` page it made the first navigation a guard redirect that then navigated
+  again from its own `ngOnInit`, racing the outlet's first transition — the unlock
+  spinner ended up sitting over the login form, which sat over Today.
+
+### The offline cache
+
+- **Cached data is always served.** The TTL decides what the UI _says_, never whether
+  the cache is readable. A roster that vanishes when the signal does is worse than
+  useless — the data is still correct, just old. `error` is reachable only when there
+  is nothing cached at all.
+- **Whole-collection replace.** `api/` has no ETags, no pagination and no
+  `X-Total-Count`, so there is nothing to diff. Every fetch returns a complete list
+  and is written whole; no merge, no partial state.
+- **`setSensitive` seals with AES-GCM** under a key kept in the OS keystore next to
+  the refresh token — so `SecureTokenStore.clear()` destroys it, and a cache whose key
+  is gone is unreadable even if rows survive the wipe. Roster and document metadata
+  stay in the clear so the shell can render before the keystore is unlocked.
+- **`CACHE_VERSION` is the substitute for schema migrations.** Bump it by hand
+  whenever a cached DTO changes; a mismatch on boot clears everything.
+- **The cache is wiped when a different account signs in.** Two clinicians sharing a
+  ward device is ordinary; serving one the other's cached roster would be a data leak
+  wearing the costume of a performance optimisation.
+- The offline interceptor short-circuits **GETs only**. There is no offline write
+  queue, so a mutation must fail visibly rather than vanish into a synthetic error.
+
+### jsdom has no `crypto.subtle`
+
+`src/setup-jest.ts` installs Node's real WebCrypto. Mocking it instead would make the
+"unreadable at rest" assertions prove only that a mock was called. On device the
+WebView has SubtleCrypto because `androidScheme: 'https'` makes it a secure context.
+
 ### `ng serve` cannot talk to production, by design
 
 The gateway's prod CORS allowlist is `capacitor://localhost`, `https://localhost` and `ionic://localhost`. A browser at `http://localhost:4300` is **not** on it and never will be — adding it would weaken the guarantee that the deployed web app's single-origin posture is untouched. So pointing the dev build at `professional.abofonsa.com` and opening it in Chrome gets a CORS failure, which is correct behaviour, not a bug. For local development run the gateway locally on :5505; for on-device testing the Capacitor origin is allowlisted and works.
