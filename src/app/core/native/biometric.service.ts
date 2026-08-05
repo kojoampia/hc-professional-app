@@ -39,7 +39,7 @@ export class BiometricService {
       reason,
       allowDeviceCredential: true,
       cancelTitle: 'Use password',
-      androidTitle: 'Unlock Abofonsa',
+      androidTitle: 'Unlock Abofonsa Pro',
     });
   }
 

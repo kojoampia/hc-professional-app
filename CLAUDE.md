@@ -33,14 +33,23 @@ store listing, permission usage strings, error copy — gets the full name.
 
 Currently short-form by necessity:
 
-| Surface                        | Value             | Why                                           |
-| ------------------------------ | ----------------- | --------------------------------------------- |
-| Android `app_name` (launcher)  | `Abofonsa`        | Home-screen labels truncate at ~12 characters |
-| iOS `CFBundleDisplayName`      | `Abofonsa`        | Same                                          |
-| Android biometric dialog title | `Unlock Abofonsa` | System dialog, tight                          |
+| Surface                        | Value                 | Why                                           |
+| ------------------------------ | --------------------- | --------------------------------------------- |
+| Android `app_name` (launcher)  | `Abofonsa Pro`        | Home-screen labels truncate at ~12 characters |
+| iOS `CFBundleDisplayName`      | `Abofonsa Pro`        | Same                                          |
+| Android biometric dialog title | `Unlock Abofonsa Pro` | System dialog, tight                          |
 
-The bundle id `com.abofonsa.bridgecare.professional` already carries it and is
-**immutable on both stores** — never change it.
+"Pro" is what earns its place next to Abofonsa in twelve characters: this is one of
+several Abofonsa apps on a clinician's phone, and "Professional" does not fit. It is a
+label, not a tier — there is no free edition to contrast it against.
+
+`brand-name.spec.ts` asserts all of the above against the **real** platform manifests.
+It exists because `npx cap add` regenerates `strings.xml` and `Info.plist` from
+`capacitor.config.ts`'s `appName` — the long form — so re-adding a platform silently
+reverts the launcher label with nothing failing.
+
+The bundle id `com.abofonsa.bridgecare.professional` already carries the full name and is
+**immutable on both stores** — never change it, and never make it follow a label change.
 
 ## Commands
 
