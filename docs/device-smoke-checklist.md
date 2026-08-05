@@ -32,6 +32,22 @@ Open `/theme` (the design-system gallery).
 19. Turn off wifi and mobile data, force-quit, relaunch. Text still renders in Inter, not a system font — the font is bundled, not fetched.
 20. Rotate to landscape: nothing clips, the toolbar keeps its safe-area inset.
 
-## MOB5+ — added as each work package lands
+## MOB5 — auth shell
 
-_(Auth shell, roster, messages, documents/camera, push. Each MOB adds its steps here as part of its gate.)_
+Needs a real account on `professional.abofonsa.com`.
+
+21. Cold start with nothing stored lands on the **sign-in** screen, not a spinner.
+22. Sign in with correct credentials → reaches the signed-in screen, which shows your login and authorities.
+23. Sign in with a **wrong password** → "That username and password did not match." Sign in with the **device in airplane mode** → "Could not reach BridgeCare." The two messages must differ; conflating them makes a network blip look like a lockout.
+24. Force-quit and relaunch → biometric prompt appears, and unlocking reaches the signed-in screen **in under 2 seconds** without retyping a password.
+25. Cancel the biometric prompt → "Use password" path reaches the sign-in screen.
+26. Fail biometrics three times → the stored session is discarded and you must sign in with a password.
+27. **Turn airplane mode on, then force-quit and relaunch.** You must get "could not reach the server / your session is still valid" with a **Try again** button — *not* a sign-out. Turn the network back on, tap Try again, and you land signed in. This is the single most important step here: a transient network failure must never discard a valid session.
+28. Leave the app backgrounded for more than 5 minutes, return → biometric prompt again.
+29. **On a device with no screen lock at all** (remove the PIN in system settings): sign in, force-quit, relaunch → you are asked for your password again, and the sign-in screen explains why. The refresh token must not have been stored.
+30. Sign out from the signed-in screen → returns to sign-in; force-quit and relaunch → still signed out.
+31. After signing out, sign in again on a **second device**, then use the first one: both work independently (sessions are per-device).
+
+## MOB6+ — added as each work package lands
+
+_(Roster, messages, documents/camera, push. Each MOB adds its steps here as part of its gate.)_

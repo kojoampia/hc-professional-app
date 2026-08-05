@@ -111,3 +111,73 @@ describe('SecureTokenStore', () => {
     });
   });
 });
+
+describe('SecureTokenStore — device protection and expiry (MOB5)', () => {
+  let store: SecureTokenStore;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    capacitor.isNativePlatform.mockReturnValue(true);
+    localStorage.clear();
+    sessionStorage.clear();
+    TestBed.configureTestingModule({});
+    store = TestBed.inject(SecureTokenStore);
+  });
+
+  describe('a device with NO screen lock', () => {
+    beforeEach(() => store.setDeviceProtected(false));
+
+    it('refuses to persist the refresh token and says so', async () => {
+      // The gate item: a long-lived credential at rest is conditional on the OS
+      // having something to protect it with.
+      await expect(store.persistRefreshToken('refresh-abc')).resolves.toBe(false);
+      expect(secureStorage.setItem).not.toHaveBeenCalled();
+      expect(localStorage.length).toBe(0);
+    });
+
+    it('keeps it for the session so the app still works until it is closed', async () => {
+      await store.persistRefreshToken('refresh-abc');
+      await expect(store.readRefreshToken()).resolves.toBe('refresh-abc');
+      expect(secureStorage.getItem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a protected device', () => {
+    beforeEach(() => store.setDeviceProtected(true));
+
+    it('persists through the keystore and confirms it', async () => {
+      await expect(store.persistRefreshToken('refresh-abc')).resolves.toBe(true);
+      expect(secureStorage.setItem).toHaveBeenCalledWith('refresh_token', 'refresh-abc');
+    });
+  });
+
+  it('defaults to protected, so a failed biometry probe does not silently downgrade storage', () => {
+    expect(store.isDeviceProtected()).toBe(true);
+  });
+
+  describe('access token expiry', () => {
+    it('is stale when there is no token at all', () => {
+      expect(store.isAccessTokenStale()).toBe(true);
+    });
+
+    it('is fresh right after being set', () => {
+      store.setAccessToken('token', 900);
+      expect(store.isAccessTokenStale()).toBe(false);
+      expect(store.hasAccessToken()).toBe(true);
+    });
+
+    it('is stale inside the skew window, before the token actually expires', () => {
+      // Refreshing exactly at expiry races the request that needs the token.
+      store.setAccessToken('token', 20);
+      expect(store.isAccessTokenStale(30_000)).toBe(true);
+      expect(store.isAccessTokenStale(5_000)).toBe(false);
+    });
+
+    it('forgets the expiry when the token is cleared', () => {
+      store.setAccessToken('token', 900);
+      store.clearAccessToken();
+      expect(store.expiresAt()).toBeNull();
+      expect(store.isAccessTokenStale()).toBe(true);
+    });
+  });
+});

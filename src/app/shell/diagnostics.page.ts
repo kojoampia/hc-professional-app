@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import {
   IonBadge,
@@ -14,6 +15,8 @@ import {
 } from '@ionic/angular/standalone';
 
 import { environment } from '../../environments/environment';
+import { AccountService } from '../core/auth/account.service';
+import { AuthService } from '../core/auth/auth.service';
 import { BiometricService } from '../core/native/biometric.service';
 import { NetworkService } from '../core/native/network.service';
 import { PushService } from '../core/native/push.service';
@@ -48,6 +51,20 @@ interface Probe {
       <!-- MOB1 pipeline probe: real Tailwind utilities, asserted by the build check -->
       <p class="text-center font-semibold tracking-tight">Bootstrap shell</p>
       <ion-list [inset]="true">
+        <ion-list-header><ion-label>Signed in</ion-label></ion-list-header>
+        <ion-item>
+          <ion-label>Account</ion-label>
+          <ion-note slot="end">{{ accounts.account()?.login ?? 'unknown' }}</ion-note>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-label>Authorities</ion-label>
+          <ion-note slot="end">{{ accounts.account()?.authorities?.join(', ') ?? '—' }}</ion-note>
+        </ion-item>
+      </ion-list>
+
+      <button class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable mb-4" (click)="signOut()">Sign out</button>
+
+      <ion-list [inset]="true">
         <ion-list-header><ion-label>Build</ion-label></ion-list-header>
         @for (row of build(); track row.label) {
           <ion-item>
@@ -81,6 +98,9 @@ export class DiagnosticsPage implements OnInit {
   private readonly push = inject(PushService);
   private readonly tokens = inject(SecureTokenStore);
   private readonly share = inject(ShareService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  readonly accounts = inject(AccountService);
 
   readonly build = signal<Probe[]>([
     { label: 'Platform', value: Capacitor.getPlatform(), ok: null },
@@ -121,5 +141,12 @@ export class DiagnosticsPage implements OnInit {
     }
 
     this.probes.set(results);
+  }
+
+  signOut(): void {
+    this.auth.logout('user').subscribe(() => {
+      this.accounts.clear();
+      void this.router.navigate(['/login'], { replaceUrl: true });
+    });
   }
 }

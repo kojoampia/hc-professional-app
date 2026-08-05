@@ -44,12 +44,27 @@ The Android emulator cannot see the host's `localhost`; the host loopback is `10
 
 ### Access tokens are never persisted
 
-`SecureTokenStore` enforces two invariants, both asserted by spec:
+`SecureTokenStore` enforces three invariants, all asserted by spec:
 
 1. The **access token lives in a memory signal** and dies with the process. Only the **refresh token** reaches the OS keystore.
 2. **Nothing is ever written to `localStorage`/`sessionStorage`.** The `@aparajita/capacitor-secure-storage` plugin ships a `SecureStorageWeb` implementation that is localStorage-backed — using it in a browser would put a long-lived credential where any script can read it. So on web (`ionic serve`, Jest, Playwright) the store **deliberately bypasses the plugin** and uses an in-memory map. Dev keeps working and the invariant holds on every platform, not just on device.
+3. **A refresh token is persisted only on a device with a screen lock.** `persistRefreshToken` returns `false` and keeps the token in memory when the OS reports no lock, so the user signs in again each launch. A long-lived credential at rest is conditional on the OS having something to protect it with.
 
 Never call `localStorage.setItem` with a token. There is a spec that will catch you.
+
+The one thing that _does_ legitimately appear in web storage is `CapacitorStorage.hpd.deviceId` — Capacitor Preferences is localStorage-backed on web. That is a device identifier, not a credential; `PreferencesService` exists for exactly that class of value and says so.
+
+### Sign-in, refresh and sign-out
+
+- **Login must identify itself as a mobile client.** `AuthService.login` sends `client`/`deviceId`/`deviceName`; without `client` the gateway returns the browser's `{id_token}` and there is nothing to rotate. See the gateway's `AuthenticateController`.
+- **Refresh is coalesced.** `AuthService.refresh()` shares one in-flight request. This is not an optimisation: N parallel refreshes would rotate once and then present an already-spent token, which the gateway correctly reads as **reuse** and answers by revoking the entire family. Client concurrency would look exactly like a stolen token.
+- **A 401 means signed out; anything else does not.** The access token lives 15 minutes, so a 401 is the expected steady state, not a failure — `authRefreshInterceptor` refreshes once and replays. A network drop, timeout or 5xx is propagated untouched, so losing signal mid-refresh surfaces as a failed request rather than a sign-out.
+- **The replayed request does not set its own Authorization header.** `authInterceptor` is registered _inside_ `authRefreshInterceptor` and re-attaches from the store, which `refresh()` has just updated. Setting it in the retry too would be overwritten anyway, and would misleadingly imply the retry controls the credential.
+- **Logout order matters**: revoke server-side first (while the token is still valid), then deregister push, then wipe locally. Clearing first strands a live family on the server that nothing can revoke. It never rejects — an offline sign-out must still sign the device out.
+
+### `ng serve` cannot talk to production, by design
+
+The gateway's prod CORS allowlist is `capacitor://localhost`, `https://localhost` and `ionic://localhost`. A browser at `http://localhost:4300` is **not** on it and never will be — adding it would weaken the guarantee that the deployed web app's single-origin posture is untouched. So pointing the dev build at `professional.abofonsa.com` and opening it in Chrome gets a CORS failure, which is correct behaviour, not a bug. For local development run the gateway locally on :5505; for on-device testing the Capacitor origin is allowlisted and works.
 
 ### Every Capacitor plugin goes behind a wrapper
 
