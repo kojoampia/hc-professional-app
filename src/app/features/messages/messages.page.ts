@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import {
   IonBadge,
   IonButton,
@@ -38,6 +39,7 @@ import { MessagesStore } from './messages.store';
   selector: 'hpd-messages',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TranslateModule,
     DatePipe,
     FormsModule,
     IonHeader,
@@ -60,7 +62,7 @@ import { MessagesStore } from './messages.store';
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Messages</ion-title>
+        <ion-title>{{ 'messages.title' | translate }}</ion-title>
         @if (store.unread.value(); as count) {
           @if (count > 0) {
             <ion-badge slot="end" color="gold" class="mr-3">{{ count }}</ion-badge>
@@ -77,7 +79,8 @@ import { MessagesStore } from './messages.store';
       <div class="px-4 py-4 flex flex-col gap-3">
         @if (!network.connected() || store.conversations.status() === 'stale') {
           <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status">
-            {{ network.connected() ? 'Showing saved messages' : 'Offline — showing saved messages' }} · updated {{ age() }}
+            {{ (network.connected() ? 'messages.savedData' : 'messages.savedDataOffline') | translate }} ·
+            {{ 'today.updated' | translate }} {{ age() }}
           </p>
         }
 
@@ -85,14 +88,14 @@ import { MessagesStore } from './messages.store';
           @for (conversation of conversations(); track conversation.id) {
             <ion-item button="true" (click)="open(conversation.id)">
               <ion-label>
-                {{ conversation.subject || 'No subject' }}
+                {{ conversation.subject || ('messages.noSubject' | translate) }}
                 <p class="text-hpd-muted">{{ conversation.lastMessageAt | date: 'EEE d MMM, HH:mm' }}</p>
               </ion-label>
             </ion-item>
           } @empty {
             <ion-item lines="none">
               <ion-label class="text-hpd-muted">
-                {{ store.conversations.status() === 'error' ? 'Could not load messages.' : 'No messages.' }}
+                {{ (store.conversations.status() === 'error' ? 'messages.loadFailed' : 'messages.empty') | translate }}
               </ion-label>
             </ion-item>
           }
@@ -112,7 +115,7 @@ import { MessagesStore } from './messages.store';
             <ion-toolbar>
               <ion-title>{{ openSubject() }}</ion-title>
               <ion-buttons slot="end">
-                <ion-button (click)="close()">Close</ion-button>
+                <ion-button (click)="close()">{{ 'messages.close' | translate }}</ion-button>
               </ion-buttons>
             </ion-toolbar>
           </ion-header>
@@ -132,7 +135,7 @@ import { MessagesStore } from './messages.store';
                   </p>
                 </div>
               } @empty {
-                <p class="text-hpd-muted">No messages in this thread yet.</p>
+                <p class="text-hpd-muted">{{ 'messages.threadEmpty' | translate }}</p>
               }
             </div>
           </ion-content>
@@ -155,7 +158,7 @@ import { MessagesStore } from './messages.store';
               </button>
             </div>
             @if (sendError()) {
-              <p class="px-3 pb-2 text-hpd-danger" role="alert">Could not send. Check your connection and try again.</p>
+              <p class="px-3 pb-2 text-hpd-danger" role="alert">{{ 'messages.sendFailed' | translate }}</p>
             }
           </ion-toolbar>
         </ng-template>

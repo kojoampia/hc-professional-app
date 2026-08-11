@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   IonBadge,
   IonContent,
@@ -31,6 +32,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
   selector: 'hpd-documents',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TranslateModule,
     FormsModule,
     IonHeader,
     IonToolbar,
@@ -52,7 +54,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Documents</ion-title>
+        <ion-title>{{ 'documents.title' | translate }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -64,7 +66,8 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
       <div class="px-4 py-4 flex flex-col gap-4">
         @if (!network.connected() || store.documents.status() === 'stale') {
           <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status">
-            {{ network.connected() ? 'Showing saved documents' : 'Offline — showing saved documents' }} · updated {{ age() }}
+            {{ (network.connected() ? 'documents.savedData' : 'documents.savedDataOffline') | translate }} ·
+            {{ 'today.updated' | translate }} {{ age() }}
           </p>
         }
 
@@ -73,7 +76,9 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
         </button>
 
         <ion-list [inset]="true">
-          <ion-list-header><ion-label>Your documents</ion-label></ion-list-header>
+          <ion-list-header
+            ><ion-label>{{ 'documents.yours' | translate }}</ion-label></ion-list-header
+          >
           @for (doc of store.byNewest(); track doc.id) {
             <ion-item>
               <ion-label>
@@ -89,7 +94,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
           } @empty {
             <ion-item lines="none">
               <ion-label class="text-hpd-muted">
-                {{ store.documents.status() === 'error' ? 'Could not load your documents.' : 'No documents yet.' }}
+                {{ (store.documents.status() === 'error' ? 'documents.loadFailed' : 'documents.empty') | translate }}
               </ion-label>
             </ion-item>
           }
@@ -100,13 +105,15 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
       <ion-modal [isOpen]="formOpen()" [breakpoints]="[0, 0.7]" [initialBreakpoint]="0.7" (ionModalDidDismiss)="formOpen.set(false)">
         <ng-template>
           <ion-header>
-            <ion-toolbar><ion-title>Add a document</ion-title></ion-toolbar>
+            <ion-toolbar
+              ><ion-title>{{ 'documents.add' | translate }}</ion-title></ion-toolbar
+            >
           </ion-header>
           <ion-content>
             <div class="px-4 py-4 flex flex-col gap-4">
               <div>
-                <p class="hpd-label">Type</p>
-                <ion-select [(ngModel)]="type" interface="action-sheet" fill="outline" placeholder="Choose">
+                <p class="hpd-label">{{ 'documents.type' | translate }}</p>
+                <ion-select [(ngModel)]="type" interface="action-sheet" fill="outline" placeholder="{{ 'documents.choose' | translate }}">
                   @for (option of types; track option) {
                     <ion-select-option [value]="option">{{ option.toLowerCase() }}</ion-select-option>
                   }
@@ -115,14 +122,19 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
 
               @if (type === 'OTHER') {
                 <div>
-                  <label class="hpd-label" for="doc-label">Label</label>
-                  <input id="doc-label" class="hpd-input" [(ngModel)]="otherLabel" placeholder="What is this document?" />
+                  <label class="hpd-label" for="doc-label">{{ 'documents.label' | translate }}</label>
+                  <input
+                    id="doc-label"
+                    class="hpd-input"
+                    [(ngModel)]="otherLabel"
+                    placeholder="{{ 'documents.labelPlaceholder' | translate }}"
+                  />
                 </div>
               }
 
               @if (type === 'LICENSE') {
                 <div>
-                  <label class="hpd-label" for="doc-expiry">Expiry date</label>
+                  <label class="hpd-label" for="doc-expiry">{{ 'documents.expiryDate' | translate }}</label>
                   <!-- The server rejects a LICENSE with no expiry, so ask before uploading
                        rather than after a 400 the clinician cannot act on. -->
                   <input id="doc-expiry" type="date" class="hpd-input" [(ngModel)]="expiryDate" />
@@ -134,15 +146,15 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
               }
 
               <button class="hpd-btn hpd-btn-primary hpd-btn-block hpd-focusable" [disabled]="busy()" (click)="takePhoto()">
-                Take a photo
+                {{ 'documents.takePhoto' | translate }}
               </button>
 
               <button class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable" [disabled]="busy()" (click)="picker.click()">
-                Choose a PDF or image
+                {{ 'documents.choosePdfOrImage' | translate }}
               </button>
               <input #picker type="file" class="hidden" accept="application/pdf,image/png,image/jpeg" (change)="pick($event)" />
 
-              <p class="text-hpd-muted">Photos are converted to JPEG and location data is removed before upload.</p>
+              <p class="text-hpd-muted">{{ 'documents.privacyNote' | translate }}</p>
             </div>
           </ion-content>
         </ng-template>
@@ -155,11 +167,11 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
             <div class="flex min-h-full flex-col items-center justify-center gap-4 px-6 text-center">
               @switch (store.upload().stage) {
                 @case ('preparing') {
-                  <p class="text-hpd-muted">Preparing the image…</p>
+                  <p class="text-hpd-muted">{{ 'documents.preparing' | translate }}</p>
                   <ion-progress-bar type="indeterminate"></ion-progress-bar>
                 }
                 @case ('uploading') {
-                  <p class="text-hpd-muted">Uploading…</p>
+                  <p class="text-hpd-muted">{{ 'documents.uploading' | translate }}</p>
                   @if (store.upload().fraction; as fraction) {
                     <ion-progress-bar [value]="fraction"></ion-progress-bar>
                     <p class="text-hpd-subtle">{{ (fraction * 100).toFixed(0) }}%</p>
@@ -168,13 +180,15 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
                   }
                 }
                 @case ('done') {
-                  <p class="font-semibold text-hpd-success">Uploaded</p>
-                  <p class="text-hpd-muted">It will show as pending until an administrator verifies it.</p>
-                  <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="finish()">Done</button>
+                  <p class="font-semibold text-hpd-success">{{ 'documents.uploaded' | translate }}</p>
+                  <p class="text-hpd-muted">{{ 'documents.pendingReview' | translate }}</p>
+                  <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="finish()">{{ 'documents.done' | translate }}</button>
                 }
                 @default {
                   <p class="text-hpd-danger" role="alert">{{ store.upload().message }}</p>
-                  <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="store.dismissUpload()">Close</button>
+                  <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="store.dismissUpload()">
+                    {{ 'messages.close' | translate }}
+                  </button>
                 }
               }
             </div>
@@ -194,6 +208,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
 export class DocumentsPage implements OnInit {
   readonly store = inject(DocumentsStore);
   readonly network = inject(NetworkService);
+  private readonly translate = inject(TranslateService);
 
   readonly types = RENEWABLE_TYPES;
   type: DocumentType = 'LICENSE';
@@ -264,7 +279,7 @@ export class DocumentsPage implements OnInit {
       return false;
     }
     if (this.type === 'OTHER' && !this.otherLabel.trim()) {
-      this.validationError.set('Give this document a label.');
+      this.validationError.set(this.translate.instant('documents.labelRequired'));
       return false;
     }
     this.validationError.set(null);

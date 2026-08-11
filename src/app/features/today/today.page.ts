@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, TitleCasePipe } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import {
   IonBadge,
   IonCard,
@@ -38,6 +39,7 @@ import { TodayStore } from './today.store';
   selector: 'hpd-today',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TranslateModule,
     DatePipe,
     TitleCasePipe,
     IonHeader,
@@ -61,7 +63,7 @@ import { TodayStore } from './today.store';
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Today</ion-title>
+        <ion-title>{{ 'today.title' | translate }}</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -73,18 +75,19 @@ import { TodayStore } from './today.store';
       <div class="px-4 py-4 flex flex-col gap-4">
         @if (!network.connected() || store.isStale()) {
           <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status">
-            {{ network.connected() ? 'Showing saved data' : 'Offline — showing saved data' }} · updated {{ age() }}
+            {{ (network.connected() ? 'today.savedData' : 'today.savedDataOffline') | translate }} · {{ 'today.updated' | translate }}
+            {{ age() }}
           </p>
         }
 
         @if (needsPortal()) {
           <ion-card>
             <ion-card-header>
-              <ion-card-title>Finish your application</ion-card-title>
+              <ion-card-title>{{ 'today.finishApplication' | translate }}</ion-card-title>
             </ion-card-header>
             <ion-card-content>
-              <p class="mb-3">Your application is not active yet, so there is nothing rostered.</p>
-              <p class="text-hpd-muted">Continue at professional.abofonsa.com to complete it.</p>
+              <p class="mb-3">{{ 'today.notActive' | translate }}</p>
+              <p class="text-hpd-muted">{{ 'today.continueOnWeb' | translate }}</p>
             </ion-card-content>
           </ion-card>
         }
@@ -108,21 +111,25 @@ import { TodayStore } from './today.store';
         <!-- Anything needing attention -->
         @if (unread() > 0 || expiring().length) {
           <ion-list [inset]="true">
-            <ion-list-header><ion-label>Needs attention</ion-label></ion-list-header>
+            <ion-list-header
+              ><ion-label>{{ 'today.needsAttention' | translate }}</ion-label></ion-list-header
+            >
             @if (unread() > 0) {
               <ion-item button="true" (click)="openMessages()">
-                <ion-label>Unread messages</ion-label>
+                <ion-label>{{ 'today.unreadMessages' | translate }}</ion-label>
                 <ion-badge slot="end" color="gold">{{ unread() }}</ion-badge>
               </ion-item>
             }
             @for (entry of expiring(); track entry.document.id) {
               <ion-item button="true" (click)="openDocuments()">
                 <ion-label>
-                  {{ entry.document.otherLabel ?? 'Licence' }}
-                  <p class="text-hpd-muted">{{ entry.lapsed ? 'Expired' : 'Expires' }} {{ entry.document.expiryDate }}</p>
+                  {{ entry.document.otherLabel ?? ('today.licence' | translate) }}
+                  <p class="text-hpd-muted">
+                    {{ (entry.lapsed ? 'today.expired' : 'today.expires') | translate }} {{ entry.document.expiryDate }}
+                  </p>
                 </ion-label>
                 <ion-badge slot="end" [color]="entry.lapsed ? 'danger' : 'warning'">
-                  {{ entry.lapsed ? 'lapsed' : entry.daysRemaining + ' d' }}
+                  {{ entry.lapsed ? ('today.lapsed' | translate) : entry.daysRemaining + ' d' }}
                 </ion-badge>
               </ion-item>
             }
@@ -131,7 +138,9 @@ import { TodayStore } from './today.store';
 
         <!-- The next seven days -->
         <ion-list [inset]="true">
-          <ion-list-header><ion-label>Next 7 days</ion-label></ion-list-header>
+          <ion-list-header
+            ><ion-label>{{ 'today.nextSevenDays' | translate }}</ion-label></ion-list-header
+          >
           @for (assignment of upcoming(); track assignment.id ?? assignment.date + assignment.shift) {
             <ion-item>
               <ion-label>
@@ -148,7 +157,7 @@ import { TodayStore } from './today.store';
           } @empty {
             <ion-item lines="none">
               <ion-label class="text-hpd-muted">
-                {{ store.roster.status() === 'error' ? 'Could not load your roster.' : 'Nothing rostered in the next 7 days.' }}
+                {{ (store.roster.status() === 'error' ? 'today.rosterFailed' : 'today.nothingRostered') | translate }}
               </ion-label>
             </ion-item>
           }
