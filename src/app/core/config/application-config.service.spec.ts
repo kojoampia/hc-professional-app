@@ -17,8 +17,8 @@ describe('ApplicationConfigService', () => {
 
   it('builds microservice URLs with the services prefix', () => {
     // Identical shape to web's, so API services copied from there work unmodified.
-    expect(service.getEndpointFor('api/onboarding/duty-rosters/my', 'professionalservice')).toBe(
-      'https://example.test/services/professionalservice/api/onboarding/duty-rosters/my',
+    expect(service.getEndpointFor('api/duty-rosters/my', 'professionalservice')).toBe(
+      'https://example.test/services/professionalservice/api/duty-rosters/my',
     );
   });
 

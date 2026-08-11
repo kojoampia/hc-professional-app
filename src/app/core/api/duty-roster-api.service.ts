@@ -149,7 +149,12 @@ export class DutyRosterApiService {
   private readonly config = inject(ApplicationConfigService);
 
   private get resourceUrl(): string {
-    return this.config.getEndpointFor('api/onboarding/duty-rosters', 'professionalservice');
+    // /api/duty-rosters, not /api/onboarding/duty-rosters: the roster is owned by
+    // professionalservice and left the onboarding prefix WP6 had put it under (api 0b2cfbb). The
+    // old path is gone rather than aliased, so this would 404 — the Today tab's roster strip is
+    // what breaks. Safe to change outright because the app has never shipped: no tags, MOB12/MOB13
+    // unstarted, so there is no installed build still calling the old surface.
+    return this.config.getEndpointFor('api/duty-rosters', 'professionalservice');
   }
 
   myAssignments(): Observable<DutyRosterAssignmentDto[]> {
