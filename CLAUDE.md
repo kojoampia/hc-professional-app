@@ -51,6 +51,49 @@ reverts the launcher label with nothing failing.
 The bundle id `com.abofonsa.bridgecare.professional` already carries the full name and is
 **immutable on both stores** — never change it, and never make it follow a label change.
 
+## The app ships in four languages — always
+
+**English, Spanish, French and German. Every release, every screen.** This is not a
+roadmap item or a nice-to-have; it is the shipping condition. `web/` carries the same
+four (Spanish arrived with the careers handoff), and a clinician who reads the portal
+in French must not find the phone in English.
+
+**Adding a user-visible string means adding it to all four catalogues in the same
+change.** There is no "English now, translations later" state — that state is
+indistinguishable from a bug on three of the four locales, and it reaches a store
+release because nothing about it is loud.
+
+Why this needs a test rather than a review habit: **ngx-translate renders a missing key
+as the key itself.** `documents.labelPlaceholder` appears in the middle of a text field,
+nothing throws, nothing logs, and the English build looks perfect. `catalogues.spec.ts`
+compares the key sets across `en`/`es`/`fr`/`de` and fails the build on drift. It also
+rejects blank values, which render as an unlabelled control — worse than an untranslated
+one, because the button is still there and simply has no text.
+
+That spec has already caught real damage: a French apostrophe escaped with a shell idiom
+produced three malformed keys in one catalogue while still parsing as valid TypeScript.
+
+Practicalities:
+
+- Catalogues are **bundled TypeScript** in `src/app/core/i18n/catalogues.ts`, not fetched
+  JSON. `web/` uses `@ngx-translate/http-loader`; that is wrong here because this app is
+  offline-first, and a fetched catalogue means the first paint after a cold start with no
+  signal is either untranslated or waiting on a request that will never complete. The
+  trade is that wording changes ship in a release rather than a deploy.
+- `LanguageService` picks **an explicit choice, then the device locale, then English**.
+  Only the primary subtag counts: `fr-CA` and `fr-FR` both select `fr`.
+- **Server enum values are not translated.** Document statuses (`PENDING`/`VERIFIED`/
+  `REJECTED`) appear in the administrator's review queue in exactly that form; translating
+  only the phone's copy would have a clinician and a reviewer describing the same document
+  differently.
+- **The brand name is never translated.** "Abofonsa BridgeCare" reads identically in all
+  four, and the parity spec asserts no `brand` key exists to be translated by accident.
+
+**This extends to the store listings at MOB13.** Publishing in four languages means the
+Play and App Store descriptions, screenshots and privacy copy are localised too — an app
+that presents itself in English and then opens in German is a rejection risk on Apple's
+side and a poor first impression on both.
+
 ## Commands
 
 ```bash

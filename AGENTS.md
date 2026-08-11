@@ -23,6 +23,14 @@ The authoritative plan is **`mobile-app-plan.md` at the workspace root** (`MOB<N
 7. **`--ion-color-*-rgb` must be literal triplets**, never `var()`.
 8. **Do not start Dashboard / Patients / Cases.** They are Phase 2 and blocked on backend work (`MOB-P2-PRE`).
 9. **Record every file copied from `web/` in the drift log** in `CLAUDE.md`, with the source commit.
+10. **Never ship a string in fewer than four languages.** The app publishes in
+    English, Spanish, French and German — every release, every screen, and the store
+    listings too. A user-visible string is added to all four catalogues in the same
+    change; there is no "English now, translations later" state, because that state
+    is indistinguishable from a bug on three locales. ngx-translate renders a missing
+    key as the key itself — nothing throws, nothing logs, and the English build looks
+    perfect — so `catalogues.spec.ts` is the gate rather than review. See CLAUDE.md
+    § The app ships in four languages.
 
 ## Commands
 
