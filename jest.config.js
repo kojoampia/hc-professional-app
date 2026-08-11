@@ -9,6 +9,16 @@ module.exports = {
   // like a broken test rather than a transform config problem.
   transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$|@ionic|@stencil|ionicons|@capacitor|@aparajita|idb-keyval|dayjs/esm)'],
   resolver: 'jest-preset-angular/build/resolvers/ng-jest-resolver.js',
+  // THE SECOND Ionic + Jest trap, hit by the first spec that renders an Ionic component rather
+  // than testing a store. `ionicons` declares ./components/* with an "import" condition only, so
+  // Jest's CommonJS resolution asks for "require", finds nothing, and reports
+  // "Cannot find module 'ionicons/components/ion-icon.js'" — pointing at @ionic/angular, which is
+  // not where the problem is. The files exist; only the exports map is unreachable from CJS, so
+  // map straight at them.
+  moduleNameMapper: {
+    '^ionicons/components/(.*)$': '<rootDir>/node_modules/ionicons/components/$1',
+    '^ionicons/icons$': '<rootDir>/node_modules/ionicons/icons/index.js',
+  },
   // jsdom has no crypto.subtle; src/setup-jest.ts installs Node's real WebCrypto so
   // the offline-cache encryption specs test actual AES-GCM rather than a mock.
   setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],

@@ -3,8 +3,10 @@ import { Routes } from '@angular/router';
 import { unlockGuard } from './core/auth/unlock.guard';
 
 /**
- * MOB8 adds Documents. Me lands in MOB11, at which point these become children of a
- * tab bar.
+ * Today, Messages, Documents and Me are children of the tab bar (MOB11). They keep their
+ * top-level URLs — /today, /messages — because deep links from a push notification target
+ * them directly, and a notification that opened the wrong tab would be worse than one that
+ * opened nothing.
  *
  * There is deliberately no `/unlock` route: the cold-start decision is made by
  * SessionBootstrapper behind the app shell's splash, so the router is told exactly
@@ -17,19 +19,30 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/login.page').then(m => m.LoginPage),
   },
   {
-    path: 'today',
-    canActivate: [unlockGuard],
-    loadComponent: () => import('./features/today/today.page').then(m => m.TodayPage),
-  },
-  {
-    path: 'messages',
-    canActivate: [unlockGuard],
-    loadComponent: () => import('./features/messages/messages.page').then(m => m.MessagesPage),
-  },
-  {
-    path: 'documents',
-    canActivate: [unlockGuard],
-    loadComponent: () => import('./features/documents/documents.page').then(m => m.DocumentsPage),
+    path: '',
+    loadComponent: () => import('./shell/tabs.page').then(m => m.TabsPage),
+    children: [
+      {
+        path: 'today',
+        canActivate: [unlockGuard],
+        loadComponent: () => import('./features/today/today.page').then(m => m.TodayPage),
+      },
+      {
+        path: 'messages',
+        canActivate: [unlockGuard],
+        loadComponent: () => import('./features/messages/messages.page').then(m => m.MessagesPage),
+      },
+      {
+        path: 'documents',
+        canActivate: [unlockGuard],
+        loadComponent: () => import('./features/documents/documents.page').then(m => m.DocumentsPage),
+      },
+      {
+        path: 'me',
+        canActivate: [unlockGuard],
+        loadComponent: () => import('./features/me/me.page').then(m => m.MePage),
+      },
+    ],
   },
   {
     // MOB1 bootstrap probe. Kept reachable: it is the first screen the device smoke

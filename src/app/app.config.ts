@@ -1,9 +1,11 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { APP_INITIALIZER, ApplicationConfig, importProvidersFrom, inject, provideZoneChangeDetection } from '@angular/core';
+import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { RouteReuseStrategy, provideRouter } from '@angular/router';
 import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone';
 
 import { routes } from './app.routes';
+import { BundledTranslateLoader, LanguageService } from './core/i18n/language.service';
 import { authInterceptor } from './core/interceptor/auth.interceptor';
 import { authRefreshInterceptor } from './core/interceptor/auth-refresh.interceptor';
 import { offlineInterceptor } from './core/interceptor/offline.interceptor';
@@ -30,5 +32,24 @@ export const appConfig: ApplicationConfig = {
     // No `mode` — Ionic uses the platform default (`ios` on iOS, `md` on Android).
     // Forcing a single mode is the classic "this is a webview" tell. See mobile-app-plan.md.
     provideIonicAngular(),
+    // Catalogues are compiled in, so the loader resolves synchronously and the first paint is
+    // already translated — see core/i18n/catalogues.ts for why they are not fetched.
+    importProvidersFrom(
+      TranslateModule.forRoot({
+        defaultLanguage: 'en',
+        loader: { provide: TranslateLoader, useClass: BundledTranslateLoader },
+      }),
+    ),
+    // Language is resolved before the first page renders. It reads a stored preference, so it is
+    // async, and running it here rather than in a component avoids a frame of English for someone
+    // who chose German.
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      useFactory: () => {
+        const language = inject(LanguageService);
+        return () => language.initialise();
+      },
+    },
   ],
 };
