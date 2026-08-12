@@ -7,6 +7,7 @@ import {
   IonButton,
   IonButtons,
   IonContent,
+  IonFooter,
   IonHeader,
   IonItem,
   IonLabel,
@@ -48,6 +49,7 @@ import { MessagesStore } from './messages.store';
     IonButtons,
     IonButton,
     IonContent,
+    IonFooter,
     IonRefresher,
     IonRefresherContent,
     IonList,
@@ -106,12 +108,14 @@ import { MessagesStore } from './messages.store';
            dismissing it should not unwind a navigation stack. -->
     </ion-content>
 
-    <ion-modal
-      [isOpen]="store.openConversationId() !== null"
-      [breakpoints]="[0, 0.9]"
-      [initialBreakpoint]="0.9"
-      (ionModalDidDismiss)="close()"
-    >
+    <!--
+      A full-screen modal, deliberately NOT a sheet. As a sheet at initialBreakpoint 0.9 the wrapper
+      is still full height and merely translated down ~10%, so its bottom ~80px sits below the
+      viewport — and that is exactly where the reply composer lives. The thread rendered, and
+      replying was impossible because the textarea and Send button were off-screen with nothing to
+      indicate it. A conversation is a full-screen task anyway; the sheet bought nothing.
+    -->
+    <ion-modal [isOpen]="store.openConversationId() !== null" (ionModalDidDismiss)="close()">
       <ng-template>
         <ion-header>
           <ion-toolbar>
@@ -141,11 +145,12 @@ import { MessagesStore } from './messages.store';
             }
           </div>
         </ion-content>
-        <ion-toolbar>
+        <ion-footer>
+          <ion-toolbar>
           <div class="flex items-end gap-2 px-3 py-2">
             <ion-textarea
               [(ngModel)]="draft"
-              placeholder="Write a reply"
+              placeholder="{{ 'messages.replyPlaceholder' | translate }}"
               [autoGrow]="true"
               [rows]="1"
               fill="outline"
@@ -155,14 +160,15 @@ import { MessagesStore } from './messages.store';
               @if (sending()) {
                 <ion-spinner name="crescent"></ion-spinner>
               } @else {
-                Send
+                {{ 'messages.send' | translate }}
               }
             </button>
           </div>
-          @if (sendError()) {
-            <p class="px-3 pb-2 text-hpd-danger" role="alert">{{ 'messages.sendFailed' | translate }}</p>
-          }
-        </ion-toolbar>
+            @if (sendError()) {
+              <p class="px-3 pb-2 text-hpd-danger" role="alert">{{ 'messages.sendFailed' | translate }}</p>
+            }
+          </ion-toolbar>
+        </ion-footer>
       </ng-template>
     </ion-modal>
   `,
