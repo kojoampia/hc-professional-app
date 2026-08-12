@@ -104,66 +104,67 @@ import { MessagesStore } from './messages.store';
 
       <!-- A thread is a bottom sheet, not a page: it is a peek at a conversation, and
            dismissing it should not unwind a navigation stack. -->
-      <ion-modal
-        [isOpen]="store.openConversationId() !== null"
-        [breakpoints]="[0, 0.9]"
-        [initialBreakpoint]="0.9"
-        (ionModalDidDismiss)="close()"
-      >
-        <ng-template>
-          <ion-header>
-            <ion-toolbar>
-              <ion-title>{{ openSubject() }}</ion-title>
-              <ion-buttons slot="end">
-                <ion-button (click)="close()">{{ 'messages.close' | translate }}</ion-button>
-              </ion-buttons>
-            </ion-toolbar>
-          </ion-header>
-          <ion-content>
-            <div class="px-4 py-4 flex flex-col gap-3">
-              @for (message of store.thread(); track message.id) {
-                <div [class]="isMine(message.senderId) ? 'self-end max-w-[85%]' : 'self-start max-w-[85%]'">
-                  <div
-                    class="rounded-hpd px-3 py-2"
-                    [class]="isMine(message.senderId) ? 'bg-hpd-primary text-white' : 'bg-white border border-hpd-border'"
-                  >
-                    {{ message.body }}
-                  </div>
-                  <p class="mt-1 text-hpd-subtle" [class.text-right]="isMine(message.senderId)">
-                    {{ isMine(message.senderId) ? 'You' : message.senderName ?? message.senderId }} ·
-                    {{ message.sentAt | date: 'HH:mm' }}
-                  </p>
-                </div>
-              } @empty {
-                <p class="text-hpd-muted">{{ 'messages.threadEmpty' | translate }}</p>
-              }
-            </div>
-          </ion-content>
-          <ion-toolbar>
-            <div class="flex items-end gap-2 px-3 py-2">
-              <ion-textarea
-                [(ngModel)]="draft"
-                placeholder="Write a reply"
-                [autoGrow]="true"
-                [rows]="1"
-                fill="outline"
-                class="flex-1"
-              ></ion-textarea>
-              <button class="hpd-btn hpd-btn-primary hpd-focusable" [disabled]="sending() || !draft.trim()" (click)="send()">
-                @if (sending()) {
-                  <ion-spinner name="crescent"></ion-spinner>
-                } @else {
-                  Send
-                }
-              </button>
-            </div>
-            @if (sendError()) {
-              <p class="px-3 pb-2 text-hpd-danger" role="alert">{{ 'messages.sendFailed' | translate }}</p>
-            }
-          </ion-toolbar>
-        </ng-template>
-      </ion-modal>
     </ion-content>
+
+    <ion-modal
+      [isOpen]="store.openConversationId() !== null"
+      [breakpoints]="[0, 0.9]"
+      [initialBreakpoint]="0.9"
+      (ionModalDidDismiss)="close()"
+    >
+      <ng-template>
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>{{ openSubject() }}</ion-title>
+            <ion-buttons slot="end">
+              <ion-button (click)="close()">{{ 'messages.close' | translate }}</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content>
+          <div class="px-4 py-4 flex flex-col gap-3">
+            @for (message of store.thread(); track message.id) {
+              <div [class]="isMine(message.senderId) ? 'self-end max-w-[85%]' : 'self-start max-w-[85%]'">
+                <div
+                  class="rounded-hpd px-3 py-2"
+                  [class]="isMine(message.senderId) ? 'bg-hpd-primary text-white' : 'bg-white border border-hpd-border'"
+                >
+                  {{ message.body }}
+                </div>
+                <p class="mt-1 text-hpd-subtle" [class.text-right]="isMine(message.senderId)">
+                  {{ isMine(message.senderId) ? 'You' : message.senderName ?? message.senderId }} ·
+                  {{ message.sentAt | date: 'HH:mm' }}
+                </p>
+              </div>
+            } @empty {
+              <p class="text-hpd-muted">{{ 'messages.threadEmpty' | translate }}</p>
+            }
+          </div>
+        </ion-content>
+        <ion-toolbar>
+          <div class="flex items-end gap-2 px-3 py-2">
+            <ion-textarea
+              [(ngModel)]="draft"
+              placeholder="Write a reply"
+              [autoGrow]="true"
+              [rows]="1"
+              fill="outline"
+              class="flex-1"
+            ></ion-textarea>
+            <button class="hpd-btn hpd-btn-primary hpd-focusable" [disabled]="sending() || !draft.trim()" (click)="send()">
+              @if (sending()) {
+                <ion-spinner name="crescent"></ion-spinner>
+              } @else {
+                Send
+              }
+            </button>
+          </div>
+          @if (sendError()) {
+            <p class="px-3 pb-2 text-hpd-danger" role="alert">{{ 'messages.sendFailed' | translate }}</p>
+          }
+        </ion-toolbar>
+      </ng-template>
+    </ion-modal>
   `,
 })
 export class MessagesPage implements OnInit {
