@@ -2,12 +2,15 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { addIcons } from 'ionicons';
+import { close } from 'ionicons/icons';
 import {
   IonBadge,
   IonButton,
   IonButtons,
   IonContent,
   IonFooter,
+  IonIcon,
   IonHeader,
   IonItem,
   IonLabel,
@@ -49,6 +52,7 @@ import { MessagesStore } from './messages.store';
     IonButtons,
     IonButton,
     IonContent,
+    IonIcon,
     IonFooter,
     IonRefresher,
     IonRefresherContent,
@@ -121,7 +125,9 @@ import { MessagesStore } from './messages.store';
           <ion-toolbar>
             <ion-title>{{ openSubject() }}</ion-title>
             <ion-buttons slot="end">
-              <ion-button (click)="close()">{{ 'messages.close' | translate }}</ion-button>
+              <ion-button (click)="close()" [attr.aria-label]="'messages.close' | translate">
+                <ion-icon slot="icon-only" name="close"></ion-icon>
+              </ion-button>
             </ion-buttons>
           </ion-toolbar>
         </ion-header>
@@ -174,6 +180,12 @@ import { MessagesStore } from './messages.store';
   `,
 })
 export class MessagesPage implements OnInit {
+  constructor() {
+    // Registered explicitly: Ionicons only ships what is asked for, and an unregistered name
+    // renders as an empty box with no error — on a dismiss control that reads as a dead button.
+    addIcons({ close });
+  }
+
   readonly store = inject(MessagesStore);
   readonly network = inject(NetworkService);
   private readonly accounts = inject(AccountService);
