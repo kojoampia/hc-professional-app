@@ -106,7 +106,15 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
       <!-- Upload progress / result -->
     </ion-content>
 
-    <ion-modal [isOpen]="formOpen()" [breakpoints]="[0, 0.7]" [initialBreakpoint]="0.7" (ionModalDidDismiss)="formOpen.set(false)">
+    <!--
+      Full-screen, not a sheet. A sheet's wrapper stays full height and is translated down by
+      (1 - breakpoint), so at 0.7 its bottom 30% — and at 0.4 its bottom 60% — sits outside the
+      viewport. Measured on a device: the 0.4 sheet ran 520px to 1316px against an 838px screen,
+      overflowing by 478px, which put the Done and Close buttons where no scroll could reach them.
+      The same shape broke the message composer. If a sheet is ever wanted back here, the content
+      has to be constrained to the visible fraction rather than laid out over the full height.
+    -->
+    <ion-modal [isOpen]="formOpen()" (ionModalDidDismiss)="formOpen.set(false)">
       <ng-template>
         <ion-header>
           <ion-toolbar
@@ -164,7 +172,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
       </ng-template>
     </ion-modal>
 
-    <ion-modal [isOpen]="store.upload().stage !== 'idle'" [breakpoints]="[0, 0.4]" [initialBreakpoint]="0.4" [backdropDismiss]="false">
+    <ion-modal [isOpen]="store.upload().stage !== 'idle'" [backdropDismiss]="false">
       <ng-template>
         <ion-content>
           <div class="flex min-h-full flex-col items-center justify-center gap-4 px-6 text-center">
