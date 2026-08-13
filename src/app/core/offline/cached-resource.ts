@@ -87,22 +87,37 @@ export function cachedResource<T>(cache: CacheStore, options: CachedResourceOpti
   return { value: value.asReadonly(), status: status.asReadonly(), fetchedAt: fetchedAt.asReadonly(), refresh };
 }
 
-/** "just now" / "12 min ago" / "3 h ago" — what the staleness chip shows. */
-export function describeAge(fetchedAt: number | null, now: number = Date.now()): string {
+/** A translation key and its count, for the staleness chip. */
+export interface AgeDescriptor {
+  key: string;
+  params?: { count: number };
+}
+
+/**
+ * How old the cached data is, as a key rather than a sentence.
+ *
+ * <p>This used to return English — `just now`, `12 min ago` — and it is not a component, so
+ * neither the template scanner nor the translate pipe could reach it. It rendered beside the
+ * "updated" label on three screens in every locale.
+ *
+ * <p>Returning a descriptor keeps the arithmetic here, where it is tested, and the wording in the
+ * catalogues, where it belongs. Use `RelativeTime.describe` to render one.
+ */
+export function describeAge(fetchedAt: number | null, now: number = Date.now()): AgeDescriptor {
   if (fetchedAt === null) {
-    return 'never';
+    return { key: 'common.ageNever' };
   }
   const seconds = Math.max(0, Math.round((now - fetchedAt) / 1000));
   if (seconds < 60) {
-    return 'just now';
+    return { key: 'common.ageJustNow' };
   }
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) {
-    return `${minutes} min ago`;
+    return { key: 'common.ageMinutes', params: { count: minutes } };
   }
   const hours = Math.round(minutes / 60);
   if (hours < 24) {
-    return `${hours} h ago`;
+    return { key: 'common.ageHours', params: { count: hours } };
   }
-  return `${Math.round(hours / 24)} d ago`;
+  return { key: 'common.ageDays', params: { count: Math.round(hours / 24) } };
 }

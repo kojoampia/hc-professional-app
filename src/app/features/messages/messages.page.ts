@@ -27,8 +27,9 @@ import {
 
 import { AccountService } from '../../core/auth/account.service';
 import { LanguageService } from '../../core/i18n/language.service';
+import { RelativeTime } from '../../core/i18n/relative-time.service';
 import { NetworkService } from '../../core/native/network.service';
-import { describeAge } from '../../core/offline/cached-resource';
+
 import { MessagesStore } from './messages.store';
 
 /**
@@ -96,7 +97,7 @@ import { MessagesStore } from './messages.store';
             <ion-item button="true" (click)="open(conversation.id)">
               <ion-label>
                 {{ conversation.subject || ('messages.noSubject' | translate) }}
-                <p class="text-hpd-muted">{{ conversation.lastMessageAt | date: 'EEE d MMM, HH:mm' }}</p>
+                <p class="text-hpd-muted">{{ conversation.lastMessageAt | date: 'EEE d MMM, HH:mm' : undefined : locale() }}</p>
               </ion-label>
             </ion-item>
           } @empty {
@@ -144,7 +145,7 @@ import { MessagesStore } from './messages.store';
                 </div>
                 <p class="mt-1 text-hpd-subtle" [class.text-right]="isMine(message.senderId)">
                   {{ isMine(message.senderId) ? ('messages.me' | translate) : message.senderName ?? message.senderId }} ·
-                  {{ message.sentAt | date: 'HH:mm' }}
+                  {{ message.sentAt | date: 'HH:mm' : undefined : locale() }}
                 </p>
               </div>
             } @empty {
@@ -189,16 +190,19 @@ export class MessagesPage implements OnInit {
 
   readonly store = inject(MessagesStore);
   readonly network = inject(NetworkService);
+  private readonly relativeTime = inject(RelativeTime);
   private readonly accounts = inject(AccountService);
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
+  /** DatePipe formats through LOCALE_ID, which ngx-translate does not touch — pass it explicitly. */
+  readonly locale = this.language.current;
 
   draft = '';
   readonly sending = signal(false);
   readonly sendError = signal(false);
 
   private readonly nowTick = signal(Date.now());
-  readonly age = computed(() => describeAge(this.store.conversations.fetchedAt(), this.nowTick()));
+  readonly age = computed(() => this.relativeTime.describe(this.store.conversations.fetchedAt(), this.nowTick()));
 
   readonly conversations = computed(() =>
     [...(this.store.conversations.value() ?? [])].sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')),

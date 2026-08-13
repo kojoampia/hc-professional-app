@@ -21,8 +21,10 @@ import {
 } from '@ionic/angular/standalone';
 
 import { DocumentType, PersonalDocumentDto } from '../../core/api/onboarding-api.service';
+import { LanguageService } from '../../core/i18n/language.service';
+import { RelativeTime } from '../../core/i18n/relative-time.service';
 import { NetworkService } from '../../core/native/network.service';
-import { describeAge } from '../../core/offline/cached-resource';
+
 import { DocumentsStore } from './documents.store';
 
 /** The types a working clinician actually re-uploads. The full applicant set lives on the web portal. */
@@ -218,6 +220,9 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
 export class DocumentsPage implements OnInit {
   readonly store = inject(DocumentsStore);
   readonly network = inject(NetworkService);
+  private readonly relativeTime = inject(RelativeTime);
+  /** DatePipe formats through LOCALE_ID, which ngx-translate does not touch — pass it explicitly. */
+  readonly locale = inject(LanguageService).current;
   private readonly translate = inject(TranslateService);
 
   readonly types = RENEWABLE_TYPES;
@@ -227,7 +232,7 @@ export class DocumentsPage implements OnInit {
 
   readonly formOpen = signal(false);
   private readonly nowTick = signal(Date.now());
-  readonly age = computed(() => describeAge(this.store.documents.fetchedAt(), this.nowTick()));
+  readonly age = computed(() => this.relativeTime.describe(this.store.documents.fetchedAt(), this.nowTick()));
 
   readonly busy = computed(() => ['preparing', 'uploading'].includes(this.store.upload().stage));
 

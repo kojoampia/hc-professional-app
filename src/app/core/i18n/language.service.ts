@@ -1,6 +1,25 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeDe from '@angular/common/locales/de';
+import localeEs from '@angular/common/locales/es';
+import localeFr from '@angular/common/locales/fr';
 import { TranslateLoader, TranslateService } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
+
+/**
+ * Angular's own locale data, which is separate from the translation catalogues and easy to forget.
+ *
+ * <p>`DatePipe` formats through `LOCALE_ID` and knows nothing about ngx-translate, so a German app
+ * rendered `EEE d MMM` as "Wed 14 Aug" — English month and weekday names beside fully translated
+ * copy. Only `en-US` ships by default; asking for any other locale without registering it first
+ * throws `Missing locale data`.
+ *
+ * <p>Registered at module load rather than in a provider because `DatePipe` resolves locale data
+ * synchronously the first time it formats, which can happen before any component runs.
+ */
+registerLocaleData(localeEs);
+registerLocaleData(localeFr);
+registerLocaleData(localeDe);
 
 import { PreferencesService } from '../native/preferences.service';
 import { CATALOGUES, SUPPORTED_LANGUAGES, SupportedLanguage } from './catalogues';

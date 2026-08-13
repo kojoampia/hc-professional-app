@@ -26,8 +26,9 @@ import { shiftWindowText } from '../../core/api/duty-roster-api.service';
 import { isWorkingClinician } from '../../core/api/onboarding-api.service';
 import { AccountService } from '../../core/auth/account.service';
 import { LanguageService } from '../../core/i18n/language.service';
+import { RelativeTime } from '../../core/i18n/relative-time.service';
 import { NetworkService } from '../../core/native/network.service';
-import { describeAge } from '../../core/offline/cached-resource';
+
 import { TodayStore } from './today.store';
 
 /**
@@ -145,7 +146,7 @@ import { TodayStore } from './today.store';
           @for (assignment of upcoming(); track assignment.id ?? assignment.date + assignment.shift) {
             <ion-item>
               <ion-label>
-                {{ assignment.date | date: 'EEE d MMM' }}
+                {{ assignment.date | date: 'EEE d MMM' : undefined : locale() }}
                 <p class="text-hpd-muted">{{ assignment.name }} · {{ assignment.duty }}</p>
               </ion-label>
               <ion-note slot="end">
@@ -170,17 +171,20 @@ import { TodayStore } from './today.store';
 export class TodayPage implements OnInit {
   readonly store = inject(TodayStore);
   readonly network = inject(NetworkService);
+  private readonly relativeTime = inject(RelativeTime);
   private readonly accounts = inject(AccountService);
   private readonly nav = inject(NavController);
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
+  /** DatePipe formats through LOCALE_ID, which ngx-translate does not touch — pass it explicitly. */
+  readonly locale = this.language.current;
 
   readonly upcoming = this.store.upcoming;
   readonly expiring = this.store.expiringDocuments;
   readonly unread = computed(() => this.store.unread.value() ?? 0);
 
   private readonly nowTick = signal(Date.now());
-  readonly age = computed(() => describeAge(this.store.oldestFetchedAt(), this.nowTick()));
+  readonly age = computed(() => this.relativeTime.describe(this.store.oldestFetchedAt(), this.nowTick()));
 
   /** True only once we actually know the status — an unknown status must not nag. */
   readonly needsPortal = computed(() => {
