@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { IonContent, IonSpinner, NavController } from '@ionic/angular/standalone';
 
 import { AuthService } from '../core/auth/auth.service';
@@ -10,13 +11,14 @@ import { AccountService } from '../core/auth/account.service';
 @Component({
   selector: 'hpd-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IonContent, IonSpinner],
+  imports: [TranslateModule, FormsModule, IonContent, IonSpinner],
   template: `
     <ion-content>
       <div class="flex min-h-full flex-col justify-center px-6 py-10">
         <header class="mb-8 text-center">
+          <!-- The brand is a proper noun and stays as it is in every locale. -->
           <h1 class="text-2xl font-bold text-hpd-primary">Abofonsa BridgeCare</h1>
-          <p class="text-hpd-muted">Professional</p>
+          <p class="text-hpd-muted">{{ 'auth.subtitle' | translate }}</p>
         </header>
 
         @if (notice(); as message) {
@@ -24,7 +26,7 @@ import { AccountService } from '../core/auth/account.service';
         }
 
         <form (ngSubmit)="submit()" #form="ngForm">
-          <label class="hpd-label" for="username">Username</label>
+          <label class="hpd-label" for="username">{{ 'auth.username' | translate }}</label>
           <input
             id="username"
             name="username"
@@ -39,7 +41,7 @@ import { AccountService } from '../core/auth/account.service';
             [disabled]="busy()"
           />
 
-          <label class="hpd-label" for="password">Password</label>
+          <label class="hpd-label" for="password">{{ 'auth.password' | translate }}</label>
           <input
             id="password"
             name="password"
@@ -59,15 +61,13 @@ import { AccountService } from '../core/auth/account.service';
             @if (busy()) {
               <ion-spinner name="crescent"></ion-spinner>
             } @else {
-              Sign in
+              {{ 'auth.signIn' | translate }}
             }
           </button>
         </form>
 
         @if (unprotectedDevice()) {
-          <p class="mt-6 text-center text-hpd-muted">
-            This device has no screen lock, so Abofonsa BridgeCare will ask for your password each time you open it.
-          </p>
+          <p class="mt-6 text-center text-hpd-muted">{{ 'auth.noScreenLock' | translate }}</p>
         }
       </div>
     </ion-content>
@@ -78,6 +78,9 @@ export class LoginPage {
   private readonly accounts = inject(AccountService);
   private readonly nav = inject(NavController);
   private readonly route = inject(ActivatedRoute);
+  // `instant` rather than the async form: the catalogues are compiled into the bundle and the
+  // loader completes synchronously, so there is a translation available the moment this runs.
+  private readonly translate = inject(TranslateService);
 
   username = '';
   password = '';
@@ -87,13 +90,17 @@ export class LoginPage {
   readonly unprotectedDevice = signal(false);
 
   /** Explains an involuntary sign-out, so an expired session is not mistaken for a bug. */
-  readonly notice = signal<string | null>(
-    {
-      'session-expired': 'Your session ended. Please sign in again.',
-      'biometry-changed': "This device's biometric settings changed, so you need to sign in again.",
+  readonly notice = signal<string | null>(this.signOutNotice());
+
+  private signOutNotice(): string | null {
+    const key = {
+      'session-expired': 'auth.sessionExpired',
+      'biometry-changed': 'auth.biometryChanged',
       user: null,
-    }[this.auth.signOutReason() ?? 'user'],
-  );
+    }[this.auth.signOutReason() ?? 'user'];
+
+    return key === null ? null : this.translate.instant(key);
+  }
 
   submit(): void {
     if (this.busy()) {
@@ -118,9 +125,9 @@ export class LoginPage {
       error: (err: unknown) => {
         this.busy.set(false);
         this.error.set(
-          err instanceof HttpErrorResponse && err.status === 401
-            ? 'That username and password did not match.'
-            : 'Could not reach Abofonsa BridgeCare. Check your connection and try again.',
+          this.translate.instant(
+            err instanceof HttpErrorResponse && err.status === 401 ? 'auth.badCredentials' : 'auth.unreachable',
+          ),
         );
       },
     });
