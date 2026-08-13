@@ -16,10 +16,25 @@ import { join, relative, resolve } from 'path';
  * the cold-start splash — the first two screens anyone sees. Four languages is a shipping condition
  * for this app (`mobile-app-plan.md` MOB11/MOB13), and nothing enforced it at the point of use.
  *
- * <p><strong>What this does not cover.</strong> It reads templates only. A user-visible string
- * built in TypeScript — an error message, a toast, an alert header — is indistinguishable from a log
- * line or a storage key to a scanner, so those are not checked and must still be got right by hand.
- * `login.page.ts` raises four such messages and routes them through `TranslateService.instant`.
+ * <p>It checks four places, and each was added because something got through the previous three:
+ *
+ * <ol>
+ *   <li><strong>Text nodes</strong> — `>Sign in<`. The original check.
+ *   <li><strong>Visible attributes</strong> — `placeholder="Write a reply"`.
+ *   <li><strong>Interpolation expressions</strong> — `{{ isMine(m) ? 'You' : m.senderName }}`. The
+ *       first version stripped `{{ … }}` wholesale as "already translated", which is true of the
+ *       common case and false of every ternary.
+ *   <li><strong>TypeScript prose</strong> — `return 'No shift assigned'`. The first version named
+ *       this as a deliberate limitation and left it. Six untranslated strings on the Today card
+ *       were reported from a device three days later, so naming it was not enough.
+ * </ol>
+ *
+ * <p><strong>What it still cannot do.</strong> Rule 4 is a heuristic, not a parser: it looks for
+ * prose *shape* — a capitalised word followed by lower-case words — plus fallback literals after
+ * `||` and `??`. A single capitalised word in TypeScript (`'Offline'`, `'GET'`, `'PENDING'`) is not
+ * flagged, because in that position it is far more often an enum or a header than a caption. Strings
+ * assembled from fragments at runtime are invisible to it. Services outside component files are not
+ * scanned at all.
  */
 
 const SOURCE_ROOT = resolve(__dirname, '../..');
@@ -32,7 +47,8 @@ const SOURCE_ROOT = resolve(__dirname, '../..');
  */
 const EXEMPT_FILES: Record<string, string> = {
   'shell/diagnostics.page.ts': 'MOB1 native-capability probe: a developer tool on the device smoke checklist, not a clinician surface.',
-  'shell/theme-gallery.page.ts': 'MOB2 design-system gallery: renders swatches and type specimens for developers, reachable only by typing /theme.',
+  'shell/theme-gallery.page.ts':
+    'MOB2 design-system gallery: renders swatches and type specimens for developers, reachable only by typing /theme.',
 };
 
 /** Proper nouns, which are the same in every locale. */
@@ -151,6 +167,82 @@ function visibleAttributes(template: string): string[] {
   return found;
 }
 
+/**
+ * String literals written inside `{{ … }}`.
+ *
+ * `{{ isMine(m) ? 'You' : m.senderName }}` is user-visible text that no amount of scanning the
+ * *text nodes* will find, because the whole interpolation is one expression. This was missed by the
+ * first version of this spec, which stripped interpolations wholesale as "already translated".
+ */
+function interpolationLiterals(template: string): string[] {
+  const found: string[] = [];
+  for (const [, expression] of template.replace(/<!--[\s\S]*?-->/g, '').matchAll(/\{\{([\s\S]*?)\}\}/g)) {
+    // Pipe arguments are formats, not prose: `| date: 'EEE d MMM'` must not be reported.
+    const withoutPipeArgs = expression.replace(/\|\s*\w+\s*:\s*(['"])(?:(?!\1).)*\1/g, ' ');
+    for (const [, , quoted] of withoutPipeArgs.matchAll(/(['"])((?:(?!\1).)*)\1/g)) {
+      // Looser than the TypeScript rule: a literal written inside an interpolation is nearly always
+      // displayed, so a single capitalised word counts — `'You'` was the one that got through.
+      // `'VERIFIED'` and other server enums do not, because they have no lower-case second letter.
+      if (!isTranslationKey(quoted) && /^[A-Z][a-z]/.test(quoted.trim())) {
+        found.push(`{{ … '${quoted}' … }}`);
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * User-visible strings assembled in TypeScript rather than in the template.
+ *
+ * <p>This is the gap that shipped `No shift assigned`, `Nothing today, ${name}` and four more on
+ * the Today card, all while the template scanner reported the file clean — the strings were in
+ * `computed()` bodies. The earlier version of this spec named that limitation and left it; it was
+ * reported from a device three days later, so naming it was not enough.
+ *
+ * <p>It cannot be exact. A parser cannot tell a caption from a log line, so this looks only for
+ * **prose shape** — a capitalised word followed by lower-case words — in component files, and
+ * accepts that a genuinely non-visible string of that shape has to be reworded or exempted.
+ */
+function typescriptProse(source: string): string[] {
+  const withoutComments = source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+  // The inline template is checked by the other functions; scanning it here would double-report.
+  const template = inlineTemplate(source);
+  const body = template === null ? withoutComments : withoutComments.split(template).join(' ');
+
+  const found: string[] = [];
+  for (const [, , quoted] of body.matchAll(/(['"`])((?:(?!\1)[\s\S])*)\1/g)) {
+    if (isProse(quoted)) {
+      found.push(quoted.replace(/\s+/g, ' ').slice(0, 50));
+    }
+  }
+
+  // Fallback values are the other shape this takes: `subject || 'Conversation'`. A single
+  // capitalised word is too common in TypeScript to flag everywhere — icon names, HTTP verbs,
+  // server enums — but as the right-hand side of `||` or `??` it is a default shown to someone.
+  for (const [, , quoted] of body.matchAll(/(?:\|\||\?\?)\s*(['"`])([A-Z][a-z]+(?:[\s,][^'"`]*)?)\1/g)) {
+    found.push(quoted.replace(/\s+/g, ' ').slice(0, 50));
+  }
+  return found;
+}
+
+function isTranslationKey(literal: string): boolean {
+  return /^[a-z][a-zA-Z]*(\.[a-zA-Z]+)+$/.test(literal.trim());
+}
+
+/**
+ * Does this literal read like something a person is meant to read?
+ *
+ * A capital followed by lower-case words: "No shift assigned", "Nothing today, ${name}". Not
+ * "Bearer " (no second word), not "self-end max-w-[85%]" (lower-case start), not "today.onDuty"
+ * (a translation key), not "GET".
+ */
+function isProse(literal: string): boolean {
+  if (isTranslationKey(literal)) {
+    return false;
+  }
+  return /^[A-Z][a-z]+([ ,]+[a-z$][\w${}]*)+/.test(literal.trim());
+}
+
 function isTranslatable(text: string): boolean {
   const bare = NOT_TRANSLATABLE.reduce((acc, noun) => acc.split(noun).join(' '), text);
   // Punctuation, digits and separators carry no language.
@@ -170,12 +262,18 @@ describe('templates contain no untranslated text', () => {
     if (EXEMPT_FILES[name as string]) {
       return;
     }
-    const template = inlineTemplate(readFileSync(file as string, 'utf8'));
+    const source = readFileSync(file as string, 'utf8');
+    const template = inlineTemplate(source);
     if (template === null) {
       return;
     }
 
-    const offenders = [...visibleText(template), ...visibleAttributes(template)].filter(isTranslatable);
+    const offenders = [
+      ...visibleText(template).filter(isTranslatable),
+      ...visibleAttributes(template).filter(isTranslatable),
+      ...interpolationLiterals(template),
+      ...typescriptProse(source),
+    ];
 
     expect(offenders).toEqual([]);
   });

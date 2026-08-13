@@ -125,9 +125,7 @@ export class LoginPage {
       error: (err: unknown) => {
         this.busy.set(false);
         this.error.set(
-          this.translate.instant(
-            err instanceof HttpErrorResponse && err.status === 401 ? 'auth.badCredentials' : 'auth.unreachable',
-          ),
+          this.translate.instant(err instanceof HttpErrorResponse && err.status === 401 ? 'auth.badCredentials' : 'auth.unreachable'),
         );
       },
     });
