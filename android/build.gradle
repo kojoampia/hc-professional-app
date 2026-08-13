@@ -24,6 +24,43 @@ allprojects {
     }
 }
 
+/*
+ * Every module compiles on a Java 21 toolchain that Gradle resolves for itself, rather than on
+ * whatever JVM happens to have launched it.
+ *
+ * Without this the build inherits JAVA_HOME, and this workstation's default is
+ * /usr/lib/jvm/java-25-openjdk-amd64 — a JRE with no javac. The failure is
+ *
+ *     Could not create task ':capacitor-android:compileDebugJavaWithJavac'.
+ *     > Toolchain installation '/usr/lib/jvm/java-25-openjdk-amd64' does not provide
+ *       the required capabilities: [JAVA_COMPILER]
+ *
+ * which reads as a toolchain or AGP misconfiguration rather than a missing compiler, and which a
+ * warm app/build/ hides completely: Gradle finds nothing to compile, never asks for a compiler,
+ * prints BUILD SUCCESSFUL, and leaves a stale APK that installs cleanly — so `adb install` says
+ * Success and the previous build gets tested as though it were the current one.
+ *
+ * It goes here rather than in app/build.gradle because the module that failed is
+ * :capacitor-android, which lives in node_modules and is not ours to edit. Pinning only the app
+ * would leave the reported failure exactly as it was.
+ *
+ * 21 because @capacitor/android compiles at VERSION_21
+ * (node_modules/@capacitor/android/capacitor/build.gradle); a higher toolchain would emit
+ * bytecode its sourceCompatibility does not claim.
+ *
+ * If no JDK 21 is installed, Gradle now says so plainly — "No matching toolchains found for
+ * requested specification: {languageVersion=21}" — instead of naming a capability.
+ */
+subprojects {
+    pluginManager.withPlugin('java-base') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

@@ -106,6 +106,11 @@ npm run build:prod        # production bundle into dist/hc-professional-app/brow
 npm run sync              # build:prod && cap sync   (run after ANY dependency or config change)
 npm run android           # sync && open Android Studio
 npm run ios               # sync && open Xcode (macOS only)
+
+# Building an APK directly. No JAVA_HOME needed — android/build.gradle pins a Java 21
+# toolchain, so this works even though the workstation default is a compiler-less JRE.
+cd android && ./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Node **22** (`.nvmrc`). Angular is pinned to **19.2.25**, byte-identical to `web/`, so services copied from there compile without adjustment.
@@ -255,6 +260,29 @@ Unlike `web/`, Tailwind is wired through a plain `.postcssrc.json` — `web/`'s 
 ### `cap sync` works on Linux
 
 Capacitor 8 uses Swift Package Manager for iOS rather than CocoaPods, so `npx cap sync` succeeds on Linux for both platforms. **Building** iOS still requires macOS + Xcode; syncing does not.
+
+### The Android build pins its own JDK — do not "fix" it with JAVA_HOME
+
+`android/build.gradle` pins a **Java 21 toolchain** for every module. Gradle resolves a JDK 21 itself, so `./gradlew assembleDebug` works no matter what `JAVA_HOME` is — including this workstation's default, which is a JRE with no compiler. **You do not need to export anything.** Verified by building from clean with `JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64`.
+
+Before the pin, the build failed with:
+
+```
+Could not create task ':capacitor-android:compileDebugJavaWithJavac'.
+> Failed to calculate the value of task '…' property 'javaCompiler'.
+   > Toolchain installation '/usr/lib/jvm/java-25-openjdk-amd64' does not provide
+     the required capabilities: [JAVA_COMPILER]
+```
+
+Worth knowing why that was expensive, because the same shape recurs. **The message names a capability, not a missing compiler** — `[JAVA_COMPILER]` reads as toolchain or AGP misconfiguration and sends you to `compileOptions` and `sourceCompatibility`, neither of which is wrong. **A warm build succeeds**: with `app/build/` populated Gradle finds nothing to compile, never asks for a compiler, and prints `BUILD SUCCESSFUL`, so the command passes or fails depending only on whether someone ran `clean`. **And the stale APK installs** — `adb install` reports `Success` and you test the previous build believing it is the current one. Check the APK timestamp when a build was suspiciously fast.
+
+The pin lives in the **root** `android/build.gradle`, not `app/build.gradle`, because the module that failed is `:capacitor-android` — it comes from `node_modules` and is not ours to edit. Pinning only the app would have left the failure untouched.
+
+**21, not 25**, because `@capacitor/android` compiles at `VERSION_21` (`node_modules/@capacitor/android/capacitor/build.gradle`). Raise it only when Capacitor does.
+
+If no JDK 21 is installed, Gradle now says exactly that — `No matching toolchains found for requested specification: {languageVersion=21}` — rather than naming a capability. Installed JVMs carrying a compiler here: 17, 21, `jdk-25.0.2-oracle-x64`, `jdk-26-oracle-x64`; anything matching `java-*-openjdk-amd64` at 25 is JRE-only.
+
+`docs/CLAUDE.md` documents the same JRE for the **Maven** builds in `gateway/` and `api/`, which have no equivalent pin and **do** still need `JAVA_HOME` set by hand.
 
 ## Design tokens are COPIED, not shared — the drift log
 

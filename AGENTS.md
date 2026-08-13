@@ -37,3 +37,5 @@ The authoritative plan is **`mobile-app-plan.md` at the workspace root** (`MOB<N
 `npm start` · `npm test` · `npx ng test --test-path-pattern="<regex>"` (single spec) · `npm run lint` · `npm run sync` · `npm run android` · `npm run ios`
 
 Node 22 (`.nvmrc`). Angular pinned to 19.2.25 to match `web/`.
+
+**The Android build needs no `JAVA_HOME`** — `android/build.gradle` pins a Java 21 toolchain for every module, so `./gradlew assembleDebug` works even though the workstation default is a JRE with no `javac`. Do not "fix" a Gradle JDK error by exporting `JAVA_HOME`; change the pin instead, and keep it at whatever `@capacitor/android` compiles against. See `CLAUDE.md § The Android build pins its own JDK`. The Maven builds in `gateway/` and `api/` have no equivalent pin and do still need it set.
