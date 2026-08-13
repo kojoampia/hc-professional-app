@@ -102,100 +102,110 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
       </div>
 
       <!-- Upload form -->
-      <ion-modal [isOpen]="formOpen()" [breakpoints]="[0, 0.7]" [initialBreakpoint]="0.7" (ionModalDidDismiss)="formOpen.set(false)">
-        <ng-template>
-          <ion-header>
-            <ion-toolbar
-              ><ion-title>{{ 'documents.add' | translate }}</ion-title></ion-toolbar
-            >
-          </ion-header>
-          <ion-content>
-            <div class="px-4 py-4 flex flex-col gap-4">
-              <div>
-                <p class="hpd-label">{{ 'documents.type' | translate }}</p>
-                <ion-select [(ngModel)]="type" interface="action-sheet" fill="outline" placeholder="{{ 'documents.choose' | translate }}">
-                  @for (option of types; track option) {
-                    <ion-select-option [value]="option">{{ option.toLowerCase() }}</ion-select-option>
-                  }
-                </ion-select>
-              </div>
-
-              @if (type === 'OTHER') {
-                <div>
-                  <label class="hpd-label" for="doc-label">{{ 'documents.label' | translate }}</label>
-                  <input
-                    id="doc-label"
-                    class="hpd-input"
-                    [(ngModel)]="otherLabel"
-                    placeholder="{{ 'documents.labelPlaceholder' | translate }}"
-                  />
-                </div>
-              }
-
-              @if (type === 'LICENSE') {
-                <div>
-                  <label class="hpd-label" for="doc-expiry">{{ 'documents.expiryDate' | translate }}</label>
-                  <!-- The server rejects a LICENSE with no expiry, so ask before uploading
-                       rather than after a 400 the clinician cannot act on. -->
-                  <input id="doc-expiry" type="date" class="hpd-input" [(ngModel)]="expiryDate" />
-                </div>
-              }
-
-              @if (validationError(); as message) {
-                <p class="rounded-hpd-sm bg-hpd-danger-tint px-3 py-2 text-hpd-danger" role="alert">{{ message }}</p>
-              }
-
-              <button class="hpd-btn hpd-btn-primary hpd-btn-block hpd-focusable" [disabled]="busy()" (click)="takePhoto()">
-                {{ 'documents.takePhoto' | translate }}
-              </button>
-
-              <button class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable" [disabled]="busy()" (click)="picker.click()">
-                {{ 'documents.choosePdfOrImage' | translate }}
-              </button>
-              <input #picker type="file" class="hidden" accept="application/pdf,image/png,image/jpeg" (change)="pick($event)" />
-
-              <p class="text-hpd-muted">{{ 'documents.privacyNote' | translate }}</p>
-            </div>
-          </ion-content>
-        </ng-template>
-      </ion-modal>
 
       <!-- Upload progress / result -->
-      <ion-modal [isOpen]="store.upload().stage !== 'idle'" [breakpoints]="[0, 0.4]" [initialBreakpoint]="0.4" [backdropDismiss]="false">
-        <ng-template>
-          <ion-content>
-            <div class="flex min-h-full flex-col items-center justify-center gap-4 px-6 text-center">
-              @switch (store.upload().stage) {
-                @case ('preparing') {
-                  <p class="text-hpd-muted">{{ 'documents.preparing' | translate }}</p>
+    </ion-content>
+
+    <!--
+      Full-screen, not a sheet. A sheet's wrapper stays full height and is translated down by
+      (1 - breakpoint), so at 0.7 its bottom 30% — and at 0.4 its bottom 60% — sits outside the
+      viewport. Measured on a device: the 0.4 sheet ran 520px to 1316px against an 838px screen,
+      overflowing by 478px, which put the Done and Close buttons where no scroll could reach them.
+      The same shape broke the message composer. If a sheet is ever wanted back here, the content
+      has to be constrained to the visible fraction rather than laid out over the full height.
+    -->
+    <ion-modal [isOpen]="formOpen()" (ionModalDidDismiss)="formOpen.set(false)">
+      <ng-template>
+        <ion-header>
+          <ion-toolbar
+            ><ion-title>{{ 'documents.add' | translate }}</ion-title></ion-toolbar
+          >
+        </ion-header>
+        <ion-content>
+          <div class="px-4 py-4 flex flex-col gap-4">
+            <div>
+              <p class="hpd-label">{{ 'documents.type' | translate }}</p>
+              <ion-select [(ngModel)]="type" interface="action-sheet" fill="outline" placeholder="{{ 'documents.choose' | translate }}">
+                @for (option of types; track option) {
+                  <ion-select-option [value]="option">{{ option.toLowerCase() }}</ion-select-option>
+                }
+              </ion-select>
+            </div>
+
+            @if (type === 'OTHER') {
+              <div>
+                <label class="hpd-label" for="doc-label">{{ 'documents.label' | translate }}</label>
+                <input
+                  id="doc-label"
+                  class="hpd-input"
+                  [(ngModel)]="otherLabel"
+                  placeholder="{{ 'documents.labelPlaceholder' | translate }}"
+                />
+              </div>
+            }
+
+            @if (type === 'LICENSE') {
+              <div>
+                <label class="hpd-label" for="doc-expiry">{{ 'documents.expiryDate' | translate }}</label>
+                <!-- The server rejects a LICENSE with no expiry, so ask before uploading
+                     rather than after a 400 the clinician cannot act on. -->
+                <input id="doc-expiry" type="date" class="hpd-input" [(ngModel)]="expiryDate" />
+              </div>
+            }
+
+            @if (validationError(); as message) {
+              <p class="rounded-hpd-sm bg-hpd-danger-tint px-3 py-2 text-hpd-danger" role="alert">{{ message }}</p>
+            }
+
+            <button class="hpd-btn hpd-btn-primary hpd-btn-block hpd-focusable" [disabled]="busy()" (click)="takePhoto()">
+              {{ 'documents.takePhoto' | translate }}
+            </button>
+
+            <button class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable" [disabled]="busy()" (click)="picker.click()">
+              {{ 'documents.choosePdfOrImage' | translate }}
+            </button>
+            <input #picker type="file" class="hidden" accept="application/pdf,image/png,image/jpeg" (change)="pick($event)" />
+
+            <p class="text-hpd-muted">{{ 'documents.privacyNote' | translate }}</p>
+          </div>
+        </ion-content>
+      </ng-template>
+    </ion-modal>
+
+    <ion-modal [isOpen]="store.upload().stage !== 'idle'" [backdropDismiss]="false">
+      <ng-template>
+        <ion-content>
+          <div class="flex min-h-full flex-col items-center justify-center gap-4 px-6 text-center">
+            @switch (store.upload().stage) {
+              @case ('preparing') {
+                <p class="text-hpd-muted">{{ 'documents.preparing' | translate }}</p>
+                <ion-progress-bar type="indeterminate"></ion-progress-bar>
+              }
+              @case ('uploading') {
+                <p class="text-hpd-muted">{{ 'documents.uploading' | translate }}</p>
+                @if (store.upload().fraction; as fraction) {
+                  <ion-progress-bar [value]="fraction"></ion-progress-bar>
+                  <p class="text-hpd-subtle">{{ (fraction * 100).toFixed(0) }}%</p>
+                } @else {
                   <ion-progress-bar type="indeterminate"></ion-progress-bar>
                 }
-                @case ('uploading') {
-                  <p class="text-hpd-muted">{{ 'documents.uploading' | translate }}</p>
-                  @if (store.upload().fraction; as fraction) {
-                    <ion-progress-bar [value]="fraction"></ion-progress-bar>
-                    <p class="text-hpd-subtle">{{ (fraction * 100).toFixed(0) }}%</p>
-                  } @else {
-                    <ion-progress-bar type="indeterminate"></ion-progress-bar>
-                  }
-                }
-                @case ('done') {
-                  <p class="font-semibold text-hpd-success">{{ 'documents.uploaded' | translate }}</p>
-                  <p class="text-hpd-muted">{{ 'documents.pendingReview' | translate }}</p>
-                  <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="finish()">{{ 'documents.done' | translate }}</button>
-                }
-                @default {
-                  <p class="text-hpd-danger" role="alert">{{ store.upload().message }}</p>
-                  <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="store.dismissUpload()">
-                    {{ 'messages.close' | translate }}
-                  </button>
-                }
               }
-            </div>
-          </ion-content>
-        </ng-template>
-      </ion-modal>
-    </ion-content>
+              @case ('done') {
+                <p class="font-semibold text-hpd-success">{{ 'documents.uploaded' | translate }}</p>
+                <p class="text-hpd-muted">{{ 'documents.pendingReview' | translate }}</p>
+                <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="finish()">{{ 'documents.done' | translate }}</button>
+              }
+              @default {
+                <p class="text-hpd-danger" role="alert">{{ store.upload().message }}</p>
+                <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="store.dismissUpload()">
+                  {{ 'messages.close' | translate }}
+                </button>
+              }
+            }
+          </div>
+        </ion-content>
+      </ng-template>
+    </ion-modal>
   `,
   styles: [
     `

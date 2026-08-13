@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
-import { IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular/standalone';
+import { IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { documentTextOutline, chatbubblesOutline, personOutline, todayOutline } from 'ionicons/icons';
 
@@ -18,11 +18,17 @@ import { documentTextOutline, chatbubblesOutline, personOutline, todayOutline } 
 @Component({
   selector: 'hpd-tabs',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslateModule, IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonRouterOutlet],
+  imports: [TranslateModule, IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel],
   template: `
     <ion-tabs>
-      <ion-router-outlet></ion-router-outlet>
-
+      <!--
+        NO <ion-router-outlet> here. IonTabs renders its own internally and routes the tab children
+        into it. Adding one looks harmless and even renders correctly — the pages appear, because
+        they are in IonTabs' outlet — but the extra outlet is empty, spans the whole viewport and is
+        painted last, so it sits on top and swallows every touch. The app then looks completely
+        inert while nothing errors: taps do nothing, and element.click() from DevTools still works
+        because it bypasses hit-testing. Cost a device debugging session; do not add it back.
+      -->
       <ion-tab-bar slot="bottom">
         <ion-tab-button tab="today" data-test="tab-today">
           <ion-icon name="today-outline"></ion-icon>

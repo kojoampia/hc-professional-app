@@ -58,6 +58,8 @@ export const EN = {
     threadEmpty: 'No messages in this thread yet.',
     sendFailed: 'Could not send. Check your connection and try again.',
     conversation: 'Conversation',
+    send: 'Send',
+    replyPlaceholder: 'Write a reply',
   },
   documents: {
     title: 'Documents',
@@ -151,6 +153,8 @@ export const ES: typeof EN = {
     threadEmpty: 'Aún no hay mensajes en esta conversación.',
     sendFailed: 'No se pudo enviar. Compruebe su conexión e inténtelo de nuevo.',
     conversation: 'Conversación',
+    send: 'Enviar',
+    replyPlaceholder: 'Escriba una respuesta',
   },
   documents: {
     title: 'Documentos',
@@ -244,6 +248,8 @@ export const FR: typeof EN = {
     threadEmpty: 'Aucun message dans cette conversation pour le moment.',
     sendFailed: "Impossible d'envoyer. Vérifiez votre connexion et réessayez.",
     conversation: 'Conversation',
+    send: 'Envoyer',
+    replyPlaceholder: 'Écrivez une réponse',
   },
   documents: {
     title: 'Documents',
@@ -337,6 +343,8 @@ export const DE: typeof EN = {
     threadEmpty: 'Noch keine Nachrichten in diesem Verlauf.',
     sendFailed: 'Senden fehlgeschlagen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
     conversation: 'Unterhaltung',
+    send: 'Senden',
+    replyPlaceholder: 'Antwort schreiben',
   },
   documents: {
     title: 'Dokumente',
