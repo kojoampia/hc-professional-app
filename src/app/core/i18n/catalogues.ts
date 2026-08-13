@@ -90,7 +90,15 @@ export const EN = {
     sendFailed: 'Could not send. Check your connection and try again.',
     conversation: 'Conversation',
     send: 'Send',
-    you: 'You',
+    /**
+     * The byline under one's own message — first person in all four, not second.
+     *
+     * English chat apps usually say "You", but translating that literally gives `Tú`/`Vous`/`Sie`,
+     * which reads as addressing the other person rather than naming yourself, and drags in a
+     * formality choice this app has no reason to make. `Me`/`Yo`/`Moi`/`Ich` is what the label
+     * means. Owner's decision, 2026-08-14 — do not "correct" it back to second person.
+     */
+    me: 'Me',
     replyPlaceholder: 'Write a reply',
   },
   documents: {
@@ -213,7 +221,7 @@ export const ES: typeof EN = {
     sendFailed: 'No se pudo enviar. Compruebe su conexión e inténtelo de nuevo.',
     conversation: 'Conversación',
     send: 'Enviar',
-    you: 'Tú',
+    me: 'Yo',
     replyPlaceholder: 'Escriba una respuesta',
   },
   documents: {
@@ -336,7 +344,7 @@ export const FR: typeof EN = {
     sendFailed: "Impossible d'envoyer. Vérifiez votre connexion et réessayez.",
     conversation: 'Conversation',
     send: 'Envoyer',
-    you: 'Vous',
+    me: 'Moi',
     replyPlaceholder: 'Écrivez une réponse',
   },
   documents: {
@@ -458,7 +466,7 @@ export const DE: typeof EN = {
     sendFailed: 'Senden fehlgeschlagen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
     conversation: 'Unterhaltung',
     send: 'Senden',
-    you: 'Sie',
+    me: 'Ich',
     replyPlaceholder: 'Antwort schreiben',
   },
   documents: {

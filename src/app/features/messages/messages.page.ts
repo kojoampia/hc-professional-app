@@ -143,7 +143,7 @@ import { MessagesStore } from './messages.store';
                   {{ message.body }}
                 </div>
                 <p class="mt-1 text-hpd-subtle" [class.text-right]="isMine(message.senderId)">
-                  {{ isMine(message.senderId) ? ('messages.you' | translate) : message.senderName ?? message.senderId }} ·
+                  {{ isMine(message.senderId) ? ('messages.me' | translate) : message.senderName ?? message.senderId }} ·
                   {{ message.sentAt | date: 'HH:mm' }}
                 </p>
               </div>
