@@ -106,6 +106,11 @@ npm run build:prod        # production bundle into dist/hc-professional-app/brow
 npm run sync              # build:prod && cap sync   (run after ANY dependency or config change)
 npm run android           # sync && open Android Studio
 npm run ios               # sync && open Xcode (macOS only)
+
+# Building an APK directly. The JAVA_HOME export is REQUIRED — see the JDK trap below.
+export JAVA_HOME=/usr/lib/jvm/jdk-25.0.2-oracle-x64
+cd android && ./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Node **22** (`.nvmrc`). Angular is pinned to **19.2.25**, byte-identical to `web/`, so services copied from there compile without adjustment.
@@ -255,6 +260,30 @@ Unlike `web/`, Tailwind is wired through a plain `.postcssrc.json` — `web/`'s 
 ### `cap sync` works on Linux
 
 Capacitor 8 uses Swift Package Manager for iOS rather than CocoaPods, so `npx cap sync` succeeds on Linux for both platforms. **Building** iOS still requires macOS + Xcode; syncing does not.
+
+### The Android build needs a real JDK, and the workstation's default is not one
+
+`./gradlew assembleDebug` fails on this workstation with:
+
+```
+Could not create task ':capacitor-android:compileDebugJavaWithJavac'.
+> Failed to calculate the value of task '…' property 'javaCompiler'.
+   > Toolchain installation '/usr/lib/jvm/java-25-openjdk-amd64' does not provide
+     the required capabilities: [JAVA_COMPILER]
+```
+
+The ambient `JAVA_HOME` points at `java-25-openjdk-amd64`, which is a **JRE — it has no `javac`**. Export a JDK first:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/jdk-25.0.2-oracle-x64
+cd android && ./gradlew assembleDebug
+```
+
+The installed JVMs that actually carry a compiler are 17, 21, `jdk-25.0.2-oracle-x64` and `jdk-26-oracle-x64`. Anything matching `java-*-openjdk-amd64` at 25 is JRE-only.
+
+Two things make this cost more than the one line it looks like. **Gradle's message names a capability, not a missing compiler** — `[JAVA_COMPILER]` reads as a toolchain-resolution or AGP problem and sends you to `compileOptions` and `sourceCompatibility`, neither of which is wrong. And **a warm build succeeds**: if `app/build/` already holds compiled classes, Gradle finds nothing to do, never asks for a compiler, and prints `BUILD SUCCESSFUL` — so the same command passes or fails depending only on whether someone ran `clean`. Worse, the stale APK in `app/build/outputs/apk/debug/` is happily installable, so `adb install` reports `Success` and you test **yesterday's code** believing it is today's. Check the APK's timestamp before trusting an install.
+
+`docs/CLAUDE.md` documents the same trap for the Maven builds in `gateway/` and `api/`, where it additionally explains why the two repos behaved differently on an identical command. It is the same JRE and the same cause; only the error text differs.
 
 ## Design tokens are COPIED, not shared — the drift log
 

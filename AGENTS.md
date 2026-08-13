@@ -37,3 +37,5 @@ The authoritative plan is **`mobile-app-plan.md` at the workspace root** (`MOB<N
 `npm start` · `npm test` · `npx ng test --test-path-pattern="<regex>"` (single spec) · `npm run lint` · `npm run sync` · `npm run android` · `npm run ios`
 
 Node 22 (`.nvmrc`). Angular pinned to 19.2.25 to match `web/`.
+
+**Building the Android app needs `export JAVA_HOME=/usr/lib/jvm/jdk-25.0.2-oracle-x64` first.** The workstation default is a JRE with no `javac`, and Gradle reports it as `Toolchain installation … does not provide the required capabilities: [JAVA_COMPILER]`. A warm `app/build/` masks it — the build succeeds, and the stale APK installs — so check the APK timestamp. See `CLAUDE.md § The Android build needs a real JDK`.
