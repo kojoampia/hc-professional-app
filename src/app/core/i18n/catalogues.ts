@@ -73,6 +73,10 @@ export const EN = {
     nextShift: 'Next shift',
     nothingToday: 'Nothing today',
     flexibleToday: 'Flexible hours today',
+    nothingTodayNamed: 'Nothing today, {{name}}',
+    until: 'Until {{time}}',
+    flexibleOn: 'Flexible on {{date}}',
+    dateAtTime: '{{date}} at {{time}}',
   },
   messages: {
     title: 'Messages',
@@ -86,6 +90,7 @@ export const EN = {
     sendFailed: 'Could not send. Check your connection and try again.',
     conversation: 'Conversation',
     send: 'Send',
+    you: 'You',
     replyPlaceholder: 'Write a reply',
   },
   documents: {
@@ -191,6 +196,10 @@ export const ES: typeof EN = {
     nextShift: 'Próximo turno',
     nothingToday: 'Nada hoy',
     flexibleToday: 'Horario flexible hoy',
+    nothingTodayNamed: 'Hoy no hay nada, {{name}}',
+    until: 'Hasta las {{time}}',
+    flexibleOn: 'Flexible el {{date}}',
+    dateAtTime: '{{date}} a las {{time}}',
   },
   messages: {
     title: 'Mensajes',
@@ -204,6 +213,7 @@ export const ES: typeof EN = {
     sendFailed: 'No se pudo enviar. Compruebe su conexión e inténtelo de nuevo.',
     conversation: 'Conversación',
     send: 'Enviar',
+    you: 'Tú',
     replyPlaceholder: 'Escriba una respuesta',
   },
   documents: {
@@ -309,6 +319,10 @@ export const FR: typeof EN = {
     nextShift: 'Prochain service',
     nothingToday: "Rien aujourd'hui",
     flexibleToday: "Horaires flexibles aujourd'hui",
+    nothingTodayNamed: "Rien aujourd'hui, {{name}}",
+    until: "Jusqu'à {{time}}",
+    flexibleOn: 'Flexible le {{date}}',
+    dateAtTime: '{{date}} à {{time}}',
   },
   messages: {
     title: 'Messages',
@@ -322,6 +336,7 @@ export const FR: typeof EN = {
     sendFailed: "Impossible d'envoyer. Vérifiez votre connexion et réessayez.",
     conversation: 'Conversation',
     send: 'Envoyer',
+    you: 'Vous',
     replyPlaceholder: 'Écrivez une réponse',
   },
   documents: {
@@ -389,8 +404,7 @@ export const DE: typeof EN = {
     username: 'Benutzername',
     password: 'Passwort',
     signIn: 'Anmelden',
-    noScreenLock:
-      'Dieses Gerät hat keine Bildschirmsperre. Abofonsa BridgeCare fragt daher bei jedem Öffnen nach Ihrem Passwort.',
+    noScreenLock: 'Dieses Gerät hat keine Bildschirmsperre. Abofonsa BridgeCare fragt daher bei jedem Öffnen nach Ihrem Passwort.',
     sessionExpired: 'Ihre Sitzung ist beendet. Bitte melden Sie sich erneut an.',
     biometryChanged: 'Die biometrischen Einstellungen dieses Geräts haben sich geändert. Sie müssen sich erneut anmelden.',
     badCredentials: 'Benutzername und Passwort stimmen nicht überein.',
@@ -427,6 +441,10 @@ export const DE: typeof EN = {
     nextShift: 'Nächster Dienst',
     nothingToday: 'Heute nichts',
     flexibleToday: 'Heute flexible Arbeitszeit',
+    nothingTodayNamed: 'Heute nichts, {{name}}',
+    until: 'Bis {{time}}',
+    flexibleOn: 'Flexibel am {{date}}',
+    dateAtTime: '{{date}} um {{time}}',
   },
   messages: {
     title: 'Nachrichten',
@@ -440,6 +458,7 @@ export const DE: typeof EN = {
     sendFailed: 'Senden fehlgeschlagen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
     conversation: 'Unterhaltung',
     send: 'Senden',
+    you: 'Sie',
     replyPlaceholder: 'Antwort schreiben',
   },
   documents: {
