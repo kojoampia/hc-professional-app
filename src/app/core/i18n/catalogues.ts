@@ -24,6 +24,33 @@ export const EN = {
     loading: 'Loading…',
     offline: 'You are offline',
   },
+  /**
+   * The sign-in screen. Its strings live here rather than beside the page because four of them are
+   * raised from TypeScript — an expired session, a changed biometric enrolment, a rejected
+   * credential, an unreachable gateway — and a message that is only translated when it happens to
+   * be in a template is worse than one that is never translated at all.
+   */
+  auth: {
+    subtitle: 'Professional',
+    username: 'Username',
+    password: 'Password',
+    signIn: 'Sign in',
+    noScreenLock: 'This device has no screen lock, so Abofonsa BridgeCare will ask for your password each time you open it.',
+    sessionExpired: 'Your session ended. Please sign in again.',
+    biometryChanged: "This device's biometric settings changed, so you need to sign in again.",
+    badCredentials: 'That username and password did not match.',
+    unreachable: 'Could not reach Abofonsa BridgeCare. Check your connection and try again.',
+  },
+  /** The cold-start splash: the first thing anyone sees, and until now the last thing translated. */
+  boot: {
+    restoring: 'Restoring your session',
+    offline: 'Could not reach Abofonsa BridgeCare. Your session is still valid.',
+    tryAgain: 'Try again',
+    signInWithPassword: 'Sign in with password',
+    unlockPrompt: 'Unlock to continue',
+    unlock: 'Unlock',
+    usePassword: 'Use password',
+  },
   today: {
     title: 'Today',
     savedData: 'Showing saved data',
@@ -83,6 +110,8 @@ export const EN = {
     pendingReview: 'It will show as pending until an administrator verifies it.',
     done: 'Done',
     labelRequired: 'Give this document a label.',
+    addOrRenew: 'Add or renew a document',
+    expires: 'Expires',
   },
   tabs: {
     today: 'Today',
@@ -118,6 +147,27 @@ export const ES: typeof EN = {
     retry: 'Reintentar',
     loading: 'Cargando…',
     offline: 'Está sin conexión',
+  },
+  auth: {
+    subtitle: 'Profesional',
+    username: 'Usuario',
+    password: 'Contraseña',
+    signIn: 'Iniciar sesión',
+    noScreenLock:
+      'Este dispositivo no tiene bloqueo de pantalla, por lo que Abofonsa BridgeCare le pedirá la contraseña cada vez que lo abra.',
+    sessionExpired: 'Su sesión ha finalizado. Vuelva a iniciar sesión.',
+    biometryChanged: 'La configuración biométrica de este dispositivo ha cambiado, por lo que debe volver a iniciar sesión.',
+    badCredentials: 'El usuario y la contraseña no coinciden.',
+    unreachable: 'No se pudo conectar con Abofonsa BridgeCare. Compruebe su conexión e inténtelo de nuevo.',
+  },
+  boot: {
+    restoring: 'Restaurando su sesión',
+    offline: 'No se pudo conectar con Abofonsa BridgeCare. Su sesión sigue siendo válida.',
+    tryAgain: 'Intentar de nuevo',
+    signInWithPassword: 'Iniciar sesión con contraseña',
+    unlockPrompt: 'Desbloquee para continuar',
+    unlock: 'Desbloquear',
+    usePassword: 'Usar contraseña',
   },
   today: {
     title: 'Hoy',
@@ -178,6 +228,8 @@ export const ES: typeof EN = {
     pendingReview: 'Aparecerá como pendiente hasta que un administrador lo verifique.',
     done: 'Hecho',
     labelRequired: 'Dé una etiqueta a este documento.',
+    addOrRenew: 'Añadir o renovar un documento',
+    expires: 'Caduca',
   },
   tabs: {
     today: 'Hoy',
@@ -213,6 +265,27 @@ export const FR: typeof EN = {
     retry: 'Réessayer',
     loading: 'Chargement…',
     offline: 'Vous êtes hors ligne',
+  },
+  auth: {
+    subtitle: 'Professionnel',
+    username: "Nom d'utilisateur",
+    password: 'Mot de passe',
+    signIn: 'Se connecter',
+    noScreenLock:
+      "Cet appareil n'a pas de verrouillage d'écran ; Abofonsa BridgeCare vous demandera donc votre mot de passe à chaque ouverture.",
+    sessionExpired: 'Votre session a pris fin. Veuillez vous reconnecter.',
+    biometryChanged: 'Les paramètres biométriques de cet appareil ont changé ; vous devez vous reconnecter.',
+    badCredentials: "Ce nom d'utilisateur et ce mot de passe ne correspondent pas.",
+    unreachable: 'Impossible de joindre Abofonsa BridgeCare. Vérifiez votre connexion et réessayez.',
+  },
+  boot: {
+    restoring: 'Restauration de votre session',
+    offline: 'Impossible de joindre Abofonsa BridgeCare. Votre session est toujours valide.',
+    tryAgain: 'Réessayer',
+    signInWithPassword: 'Se connecter avec un mot de passe',
+    unlockPrompt: 'Déverrouillez pour continuer',
+    unlock: 'Déverrouiller',
+    usePassword: 'Utiliser le mot de passe',
   },
   today: {
     title: "Aujourd'hui",
@@ -273,6 +346,8 @@ export const FR: typeof EN = {
     pendingReview: "Il apparaîtra comme en attente jusqu'à ce qu'un administrateur le vérifie.",
     done: 'Terminé',
     labelRequired: 'Donnez un libellé à ce document.',
+    addOrRenew: 'Ajouter ou renouveler un document',
+    expires: 'Expire le',
   },
   tabs: {
     today: "Aujourd'hui",
@@ -308,6 +383,27 @@ export const DE: typeof EN = {
     retry: 'Erneut versuchen',
     loading: 'Wird geladen…',
     offline: 'Sie sind offline',
+  },
+  auth: {
+    subtitle: 'Fachkraft',
+    username: 'Benutzername',
+    password: 'Passwort',
+    signIn: 'Anmelden',
+    noScreenLock:
+      'Dieses Gerät hat keine Bildschirmsperre. Abofonsa BridgeCare fragt daher bei jedem Öffnen nach Ihrem Passwort.',
+    sessionExpired: 'Ihre Sitzung ist beendet. Bitte melden Sie sich erneut an.',
+    biometryChanged: 'Die biometrischen Einstellungen dieses Geräts haben sich geändert. Sie müssen sich erneut anmelden.',
+    badCredentials: 'Benutzername und Passwort stimmen nicht überein.',
+    unreachable: 'Abofonsa BridgeCare ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
+  },
+  boot: {
+    restoring: 'Ihre Sitzung wird wiederhergestellt',
+    offline: 'Abofonsa BridgeCare ist nicht erreichbar. Ihre Sitzung ist weiterhin gültig.',
+    tryAgain: 'Erneut versuchen',
+    signInWithPassword: 'Mit Passwort anmelden',
+    unlockPrompt: 'Zum Fortfahren entsperren',
+    unlock: 'Entsperren',
+    usePassword: 'Passwort verwenden',
   },
   today: {
     title: 'Heute',
@@ -368,6 +464,8 @@ export const DE: typeof EN = {
     pendingReview: 'Es wird als ausstehend angezeigt, bis ein Administrator es überprüft.',
     done: 'Fertig',
     labelRequired: 'Geben Sie diesem Dokument eine Bezeichnung.',
+    addOrRenew: 'Dokument hinzufügen oder erneuern',
+    expires: 'Läuft ab am',
   },
   tabs: {
     today: 'Heute',

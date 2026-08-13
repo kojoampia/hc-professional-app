@@ -72,7 +72,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
         }
 
         <button class="hpd-btn hpd-btn-primary hpd-btn-block hpd-focusable" [disabled]="busy()" (click)="openForm()">
-          Add or renew a document
+          {{ 'documents.addOrRenew' | translate }}
         </button>
 
         <ion-list [inset]="true">
@@ -84,7 +84,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
               <ion-label>
                 {{ label(doc) }}
                 @if (doc.expiryDate) {
-                  <p class="text-hpd-muted">Expires {{ doc.expiryDate }}</p>
+                  <p class="text-hpd-muted">{{ 'documents.expires' | translate }} {{ doc.expiryDate }}</p>
                 }
               </ion-label>
               <ion-badge slot="end" [color]="statusColour(doc.verificationStatus)">

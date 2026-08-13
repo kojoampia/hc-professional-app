@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { IonApp, IonRouterOutlet, IonSpinner, NavController } from '@ionic/angular/standalone';
 
 import { BootOutcome, SessionBootstrapper } from './core/auth/session-bootstrapper.service';
@@ -16,26 +17,31 @@ import { NetworkService } from './core/native/network.service';
 @Component({
   selector: 'hpd-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonApp, IonRouterOutlet, IonSpinner],
+  imports: [TranslateModule, IonApp, IonRouterOutlet, IonSpinner],
   template: `
     <ion-app>
       @if (outcome() === null || outcome() === 'locked' || outcome() === 'offline') {
         <div class="hpd-boot">
+          <!-- The brand is a proper noun and stays as it is in every locale. -->
           <h1 class="text-2xl font-bold text-hpd-primary">Abofonsa BridgeCare</h1>
 
           @switch (outcome()) {
             @case ('offline') {
-              <p class="text-hpd-muted">Could not reach Abofonsa BridgeCare. Your session is still valid.</p>
-              <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="retry()">Try again</button>
-              <button class="hpd-btn hpd-btn-ghost hpd-focusable" (click)="signInInstead()">Sign in with password</button>
+              <p class="text-hpd-muted">{{ 'boot.offline' | translate }}</p>
+              <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="retry()">{{ 'boot.tryAgain' | translate }}</button>
+              <button class="hpd-btn hpd-btn-ghost hpd-focusable" (click)="signInInstead()">
+                {{ 'boot.signInWithPassword' | translate }}
+              </button>
             }
             @case ('locked') {
-              <p class="text-hpd-muted">Unlock to continue</p>
-              <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="retry()">Unlock</button>
-              <button class="hpd-btn hpd-btn-ghost hpd-focusable" (click)="signInInstead()">Use password</button>
+              <p class="text-hpd-muted">{{ 'boot.unlockPrompt' | translate }}</p>
+              <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="retry()">{{ 'boot.unlock' | translate }}</button>
+              <button class="hpd-btn hpd-btn-ghost hpd-focusable" (click)="signInInstead()">
+                {{ 'boot.usePassword' | translate }}
+              </button>
             }
             @default {
-              <ion-spinner name="crescent" aria-label="Restoring your session"></ion-spinner>
+              <ion-spinner name="crescent" [attr.aria-label]="'boot.restoring' | translate"></ion-spinner>
             }
           }
         </div>
