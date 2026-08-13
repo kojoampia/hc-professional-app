@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import {
@@ -26,6 +26,7 @@ import {
 } from '@ionic/angular/standalone';
 
 import { AccountService } from '../../core/auth/account.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { NetworkService } from '../../core/native/network.service';
 import { describeAge } from '../../core/offline/cached-resource';
 import { MessagesStore } from './messages.store';
@@ -142,7 +143,7 @@ import { MessagesStore } from './messages.store';
                   {{ message.body }}
                 </div>
                 <p class="mt-1 text-hpd-subtle" [class.text-right]="isMine(message.senderId)">
-                  {{ isMine(message.senderId) ? 'You' : message.senderName ?? message.senderId }} ·
+                  {{ isMine(message.senderId) ? ('messages.you' | translate) : message.senderName ?? message.senderId }} ·
                   {{ message.sentAt | date: 'HH:mm' }}
                 </p>
               </div>
@@ -153,23 +154,23 @@ import { MessagesStore } from './messages.store';
         </ion-content>
         <ion-footer>
           <ion-toolbar>
-          <div class="flex items-end gap-2 px-3 py-2">
-            <ion-textarea
-              [(ngModel)]="draft"
-              placeholder="{{ 'messages.replyPlaceholder' | translate }}"
-              [autoGrow]="true"
-              [rows]="1"
-              fill="outline"
-              class="flex-1"
-            ></ion-textarea>
-            <button class="hpd-btn hpd-btn-primary hpd-focusable" [disabled]="sending() || !draft.trim()" (click)="send()">
-              @if (sending()) {
-                <ion-spinner name="crescent"></ion-spinner>
-              } @else {
-                {{ 'messages.send' | translate }}
-              }
-            </button>
-          </div>
+            <div class="flex items-end gap-2 px-3 py-2">
+              <ion-textarea
+                [(ngModel)]="draft"
+                placeholder="{{ 'messages.replyPlaceholder' | translate }}"
+                [autoGrow]="true"
+                [rows]="1"
+                fill="outline"
+                class="flex-1"
+              ></ion-textarea>
+              <button class="hpd-btn hpd-btn-primary hpd-focusable" [disabled]="sending() || !draft.trim()" (click)="send()">
+                @if (sending()) {
+                  <ion-spinner name="crescent"></ion-spinner>
+                } @else {
+                  {{ 'messages.send' | translate }}
+                }
+              </button>
+            </div>
             @if (sendError()) {
               <p class="px-3 pb-2 text-hpd-danger" role="alert">{{ 'messages.sendFailed' | translate }}</p>
             }
@@ -189,6 +190,8 @@ export class MessagesPage implements OnInit {
   readonly store = inject(MessagesStore);
   readonly network = inject(NetworkService);
   private readonly accounts = inject(AccountService);
+  private readonly translate = inject(TranslateService);
+  private readonly language = inject(LanguageService);
 
   draft = '';
   readonly sending = signal(false);
@@ -203,7 +206,10 @@ export class MessagesPage implements OnInit {
 
   readonly openSubject = computed(() => {
     const id = this.store.openConversationId();
-    return this.conversations().find(c => c.id === id)?.subject || 'Conversation';
+    // Reading the active language makes this recompute on a language change; `instant` is not
+    // reactive the way the pipe is. Same reason as TodayPage.t().
+    this.language.current();
+    return this.conversations().find(c => c.id === id)?.subject || this.translate.instant('messages.conversation');
   });
 
   async ngOnInit(): Promise<void> {

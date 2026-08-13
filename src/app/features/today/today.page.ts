@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, TitleCasePipe } from '@angular/common';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   IonBadge,
   IonCard,
@@ -25,6 +25,7 @@ import {
 import { shiftWindowText } from '../../core/api/duty-roster-api.service';
 import { isWorkingClinician } from '../../core/api/onboarding-api.service';
 import { AccountService } from '../../core/auth/account.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { NetworkService } from '../../core/native/network.service';
 import { describeAge } from '../../core/offline/cached-resource';
 import { TodayStore } from './today.store';
@@ -171,6 +172,8 @@ export class TodayPage implements OnInit {
   readonly network = inject(NetworkService);
   private readonly accounts = inject(AccountService);
   private readonly nav = inject(NavController);
+  private readonly translate = inject(TranslateService);
+  private readonly language = inject(LanguageService);
 
   readonly upcoming = this.store.upcoming;
   readonly expiring = this.store.expiringDocuments;
@@ -188,29 +191,43 @@ export class TodayPage implements OnInit {
   /** Comes from the same selection as the headline — see TodayStore.featuredAssignment. */
   readonly currentAssignment = this.store.featuredAssignment;
 
+  /**
+   * Translates, and makes the caller recompute when the language changes.
+   *
+   * <p>The `translate` pipe is impure and re-runs itself on a language change; `instant` is a plain
+   * function call and does not. These two headings are `computed()` rather than template
+   * expressions, so without reading `current()` here they would hold the language that happened to
+   * be active when the roster last changed — switching language in the Me tab would translate the
+   * whole app except this card.
+   */
+  private t(key: string, params?: Record<string, unknown>): string {
+    this.language.current();
+    return this.translate.instant(key, params);
+  }
+
   readonly shiftHeading = computed(() => {
     const label = this.store.shiftLabel();
     if (!label) {
-      return 'No shift assigned';
+      return this.t('today.noShiftAssigned');
     }
-    return label.kind === 'active' || label.kind === 'flexible' ? 'On duty' : 'Next shift';
+    return label.kind === 'active' || label.kind === 'flexible' ? this.t('today.onDuty') : this.t('today.nextShift');
   });
 
   readonly shiftTitle = computed(() => {
     const label = this.store.shiftLabel();
     if (!label) {
       const name = this.accounts.account()?.firstName;
-      return name ? `Nothing today, ${name}` : 'Nothing today';
+      return name ? this.t('today.nothingTodayNamed', { name }) : this.t('today.nothingToday');
     }
     switch (label.kind) {
       case 'active':
-        return `Until ${label.time}`;
+        return this.t('today.until', { time: label.time });
       case 'flexible':
-        return 'Flexible hours today';
+        return this.t('today.flexibleToday');
       case 'nextFlexible':
-        return `Flexible on ${label.date}`;
+        return this.t('today.flexibleOn', { date: label.date });
       default:
-        return `${label.date} at ${label.time}`;
+        return this.t('today.dateAtTime', { date: label.date, time: label.time });
     }
   });
 
