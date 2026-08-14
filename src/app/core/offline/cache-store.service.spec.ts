@@ -267,17 +267,19 @@ describe('cachedResource', () => {
 describe('describeAge', () => {
   const now = Date.UTC(2026, 7, 5, 12, 0, 0);
 
+  // Keys and counts, not sentences: the wording lives in the catalogues so it can be translated,
+  // and this asserts only the arithmetic that decides which bucket an age falls in.
   it.each([
-    [null, 'never'],
-    [now - 5_000, 'just now'],
-    [now - 12 * 60_000, '12 min ago'],
-    [now - 3 * 3_600_000, '3 h ago'],
-    [now - 2 * 86_400_000, '2 d ago'],
+    [null, { key: 'common.ageNever' }],
+    [now - 5_000, { key: 'common.ageJustNow' }],
+    [now - 12 * 60_000, { key: 'common.ageMinutes', params: { count: 12 } }],
+    [now - 3 * 3_600_000, { key: 'common.ageHours', params: { count: 3 } }],
+    [now - 2 * 86_400_000, { key: 'common.ageDays', params: { count: 2 } }],
   ])('%s reads as %s', (fetchedAt, expected) => {
-    expect(describeAge(fetchedAt as number | null, now)).toBe(expected);
+    expect(describeAge(fetchedAt as number | null, now)).toEqual(expected);
   });
 
   it('never reports a negative age from clock skew', () => {
-    expect(describeAge(now + 60_000, now)).toBe('just now');
+    expect(describeAge(now + 60_000, now)).toEqual({ key: 'common.ageJustNow' });
   });
 });

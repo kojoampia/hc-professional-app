@@ -23,6 +23,11 @@ export const EN = {
     retry: 'Retry',
     loading: 'Loading…',
     offline: 'You are offline',
+    ageNever: 'never',
+    ageJustNow: 'just now',
+    ageMinutes: '{{count}} min ago',
+    ageHours: '{{count}} h ago',
+    ageDays: '{{count}} d ago',
   },
   /**
    * The sign-in screen. Its strings live here rather than beside the page because four of them are
@@ -160,6 +165,11 @@ export const ES: typeof EN = {
     retry: 'Reintentar',
     loading: 'Cargando…',
     offline: 'Está sin conexión',
+    ageNever: 'nunca',
+    ageJustNow: 'ahora mismo',
+    ageMinutes: 'hace {{count}} min',
+    ageHours: 'hace {{count}} h',
+    ageDays: 'hace {{count}} d',
   },
   auth: {
     subtitle: 'Profesional',
@@ -283,6 +293,11 @@ export const FR: typeof EN = {
     retry: 'Réessayer',
     loading: 'Chargement…',
     offline: 'Vous êtes hors ligne',
+    ageNever: 'jamais',
+    ageJustNow: "à l'instant",
+    ageMinutes: 'il y a {{count}} min',
+    ageHours: 'il y a {{count}} h',
+    ageDays: 'il y a {{count}} j',
   },
   auth: {
     subtitle: 'Professionnel',
@@ -406,6 +421,11 @@ export const DE: typeof EN = {
     retry: 'Erneut versuchen',
     loading: 'Wird geladen…',
     offline: 'Sie sind offline',
+    ageNever: 'nie',
+    ageJustNow: 'gerade eben',
+    ageMinutes: 'vor {{count}} Min.',
+    ageHours: 'vor {{count}} Std.',
+    ageDays: 'vor {{count}} T.',
   },
   auth: {
     subtitle: 'Fachkraft',
