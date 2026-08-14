@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { CATALOGUES } from '../i18n/catalogues';
+
 /**
  * Guards the brand-name rule.
  *
@@ -49,10 +51,13 @@ describe('brand name', () => {
       expect(SHORT).not.toContain('BridgeCare');
     });
 
-    it('holds for the Android biometric dialog title too', () => {
-      // A system dialog is tight, so it takes the short form for the same reason.
-      const biometrics = read('src/app/core/native/biometric.service.ts');
-      const title = /androidTitle:\s*'([^']+)'/.exec(biometrics)?.[1];
+    it.each(Object.keys(CATALOGUES))('holds for the Android biometric dialog title in %s', language => {
+      // A system dialog is tight, so it takes the short form for the same reason. The title moved
+      // out of biometric.service.ts and into the catalogues when the dialog was translated, so the
+      // rule now has to hold in four places instead of one — and a translator, reading a string
+      // with no context, is exactly who would render it as "BridgeCare" alone.
+      const title = CATALOGUES[language as keyof typeof CATALOGUES].boot.unlockTitle;
+
       expect(title).toContain('Abofonsa');
       expect(title).not.toMatch(/(?<!Abofonsa )BridgeCare/);
     });

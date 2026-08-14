@@ -46,6 +46,14 @@ describe('dates and ages are localised', () => {
     expect(pipe.transform(when, 'EEE d MMM', undefined, locale)).toBe(expected);
   });
 
+  it('sets the document language, which is what a screen reader announces', () => {
+    // index.html is static `lang="en"`. Nothing else updates it, so a German app told TalkBack it
+    // was English and got German words read with English phonetics — invisible to a visual check.
+    TestBed.inject(LanguageService).use('de');
+
+    expect(document.documentElement.lang).toBe('de');
+  });
+
   it('exposes the active language as the locale the pipes are given', () => {
     const language = TestBed.inject(LanguageService);
 
