@@ -1,0 +1,18 @@
+/*
+  InfoPlist.strings (de) — Abofonsa BridgeCare Professional
+
+  Translations of the permission prompts iOS draws before granting camera, photo library and
+  Face ID access. The English originals stay in Info.plist and are used when no localisation
+  matches; these override them on a German device.
+
+  NOT YET WIRED INTO THE XCODE TARGET. Creating the file is not enough — see
+  ios/App/App/README-localisation.md for the two remaining steps, which need Xcode on a Mac.
+
+  The brand name is never translated. See CLAUDE.md § The brand name.
+*/
+
+"NSCameraUsageDescription" = "Abofonsa BridgeCare verwendet die Kamera, damit Sie Ihre Berufszulassung und Ihre Zertifikate fotografieren können, wenn sie erneuert werden müssen.";
+
+"NSPhotoLibraryUsageDescription" = "Abofonsa BridgeCare benötigt Zugriff auf Ihre Fotos, damit Sie einen vorhandenen Scan Ihrer Zulassung oder Ihrer Zertifikate hochladen können.";
+
+"NSFaceIDUsageDescription" = "Abofonsa BridgeCare verwendet Face ID, um Ihre Sitzung zu entsperren, damit Sie Ihr Passwort nicht zu Beginn jeder Schicht erneut eingeben müssen.";
