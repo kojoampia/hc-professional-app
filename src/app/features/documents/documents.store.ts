@@ -69,14 +69,14 @@ export class DocumentsStore {
       if (result.overTarget) {
         // Better to say so than to upload something the server will reject with a
         // message about bytes that means nothing to a clinician holding a phone.
-        this.fail('That photo is too large even after compression. Try again with less of the background in frame.');
+        this.fail('documents.uploadPhotoTooLarge');
         return;
       }
       jpeg = result.blob;
     } catch {
       // Most likely an unsupported source format — an Android WebView asked to
       // decode a HEIC synced from an iPhone, for instance.
-      this.fail('Could not read that image. Try taking the photo again, or choose a PDF.');
+      this.fail('documents.uploadPhotoUnreadable');
       return;
     }
 
@@ -86,13 +86,13 @@ export class DocumentsStore {
   /** Uploads a file the user picked. PDFs pass through untouched; images are re-encoded. */
   async uploadPicked(file: File, type: DocumentType, options: { otherLabel?: string; expiryDate?: string } = {}): Promise<void> {
     if (!ACCEPTED_TYPES.includes(file.type as (typeof ACCEPTED_TYPES)[number])) {
-      this.fail('Only PDF, PNG and JPEG documents are accepted.');
+      this.fail('documents.uploadTypeRejected');
       return;
     }
 
     if (file.type === 'application/pdf') {
       if (file.size > SERVER_MAX_BYTES) {
-        this.fail('That PDF is larger than 5 MB. Try a smaller scan.');
+        this.fail('documents.uploadPdfTooLarge');
         return;
       }
       await this.send(file, file.name, type, options);
@@ -103,12 +103,12 @@ export class DocumentsStore {
     try {
       const result = await this.compressor.compress(file, browserCodec);
       if (result.overTarget) {
-        this.fail('That image is too large even after compression.');
+        this.fail('documents.uploadImageTooLarge');
         return;
       }
       await this.send(result.blob, file.name.replace(/\.[^.]+$/, '') + '.jpg', type, options);
     } catch {
-      this.fail('Could not read that image.');
+      this.fail('documents.uploadImageUnreadable');
     }
   }
 
@@ -136,7 +136,7 @@ export class DocumentsStore {
           }
         },
         error: () => {
-          this.fail('Upload failed. Check your connection and try again.');
+          this.fail('documents.uploadFailed');
           resolve();
         },
         complete: () => {
@@ -147,8 +147,15 @@ export class DocumentsStore {
     });
   }
 
-  private fail(message: string): void {
-    this.uploadState.set({ stage: 'error', fraction: null, message });
+  /**
+   * Records a failure as a translation KEY, not a sentence.
+   *
+   * The page renders it through the translate pipe, so the message follows a language change while
+   * the dialog is still open — and, more importantly, the wording lives in the catalogues where
+   * the four-language rule can see it. These were English-only until 2026-08-14.
+   */
+  private fail(messageKey: string): void {
+    this.uploadState.set({ stage: 'error', fraction: null, message: messageKey });
   }
 
   dismissUpload(): void {

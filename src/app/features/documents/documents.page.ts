@@ -198,7 +198,9 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
                 <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="finish()">{{ 'documents.done' | translate }}</button>
               }
               @default {
-                <p class="text-hpd-danger" role="alert">{{ store.upload().message }}</p>
+                @if (store.upload().message; as messageKey) {
+                  <p class="text-hpd-danger" role="alert">{{ messageKey | translate }}</p>
+                }
                 <button class="hpd-btn hpd-btn-primary hpd-focusable" (click)="store.dismissUpload()">
                   {{ 'messages.close' | translate }}
                 </button>
@@ -290,7 +292,7 @@ export class DocumentsPage implements OnInit {
 
   private validate(): boolean {
     if (this.type === 'LICENSE' && !this.expiryDate) {
-      this.validationError.set('A licence needs its expiry date.');
+      this.validationError.set(this.translate.instant('documents.expiryRequired'));
       return false;
     }
     if (this.type === 'OTHER' && !this.otherLabel.trim()) {

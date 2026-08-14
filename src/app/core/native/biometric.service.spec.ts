@@ -1,4 +1,8 @@
 import { TestBed } from '@angular/core/testing';
+import { TranslateLoader, TranslateModule, TranslateService } from '@ngx-translate/core';
+
+import { EN } from '../i18n/catalogues';
+import { BundledTranslateLoader } from '../i18n/language.service';
 
 import { BiometricService } from './biometric.service';
 
@@ -33,7 +37,12 @@ describe('BiometricService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    TestBed.configureTestingModule({});
+    // Real catalogues: the prompt words are now translations, and a stub would let a missing key
+    // pass as an empty dialog.
+    TestBed.configureTestingModule({
+      imports: [TranslateModule.forRoot({ loader: { provide: TranslateLoader, useClass: BundledTranslateLoader } })],
+    });
+    TestBed.inject(TranslateService).use('en');
     service = TestBed.inject(BiometricService);
   });
 
@@ -61,10 +70,12 @@ describe('BiometricService', () => {
   });
 
   it('always allows the device credential as a fallback when prompting', async () => {
-    await service.authenticate('Unlock Abofonsa BridgeCare Professional');
+    await service.authenticate();
 
+    // The words come from the catalogue now; what this asserts is that they arrive at the plugin
+    // and that device credential stays allowed, which is what makes a PIN-only phone usable.
     expect(plugin.authenticate).toHaveBeenCalledWith(
-      expect.objectContaining({ reason: 'Unlock Abofonsa BridgeCare Professional', allowDeviceCredential: true }),
+      expect.objectContaining({ reason: EN.boot.unlockReason, cancelTitle: EN.boot.usePassword, allowDeviceCredential: true }),
     );
   });
 

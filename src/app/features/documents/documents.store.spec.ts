@@ -106,7 +106,7 @@ describe('DocumentsStore', () => {
       expect(api.uploadDocument).not.toHaveBeenCalled();
       expect(store.upload().stage).toBe('error');
       // The message must be actionable, not a byte count.
-      expect(store.upload().message).toContain('background');
+      expect(store.upload().message).toBe('documents.uploadPhotoTooLarge');
     });
 
     it('explains an undecodable image rather than surfacing a decode error', async () => {
@@ -116,7 +116,7 @@ describe('DocumentsStore', () => {
       await store.captureAndUpload('CERTIFICATE');
 
       expect(store.upload().stage).toBe('error');
-      expect(store.upload().message).toContain('Could not read that image');
+      expect(store.upload().message).toBe('documents.uploadPhotoUnreadable');
     });
 
     it('passes the licence expiry through, which the server requires', async () => {
@@ -131,7 +131,7 @@ describe('DocumentsStore', () => {
       await store.captureAndUpload('CERTIFICATE');
 
       expect(store.upload().stage).toBe('error');
-      expect(store.upload().message).toContain('Check your connection');
+      expect(store.upload().message).toBe('documents.uploadFailed');
     });
   });
 
@@ -161,14 +161,14 @@ describe('DocumentsStore', () => {
       await store.uploadPicked(file(type, 1000), 'CERTIFICATE');
 
       expect(api.uploadDocument).not.toHaveBeenCalled();
-      expect(store.upload().message).toContain('Only PDF, PNG and JPEG');
+      expect(store.upload().message).toBe('documents.uploadTypeRejected');
     });
 
     it('rejects an oversize PDF locally rather than letting the server do it', async () => {
       await store.uploadPicked(file('application/pdf', SERVER_MAX_BYTES + 1, 'huge.pdf'), 'CERTIFICATE');
 
       expect(api.uploadDocument).not.toHaveBeenCalled();
-      expect(store.upload().message).toContain('5 MB');
+      expect(store.upload().message).toBe('documents.uploadPdfTooLarge');
     });
   });
 

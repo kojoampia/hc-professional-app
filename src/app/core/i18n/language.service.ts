@@ -82,6 +82,11 @@ export class LanguageService {
   private apply(language: SupportedLanguage): void {
     this.translate.use(language);
     this.currentSignal.set(language);
+
+    // `index.html` ships `lang="en"` and nothing else updates it, so a German app announced itself
+    // as English to TalkBack and VoiceOver — which then read German copy with English phonetics.
+    // Silent to anyone not using a screen reader, which is why it survived every visual check.
+    document.documentElement.lang = language;
   }
 
   /**
