@@ -77,6 +77,10 @@ coverage/
 /android/.gradle/
 /android/build/
 /android/app/build/
+# capacitor-cordova-android-plugins is a real Gradle module, so it has build output
+# of its own. Its sources are committed like the rest of the native project; this
+# line is what the three above missed.
+/android/capacitor-cordova-android-plugins/build/
 /android/local.properties
 /android/captures/
 *.apk
