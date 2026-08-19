@@ -1,0 +1,92 @@
+# Quality gate for every pull request and every push to main.
+#
+# THIS IS THE FIRST TEST-RUNNING CI IN THIS WORKSPACE. Every sibling repository has a `release.yml`
+# that builds an image and pushes it, and each says so explicitly: no quality gate, nothing that can
+# fail a pull request on a bad spec. That is a defensible trade for a container — a bad deploy is
+# fixed by deploying again, in minutes, by one person.
+#
+# It is not defensible here. A mobile regression cannot be hotfixed by redeploying anything: it ships
+# through store review, which is days on Android and unpredictable on iOS, and until it clears, every
+# clinician who updated is holding the broken build. The asymmetry is the whole argument for this
+# file — see mobile-app-plan.md § CI.
+#
+# What it does NOT do is sign or publish anything. Release lives in release-android.yml and
+# release-ios.yml, which run on tags and carry the credentials. This workflow needs no secrets at
+# all, which is deliberate: it must run on a fork's pull request, where secrets are not available.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # So a red main can be re-checked after a dependency or runner change without an empty commit.
+  workflow_dispatch:
+
+# A second push to the same PR makes the first run pointless. Cancel it rather than pay for both —
+# but never cancel a run on main, where the history of what passed is the point.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: lint, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22 from .nvmrc rather than a literal here, so the version is stated once and this file
+      # cannot drift from what a developer runs locally.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` and not `npm install`: it installs exactly the lockfile and fails if package.json
+      # and package-lock.json disagree, which is itself a check worth having.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # Formatting is checked, never applied. A CI job that rewrites source and pushes turns review
+      # into a moving target.
+      - name: Check formatting
+        run: npm run prettier:check
+
+      # test:ci rather than test — it adds coverage and caps workers at 2, which matters on a
+      # two-core runner where Jest's default of one worker per core swaps and then times out.
+      - name: Test
+        run: npm run test:ci
+
+      # The production configuration specifically. It is the one that applies the environment file
+      # replacement — dev points the app at 10.0.2.2, prod at professional.abofonsa.com — so a dev
+      # build passing says nothing about what would ship.
+      - name: Production build
+        run: npm run build:prod
+
+      # `cap sync` copies the built web assets into the native projects and reconciles the plugin
+      # list against package.json. It is the step that catches a plugin added to package.json but
+      # never registered natively — which builds and tests green, and fails on a device.
+      #
+      # Neither the Android SDK nor Xcode is needed for this; sync is a file operation.
+      - name: Capacitor sync
+        run: npx cap sync
+
+      # Belt and braces on the invariant MOB11 exists to protect. The three i18n specs run as part
+      # of the suite above, so this adds nothing on a green run — its value is in the failure
+      # message, which names the actual condition rather than reporting "8 assertions failed" in a
+      # spec whose name a reviewer has to go and read.
+      - name: Confirm all four locales are still present
+        run: |
+          for lang in EN ES FR DE; do
+            grep -q "export const $lang" src/app/core/i18n/catalogues.ts \
+              || { echo "::error::catalogue $lang is missing — four languages is a shipping condition, see mobile-app-plan.md"; exit 1; }
+          done
+          echo "en, es, fr and de all present"

@@ -7,8 +7,14 @@ android {
         applicationId "com.abofonsa.bridgecare.professional"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Both supplied by CI, with the committed values as the local-build fallback.
+        //
+        // versionCode comes from github.run_number because Play rejects a reused one outright, and
+        // a monotonic counter nobody has to remember to bump is the only version of this that does
+        // not eventually block a release on a Friday. versionName comes from package.json so the
+        // marketing version is stated in exactly one place — see release-android.yml.
+        versionCode System.getenv("ANDROID_VERSION_CODE") ? System.getenv("ANDROID_VERSION_CODE").toInteger() : 1
+        versionName System.getenv("ANDROID_VERSION_NAME") ?: "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +22,42 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing, read from the ENVIRONMENT and never from a file in this repository.
+    //
+    // This repository is PUBLIC. Anything committed here is mirrored and indexed within minutes and
+    // is not retractable by deleting it, so the upload keystore lives in GitHub Actions secrets and
+    // is materialised on the runner for the length of one job. `*.keystore`, `*.jks` and `*.p8` are
+    // gitignored; that is the second line, not the first.
+    //
+    // The config is declared unconditionally but only *populated* when the environment carries a
+    // keystore, so a local `assembleDebug` on a machine with no signing material still works —
+    // debug builds use the standard debug key and never consult this block.
+    //
+    // Play App Signing holds the real app key; this is the UPLOAD key. The distinction matters: an
+    // upload key can be reset by Google if it is lost, whereas losing the app key without Play App
+    // Signing means the listing can never be updated again and a new one must be published.
+    signingConfigs {
+        release {
+            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Only when there is something to sign with. Without this guard a release build on an
+            // unconfigured machine fails inside the signing task with a null storeFile, which reads
+            // as a broken Gradle setup rather than an absent credential.
+            if (System.getenv("ANDROID_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

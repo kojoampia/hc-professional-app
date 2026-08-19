@@ -1,0 +1,164 @@
+# Tag `v*` → signed IPA → TestFlight. No local steps.
+#
+# THIS CANNOT RUN YET, and the reason is the same one holding MOB9's iOS half: no App Store Connect
+# credentials exist. The preflight says which are missing and stops. It is committed now rather than
+# when the key arrives so that the day it does, the remaining work is pasting secrets — not designing
+# a release pipeline under time pressure with a store review queue waiting.
+#
+# CREDENTIALS THIS NEEDS, none of which exist yet — see MOB0:
+#
+#   APP_STORE_CONNECT_KEY_ID       the App Store Connect API key id
+#   APP_STORE_CONNECT_ISSUER_ID    the issuer id from the same page
+#   APP_STORE_CONNECT_KEY_P8       the .p8 private key, base64
+#   MATCH_GIT_URL                  the PRIVATE repository holding encrypted certificates
+#   MATCH_PASSWORD                 the passphrase those are encrypted with
+#   MATCH_GIT_BASIC_AUTHORIZATION  a token that can read that repository
+#
+# NOTE the APNs `.p8` (MOB9, push) and the App Store Connect `.p8` (this file, publishing) are
+# DIFFERENT KEYS from different pages of the developer portal. They have the same file extension and
+# are routinely confused; neither substitutes for the other, and MOB0 needs both.
+#
+# WHY fastlane match rather than uploading a .p12: match keeps certificates and profiles in a private
+# encrypted repository, so a laptop and a runner obtain them the same way. The alternative — a
+# certificate exported by hand, base64'd into a secret — works exactly once, expires silently after a
+# year, and is renewed by whoever still remembers the export steps.
+#
+# macos-14 is required: Xcode does not exist on the ubuntu runners, and the AAB workflow's runner
+# cannot do this half. It is also several times the per-minute cost of ubuntu, which is why this runs
+# only on tags and never on a pull request.
+name: Release iOS
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: release-ios-${{ github.ref }}
+  cancel-in-progress: false # never cancel mid-upload
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: signed IPA → TestFlight
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # First, and before any macos minutes are spent on a checkout of certificates or a build.
+      - name: Preflight — required secrets are present
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: |
+          missing=()
+          for name in APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_P8 \
+                      MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]}"
+            echo "::error::See MOB0 in ../docs/mobile-app-plan.md. The App Store Connect API key is a DIFFERENT key from the APNs .p8 that MOB9 needs."
+            exit 1
+          fi
+          echo "all six publishing secrets are present"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # The same gate as ci.yml and the Android release. A tag is not exempt.
+      - name: Lint, test and build
+        run: |
+          npm run lint
+          npm run prettier:check
+          npm run test:ci
+          npm run build:prod
+
+      - name: Capacitor sync
+        run: npx cap sync ios
+
+      # Same check as the Android workflow: the tag and package.json must agree, or the two stores
+      # end up carrying builds that claim the same marketing version and contain different code.
+      - name: Resolve version
+        id: version
+        run: |
+          pkg=$(node -p "require('./package.json').version")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$pkg" != "$tag" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $pkg — bump one or the other"
+            exit 1
+          fi
+          echo "name=$pkg" >> "$GITHUB_OUTPUT"
+
+      - name: Write the App Store Connect key
+        env:
+          APP_STORE_CONNECT_KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          echo "$APP_STORE_CONNECT_KEY_P8" | base64 -d > "$RUNNER_TEMP/private_keys/AuthKey.p8"
+
+      # match fetches the distribution certificate and provisioning profile from the private repo and
+      # installs them into a throwaway keychain. `readonly` so a CI run can never mint a new
+      # certificate — Apple caps how many an account may hold, and a runner quietly consuming them is
+      # a genuinely unpleasant thing to debug.
+      - name: Install signing certificates (fastlane match)
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: |
+          gem install fastlane --no-document
+          fastlane match appstore \
+            --readonly true \
+            --git_url "${{ secrets.MATCH_GIT_URL }}" \
+            --app_identifier com.abofonsa.bridgecare.professional
+          echo "certificates installed"
+
+      # CFBundleVersion from the run number, for the same reason as Android's versionCode: App Store
+      # Connect rejects a build number it has already seen, and a human-maintained counter is the
+      # thing that gets forgotten at the worst moment.
+      - name: Set the build number
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.name }}" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" ios/App/App/Info.plist
+
+      - name: Archive and export
+        run: |
+          fastlane gym \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --export_method app-store \
+            --output_directory "$RUNNER_TEMP/build" \
+            --clean
+
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          fastlane pilot upload \
+            --api_key_path <(printf '{"key_id":"%s","issuer_id":"%s","key_filepath":"%s"}' \
+                "$APP_STORE_CONNECT_KEY_ID" "$APP_STORE_CONNECT_ISSUER_ID" "$RUNNER_TEMP/private_keys/AuthKey.p8") \
+            --ipa "$RUNNER_TEMP/build/App.ipa" \
+            --skip_waiting_for_build_processing true
+
+      - name: Keep the IPA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: App-${{ steps.version.outputs.name }}-${{ github.run_number }}.ipa
+          path: ${{ runner.temp }}/build/App.ipa
+          if-no-files-found: warn
+          retention-days: 30
