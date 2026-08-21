@@ -1,9 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, from, of, throwError } from 'rxjs';
+import { Observable, firstValueFrom, from, of, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
 import { ApplicationConfigService } from '../config/application-config.service';
+import { NotificationsApiService } from '../api/notifications-api.service';
 import { PushService } from '../native/push.service';
 import { SecureTokenStore } from '../native/secure-token-store.service';
 import { MessageSocketService } from '../api/message-socket.service';
@@ -40,6 +41,7 @@ export class AuthService {
   private readonly tokens = inject(SecureTokenStore);
   private readonly device = inject(DeviceService);
   private readonly push = inject(PushService);
+  private readonly notifications = inject(NotificationsApiService);
   private readonly cache = inject(CacheStore);
   private readonly socket = inject(MessageSocketService);
 
@@ -166,6 +168,19 @@ export class AuthService {
   /** Local teardown. Also the path taken when the server has already disowned us. */
   private async endSession(reason: SignOutReason): Promise<void> {
     this.refreshInFlight = null;
+    // Server first, and before the credentials go: the DELETE is authenticated, and a registration
+    // left behind keeps this handset in the account's target set. That matters most on a shared
+    // phone — FCM hands the next user the same token, and until the server is told, notifications
+    // for the clinician who just signed out would still be addressed to it (MOB10).
+    const deviceToken = this.push.token();
+    if (deviceToken) {
+      try {
+        await firstValueFrom(this.notifications.deregister(deviceToken));
+      } catch {
+        // Offline, or the session is already gone — this path is also taken when the server has
+        // disowned the token. The device is pruned server-side the first time a send to it fails.
+      }
+    }
     try {
       await this.push.unregister();
     } catch {

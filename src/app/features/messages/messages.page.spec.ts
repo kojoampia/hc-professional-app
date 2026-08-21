@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
+import { provideRouter } from '@angular/router';
 
 import { MessagesPage } from './messages.page';
 
@@ -35,7 +36,9 @@ describe('MessagesPage — opening a thread', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [MessagesPage, TranslateModule.forRoot()],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      // provideRouter supplies the ActivatedRoute the page reads a tapped notification's
+      // conversation id from (MOB10).
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
     fixture = TestBed.createComponent(MessagesPage);
     page = fixture.componentInstance;

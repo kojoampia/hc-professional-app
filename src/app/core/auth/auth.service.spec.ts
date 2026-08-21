@@ -1,3 +1,4 @@
+import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -24,13 +25,24 @@ describe('AuthService', () => {
   let auth: AuthService;
   let http: HttpTestingController;
   let tokens: SecureTokenStore;
-  let push: { unregister: jest.Mock };
+  let push: { unregister: jest.Mock; token: WritableSignal<string | null> };
 
   const tokenPair = (suffix: string) => ({
     id_token: 'access-' + suffix,
     refresh_token: 'refresh-' + suffix,
     expires_in: 900,
   });
+
+  /**
+   * Answers the device deregistration every end-of-session path now issues (MOB10).
+   *
+   * Sign-out waits on it, so a test that does not drain it hangs rather than failing — which reads
+   * as a slow suite rather than a missing request.
+   */
+  const drainDeregistration = async (): Promise<void> => {
+    await settle();
+    http.expectOne(request => request.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
+  };
 
   /** Signs in and leaves the service holding access-1 / refresh-1. */
   const signIn = async (): Promise<void> => {
@@ -41,7 +53,8 @@ describe('AuthService', () => {
   };
 
   beforeEach(() => {
-    push = { unregister: jest.fn(async () => undefined) };
+    // A device that has registered for push, so sign-out has something to deregister (MOB10).
+    push = { unregister: jest.fn(async () => undefined), token: signal<string | null>('device-token-1') };
 
     TestBed.configureTestingModule({
       providers: [
@@ -110,7 +123,9 @@ describe('AuthService', () => {
     });
 
     it('clears any previous sign-out reason', async () => {
-      await auth.discardStoredSession('session-expired');
+      const discarded = auth.discardStoredSession('session-expired');
+      await drainDeregistration();
+      await discarded;
       expect(auth.signOutReason()).toBe('session-expired');
 
       await signIn();
@@ -162,6 +177,9 @@ describe('AuthService', () => {
       const done = firstValueFrom(auth.refresh());
       await settle();
       http.expectOne(BASE + 'api/auth/refresh').flush({}, { status: 401, statusText: 'Unauthorized' });
+      // A spent refresh token still ends the session, so the device is deregistered here too — the
+      // call is expected to 401 in practice, which is why it is best-effort.
+      await drainDeregistration();
 
       await expect(done).rejects.toBeInstanceOf(SessionExpiredError);
       expect(auth.isAuthenticated()).toBe(false);
@@ -215,6 +233,7 @@ describe('AuthService', () => {
       // nothing could ever revoke.
       expect(req.request.body).toEqual({ refresh_token: 'refresh-1' });
       req.flush(null, { status: 204, statusText: 'No Content' });
+      await drainDeregistration();
       await done;
 
       await expect(tokens.hasRefreshToken()).resolves.toBe(false);
@@ -225,9 +244,31 @@ describe('AuthService', () => {
       const done = lastValueFrom(auth.logout());
       await settle();
       http.expectOne(BASE + 'api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      // Server first, and while the access token is still valid: a registration left behind keeps
+      // this handset in the account's target set, and on a shared phone FCM hands the same token to
+      // the next user (MOB10).
+      http
+        .expectOne(r => r.method === 'DELETE' && r.url.includes('api/notifications/devices/device-token-1'))
+        .flush(null, { status: 204, statusText: 'No Content' });
       await done;
 
       expect(push.unregister).toHaveBeenCalled();
+      await expect(tokens.hasRefreshToken()).resolves.toBe(false);
+    });
+
+    it('still signs out when the device cannot be deregistered', async () => {
+      const done = lastValueFrom(auth.logout());
+      await settle();
+      http.expectOne(BASE + 'api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      http.expectOne(r => r.method === 'DELETE').error(new ProgressEvent('offline'));
+      await done;
+
+      // The server prunes the token the first time a send to it fails, so an unreachable network
+      // must not strand the user in a signed-in state.
+      expect(auth.isAuthenticated()).toBe(false);
     });
 
     it('still signs out locally when the revoke call fails', async () => {
@@ -236,6 +277,8 @@ describe('AuthService', () => {
       const done = lastValueFrom(auth.logout());
       await settle();
       http.expectOne(BASE + 'api/auth/logout').error(new ProgressEvent('offline'));
+      await settle();
+      http.expectOne(r => r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
       await done;
 
       await expect(tokens.hasRefreshToken()).resolves.toBe(false);
@@ -246,6 +289,7 @@ describe('AuthService', () => {
       const done = lastValueFrom(auth.logout('biometry-changed'));
       await settle();
       http.expectOne(BASE + 'api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+      await drainDeregistration();
       await done;
 
       expect(auth.signOutReason()).toBe('biometry-changed');

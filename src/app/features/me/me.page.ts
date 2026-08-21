@@ -14,11 +14,13 @@ import {
   IonSelect,
   IonSelectOption,
   IonTitle,
+  IonToggle,
   IonToolbar,
   NavController,
 } from '@ionic/angular/standalone';
 
 import { ClinicianProfileDto, ProfileApiService } from '../../core/api/profile-api.service';
+import { NotificationsApiService } from '../../core/api/notifications-api.service';
 import { DutyRosterApiService } from '../../core/api/duty-roster-api.service';
 import { AccountService } from '../../core/auth/account.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -56,6 +58,7 @@ import { formatRosterSummary } from './roster-summary';
     IonButton,
     IonSelect,
     IonSelectOption,
+    IonToggle,
   ],
   template: `
     <ion-header>
@@ -118,6 +121,34 @@ import { formatRosterSummary } from './roster-summary';
       </ion-list>
 
       <ion-list>
+        <ion-list-header>{{ 'me.notifications' | translate }}</ion-list-header>
+
+        <ion-item>
+          <ion-toggle [checked]="pushMessages()" (ionChange)="setMessages($any($event).detail.checked)" data-test="push-messages">{{
+            'me.pushMessages' | translate
+          }}</ion-toggle>
+        </ion-item>
+        <ion-item>
+          <ion-toggle [checked]="pushCompliance()" (ionChange)="setCompliance($any($event).detail.checked)" data-test="push-compliance">{{
+            'me.pushCompliance' | translate
+          }}</ion-toggle>
+        </ion-item>
+        <ion-item>
+          <ion-toggle [checked]="pushSenderName()" (ionChange)="setSenderName($any($event).detail.checked)" data-test="push-sender-name">{{
+            'me.pushSenderName' | translate
+          }}</ion-toggle>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-note>{{ 'me.pushSenderNameDetail' | translate }}</ion-note>
+        </ion-item>
+        @if (prefsFailed()) {
+          <ion-item lines="none">
+            <ion-note color="danger">{{ 'me.prefsSaveFailed' | translate }}</ion-note>
+          </ion-item>
+        }
+      </ion-list>
+
+      <ion-list>
         <ion-list-header>{{ 'me.language' | translate }}</ion-list-header>
         <ion-item>
           <ion-select [value]="language.current()" (ionChange)="changeLanguage($any($event).detail.value)" data-test="language">
@@ -156,6 +187,7 @@ import { formatRosterSummary } from './roster-summary';
 })
 export class MePage implements OnInit {
   private readonly profiles = inject(ProfileApiService);
+  private readonly notifications = inject(NotificationsApiService);
   private readonly rosters = inject(DutyRosterApiService);
   private readonly share = inject(ShareService);
   private readonly auth = inject(AuthService);
@@ -178,9 +210,20 @@ export class MePage implements OnInit {
   readonly savedMessage = signal<string | null>(null);
   readonly shareMessage = signal<string | null>(null);
 
+  /**
+   * Notification preferences (MOB10). They start at the server's defaults — messages and compliance
+   * on, sender name off — so the switches are never blank while the read is in flight, and a device
+   * that cannot reach the server shows what the server would actually do rather than all-off.
+   */
+  readonly pushMessages = signal(true);
+  readonly pushCompliance = signal(true);
+  readonly pushSenderName = signal(false);
+  readonly prefsFailed = signal(false);
+
   private profile: ClinicianProfileDto = {};
 
   ngOnInit(): void {
+    this.loadPreferences();
     this.profiles.mine().subscribe({
       next: profile => {
         this.profile = profile ?? {};
@@ -219,6 +262,63 @@ export class MePage implements OnInit {
 
   async changeLanguage(code: SupportedLanguage): Promise<void> {
     await this.language.use(code);
+    // No device re-registration here: PushRegistrationService watches the language signal, so the
+    // server learns the new language whether it was changed from this page or anywhere else.
+  }
+
+  setMessages(enabled: boolean): void {
+    this.pushMessages.set(enabled);
+    this.savePreferences();
+  }
+
+  setCompliance(enabled: boolean): void {
+    this.pushCompliance.set(enabled);
+    this.savePreferences();
+  }
+
+  setSenderName(enabled: boolean): void {
+    this.pushSenderName.set(enabled);
+    this.savePreferences();
+  }
+
+  private loadPreferences(): void {
+    this.notifications.preferences().subscribe({
+      next: preferences => {
+        this.pushMessages.set(preferences.messages);
+        this.pushCompliance.set(preferences.compliance);
+        this.pushSenderName.set(preferences.showSenderName);
+      },
+      // Offline, or a profile that does not exist yet. The defaults above are the honest answer to
+      // "what happens if a notification arrives now", so there is nothing to report.
+      error: () => undefined,
+    });
+  }
+
+  /**
+   * Writes all three on every change.
+   *
+   * <p>There is no Save button for this list, because a settings toggle that needs confirming reads
+   * as broken. The three go together because the endpoint replaces all three — a partial body would
+   * be indistinguishable from "off".
+   */
+  private savePreferences(): void {
+    this.prefsFailed.set(false);
+    this.notifications
+      .savePreferences({
+        messages: this.pushMessages(),
+        compliance: this.pushCompliance(),
+        showSenderName: this.pushSenderName(),
+      })
+      .subscribe({
+        next: saved => {
+          // Take the server's answer, not the optimistic local one: it is what will actually be
+          // consulted when an event arrives.
+          this.pushMessages.set(saved.messages);
+          this.pushCompliance.set(saved.compliance);
+          this.pushSenderName.set(saved.showSenderName);
+        },
+        error: () => this.prefsFailed.set(true),
+      });
   }
 
   shareRoster(): void {

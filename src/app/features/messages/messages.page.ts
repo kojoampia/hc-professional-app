@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -194,6 +196,8 @@ export class MessagesPage implements OnInit {
   private readonly accounts = inject(AccountService);
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   /** DatePipe formats through LOCALE_ID, which ngx-translate does not touch — pass it explicitly. */
   readonly locale = this.language.current;
 
@@ -219,6 +223,24 @@ export class MessagesPage implements OnInit {
   async ngOnInit(): Promise<void> {
     await this.store.start();
     this.nowTick.set(Date.now());
+    this.openFromNotificationTaps();
+  }
+
+  /**
+   * Opens the thread a tapped push notification named (MOB10).
+   *
+   * <p>Subscribed rather than read once from the snapshot: this page is a tab, so a second tap
+   * while it is already mounted re-uses the component and `ngOnInit` does not run again. Reading
+   * the snapshot alone works exactly once per visit to the tab, which is the kind of bug that
+   * survives testing — the first notification always opens the right thread.
+   */
+  private openFromNotificationTaps(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const conversationId = params.get('conversation');
+      if (conversationId && conversationId !== this.store.openConversationId()) {
+        void this.open(conversationId);
+      }
+    });
   }
 
   isMine(senderId: string | undefined): boolean {

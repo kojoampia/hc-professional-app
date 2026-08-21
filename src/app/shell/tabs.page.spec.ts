@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { provideRouter } from '@angular/router';
 
+import { PushRegistrationService } from '../core/push/push-registration.service';
 import { TabsPage } from './tabs.page';
 
 /**
@@ -29,7 +30,9 @@ describe('TabsPage', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [TabsPage, TranslateModule.forRoot()],
-      providers: [provideRouter([])],
+      // The shell asks for push registration on mount (MOB10). Stubbed: what it does is
+      // PushRegistrationService's own spec, and the real one would drag the messaging graph in.
+      providers: [provideRouter([]), { provide: PushRegistrationService, useValue: { start: jest.fn().mockResolvedValue(true) } }],
     });
     fixture = TestBed.createComponent(TabsPage);
     fixture.detectChanges();
