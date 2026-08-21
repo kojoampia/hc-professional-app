@@ -1,0 +1,21 @@
+Abofonsa BridgeCare Professional est l'application destinée aux cliniciens de la plateforme de soins à domicile Abofonsa BridgeCare. C'est un outil de travail pour des professionnels de santé vérifiés, et non une application de santé grand public : chaque écran exige un compte délivré et habilité par Abofonsa, et rien n'est accessible sans lui.
+
+CE QUE VOUS POUVEZ FAIRE
+
+Planning de garde — consultez les postes qui vous sont affectés, par mois, semaine ou jour, avec les visites de chaque tournée dans l'ordre où vous les ferez, ainsi que l'adresse et le téléphone dont vous avez besoin sur place.
+
+Absences — demandez des congés et voyez s'ils ont été approuvés. Les demandes sont traitées par un administrateur du planning ; elles ne sont jamais accordées automatiquement.
+
+Messages — messagerie sécurisée avec votre équipe soignante, avec compteur de non-lus et notifications désactivables.
+
+Documents — photographiez ou envoyez votre licence professionnelle, vos certificats et vos pièces d'identité au moment de leur renouvellement, et suivez leur statut de vérification.
+
+Votre profil — tenez vos coordonnées à jour, en français, anglais, espagnol ou allemand.
+
+VOS DONNÉES
+
+Les informations des patients restent sur les serveurs qui les détiennent et ne s'affichent que pour les clients de votre propre planning, dans une fenêtre limitée. Rien n'est conservé en clair sur l'appareil, et la déconnexion l'efface. L'application ne vend pas de données et ne les utilise pas à des fins publicitaires.
+
+À QUI ELLE S'ADRESSE
+
+Médecins, infirmiers, ambulanciers, pharmaciens, thérapeutes, aides-soignants, care angels, préparateurs et techniciens travaillant avec Abofonsa. Un compte est nécessaire. Si vous êtes patient ou proche, ce n'est pas l'application que vous cherchez.

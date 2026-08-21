@@ -1,0 +1,1 @@
+Calendrier du planning en vues mois, semaine et année, tournées de visites avec coordonnées client, et demandes de congés.
