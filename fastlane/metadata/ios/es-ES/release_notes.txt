@@ -1,0 +1,1 @@
+Calendario del cuadrante con vistas de mes, semana y año, rondas de visitas con datos del cliente y solicitudes de ausencia.

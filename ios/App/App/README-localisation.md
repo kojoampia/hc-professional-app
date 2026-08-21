@@ -10,22 +10,21 @@ That is why this file exists: the work looks finished in a diff and is not.
 
 ## What is left (needs Xcode on a Mac)
 
+**One step, not two, as of MOB13.** Step 2 is done; step 1 is not, and it is the one that matters.
+
 1. **Add the three files to the `App` target.** In Xcode, drag each `InfoPlist.strings` into the
    project navigator with *Copy items if needed* **off** and *Add to targets: App* **on**. Xcode
    should collapse them into one `InfoPlist.strings` entry with three children; if it does not,
    select the file, open the File inspector, and tick `es`, `fr`, `de` under *Localization*.
-2. **Declare the languages** in `Info.plist`, so the App Store lists the app as localised rather
-   than English-only:
+2. ~~**Declare the languages** in `Info.plist`~~ — **done in MOB13.** `CFBundleLocalizations` now
+   lists `en`, `es`, `fr`, `de`, so the App Store lists the app as localised rather than
+   English-only.
 
-   ```xml
-   <key>CFBundleLocalizations</key>
-   <array>
-     <string>en</string>
-     <string>es</string>
-     <string>fr</string>
-     <string>de</string>
-   </array>
-   ```
+   **This did not fix the prompts, and could not.** Declaring a language and bundling its strings
+   are separate things: step 1 above is still what copies the `.strings` files into the app, and
+   until it is done a German device still reads the English `Info.plist` entries. If anything the
+   declaration makes the gap worse — the store now advertises German while the permission dialogs
+   speak English.
 
 ## How to verify — not by reading the code
 

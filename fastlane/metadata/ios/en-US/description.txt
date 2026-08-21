@@ -1,0 +1,21 @@
+Abofonsa BridgeCare Professional is the clinician-facing app for the Abofonsa BridgeCare home-healthcare platform. It is a work tool for verified healthcare professionals, not a consumer health app: every screen requires an account issued and credentialed by Abofonsa, and there is no way to browse it without one.
+
+WHAT YOU CAN DO
+
+Duty roster — see the shifts you are assigned, by month, week or day, with the visits on each round in the order you will make them, and the address and phone number you need at the door.
+
+Time off — request holiday or leave and see whether it has been approved. Requests go to a roster administrator; they are never granted automatically.
+
+Messages — secure messaging with your care team, with unread counts and notifications you can turn off.
+
+Documents — photograph or upload your professional licence, certificates and identity documents when they need renewing, and see their verification status.
+
+Your profile — keep your contact details current, in English, Spanish, French or German.
+
+ABOUT YOUR DATA
+
+Patient information stays on the servers that own it and is shown only for the customers on your own duty roster, within a limited window. Nothing is cached on the device unencrypted, and signing out removes it. The app does not sell data or use it for advertising.
+
+WHO IT IS FOR
+
+Doctors, nurses, paramedics, pharmacists, therapists, carers, care angels, chemists and technicians working with Abofonsa. An account is required. If you are a patient or a family member, this is not the app you want.

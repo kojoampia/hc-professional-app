@@ -151,6 +151,20 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: ${{ inputs.track || 'internal' }}
           status: completed
+          # Release notes in all four shipping languages. The directory holds one whatsnew-<locale>
+          # file per language; Play shows each tester the one matching their account, and falls back
+          # to en-US for anything not listed.
+          #
+          # Four languages is a shipping condition for every package here, store-facing copy
+          # included — an app that advertises itself in English and opens in German is an Apple
+          # rejection risk, and the same reasoning applies to Play. See MOB13.
+          #
+          # NOTE this publishes release notes only. Title, short and full descriptions live beside
+          # them in fastlane/metadata/android/<locale>/ and are NOT uploaded by this action; they
+          # are applied with `fastlane supply` or pasted into the console once, because a listing
+          # rarely changes and republishing it on every tag is how a reviewed listing gets reverted
+          # by accident. See fastlane/metadata/README.md.
+          whatsNewDirectory: fastlane/metadata/android/whatsnew
 
       # Kept for the case the upload step fails: without this the only signed artefact of a tagged
       # release would live on a runner that is about to be destroyed.

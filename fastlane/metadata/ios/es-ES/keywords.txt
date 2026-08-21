@@ -1,0 +1,1 @@
+cuadrante,turno,enfermera,domiciliaria,guardia,credenciales,cuidados,sanitario

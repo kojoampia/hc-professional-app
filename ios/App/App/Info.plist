@@ -12,6 +12,19 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<!-- The four languages this app ships, declared so the App Store lists it as localised rather
+	     than English-only. Must stay in step with the .lproj directories beside this file and with
+	     src/assets/i18n — four languages is a shipping condition for every package, not a MOB11
+	     one-off. Declaring a language here does NOT bundle its strings: the .lproj files still have
+	     to be members of the App target, which is the step README-localisation.md exists for and
+	     which is still outstanding. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>es</string>
+		<string>fr</string>
+		<string>de</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>Abofonsa Pro</string>
 	<key>CFBundleExecutable</key>
