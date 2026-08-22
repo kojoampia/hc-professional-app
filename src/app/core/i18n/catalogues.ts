@@ -28,6 +28,10 @@ export const EN = {
     ageMinutes: '{{count}} min ago',
     ageHours: '{{count}} h ago',
     ageDays: '{{count}} d ago',
+    pendingUnsent: 'Not sent yet',
+    pendingConflict: 'Changed elsewhere',
+    pendingRejected: 'Refused',
+    pendingExpired: 'Gave up',
   },
   /**
    * The sign-in screen. Its strings live here rather than beside the page because four of them are
@@ -237,6 +241,10 @@ export const ES: typeof EN = {
     ageMinutes: 'hace {{count}} min',
     ageHours: 'hace {{count}} h',
     ageDays: 'hace {{count}} d',
+    pendingUnsent: 'Aún sin enviar',
+    pendingConflict: 'Modificado en otro sitio',
+    pendingRejected: 'Rechazado',
+    pendingExpired: 'Se ha desistido',
   },
   auth: {
     subtitle: 'Profesional',
@@ -432,6 +440,10 @@ export const FR: typeof EN = {
     ageMinutes: 'il y a {{count}} min',
     ageHours: 'il y a {{count}} h',
     ageDays: 'il y a {{count}} j',
+    pendingUnsent: 'Pas encore envoyé',
+    pendingConflict: 'Modifié ailleurs',
+    pendingRejected: 'Refusé',
+    pendingExpired: 'Abandonné',
   },
   auth: {
     subtitle: 'Professionnel',
@@ -627,6 +639,10 @@ export const DE: typeof EN = {
     ageMinutes: 'vor {{count}} Min.',
     ageHours: 'vor {{count}} Std.',
     ageDays: 'vor {{count}} T.',
+    pendingUnsent: 'Noch nicht gesendet',
+    pendingConflict: 'Anderswo geändert',
+    pendingRejected: 'Abgelehnt',
+    pendingExpired: 'Aufgegeben',
   },
   auth: {
     subtitle: 'Fachkraft',

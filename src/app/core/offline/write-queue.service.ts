@@ -193,13 +193,31 @@ export class WriteQueue {
     await this.inFlight;
   }
 
+  /**
+   * Keeps going until nothing is left to do.
+   *
+   * <p><b>One pass is not enough, and that was a real bug.</b> {@link due} yields at most one op per
+   * `(kind, subject)` lane, so a single pass sends the first note on a patient and leaves the second
+   * queued — it would then wait for an unrelated event to come along. On a phone that is the
+   * difference between two notes leaving together and the second one leaving tomorrow.
+   *
+   * <p>Termination is by `attempted`, not by the list emptying: an op whose sender is not registered
+   * stays `pending` and stays due forever, so without this the loop would spin. Each op gets one
+   * attempt per drain; the next trigger gives it another.
+   */
   private async runDrain(): Promise<void> {
-    do {
+    const attempted = new Set<string>();
+    for (;;) {
       this.drainAgain = false;
-      for (const write of this.due()) {
+      const batch = this.due().filter(write => !attempted.has(write.id));
+      if (batch.length === 0 || !this.network.connected()) {
+        return;
+      }
+      for (const write of batch) {
+        attempted.add(write.id);
         await this.attempt(write);
       }
-    } while (this.drainAgain && this.network.connected());
+    }
   }
 
   /** Re-arms a conflicted or rejected op after the clinician has looked at it. */
