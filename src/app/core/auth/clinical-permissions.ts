@@ -41,12 +41,7 @@ export const AUTHORITY = {
  * handled by the early return. If these two lists disagree, the phone offers a button the server
  * refuses — or hides one it would have accepted.
  */
-const CLINICAL_MUTATION_ROLES: readonly string[] = [
-  AUTHORITY.NURSE,
-  AUTHORITY.PARAMEDIC,
-  AUTHORITY.THERAPIST,
-  AUTHORITY.PHARMACIST,
-];
+const CLINICAL_MUTATION_ROLES: readonly string[] = [AUTHORITY.NURSE, AUTHORITY.PARAMEDIC, AUTHORITY.THERAPIST, AUTHORITY.PHARMACIST];
 
 /** What a clinician might want to do. Only the three this app offers are listed. */
 export type ClinicalPermission = 'manageActivity' | 'manageReport' | 'manageCase';
