@@ -19,6 +19,8 @@ describe('MePage', () => {
   let nav: { navigateRoot: jest.Mock };
 
   const PROFILE_URL = 'services/professionalservice/api/onboarding/profile';
+  const PROGRESS_URL = 'services/professionalservice/api/onboarding/progress';
+  const CHANGE_PASSWORD_URL = 'api/account/change-password';
   const PREFERENCES_URL = 'services/professionalservice/api/notifications/preferences';
   const ROSTER_URL = 'services/professionalservice/api/duty-roster';
 
@@ -53,9 +55,15 @@ describe('MePage', () => {
     httpMock.expectOne(request => request.method === 'GET' && request.url.endsWith(PREFERENCES_URL)).flush(body);
   };
 
+  /** ngOnInit also reads the completion figure (Phase 9); most tests do not care what it is. */
+  const flushProgress = (body: unknown = { percent: 50, complete: false, status: 'SUBMITTED', requirements: [] }): void => {
+    httpMock.expectOne(request => request.url.endsWith(PROGRESS_URL)).flush(body);
+  };
+
   const loadProfile = (body: unknown = { firstName: 'Ama', lastName: 'Mensah', email: 'ama@example.com', mobilePhone: '024' }): void => {
     fixture.detectChanges();
     flushPreferences();
+    flushProgress();
     httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush(body);
   };
 
@@ -82,6 +90,12 @@ describe('MePage', () => {
 
     expect(page.savedMessage()).toBe('me.saved');
     expect(page.saveFailed()).toBe(false);
+
+    // The completion figure is computed from what was just written, so it is re-read rather than
+    // left showing the number from before the save — otherwise a clinician fills in their address
+    // and the meter still says the address is missing.
+    flushProgress({ percent: 63, complete: false, status: 'SUBMITTED', requirements: [] });
+    expect(page.progress()?.percent).toBe(63);
   });
 
   it('reports a failed save without losing what was typed', () => {
@@ -100,6 +114,7 @@ describe('MePage', () => {
     // Normal for an account that has registered but not completed onboarding.
     fixture.detectChanges();
     flushPreferences();
+    flushProgress();
     httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({}, { status: 404, statusText: 'Not Found' });
 
     expect(page.loadFailed()).toBe(true);
@@ -161,6 +176,7 @@ describe('MePage', () => {
     it('shows what the server says, not what the switches defaulted to', () => {
       fixture.detectChanges();
       flushPreferences({ messages: false, compliance: true, showSenderName: true });
+      flushProgress();
       httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
 
       expect(page.pushMessages()).toBe(false);
@@ -173,6 +189,7 @@ describe('MePage', () => {
       httpMock
         .expectOne(request => request.method === 'GET' && request.url.endsWith(PREFERENCES_URL))
         .flush({}, { status: 503, statusText: 'Service Unavailable' });
+      flushProgress();
       httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
 
       expect(page.pushMessages()).toBe(true);
@@ -201,6 +218,161 @@ describe('MePage', () => {
         .flush({}, { status: 503, statusText: 'Service Unavailable' });
 
       expect(page.prefsFailed()).toBe(true);
+    });
+  });
+
+  describe('the completion meter (Phase 9)', () => {
+    it('renders the SERVER figure, and never derives one', () => {
+      // The same number gates the transition to ACTIVE, so a locally derived percentage can read
+      // 100% while the service still refuses to advance the application.
+      fixture.detectChanges();
+      flushPreferences();
+      flushProgress({
+        percent: 75,
+        complete: false,
+        status: 'SUBMITTED',
+        requirements: [
+          { key: 'profile', done: true },
+          { key: 'address', done: false },
+        ],
+      });
+      httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
+      fixture.detectChanges();
+
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(text).toContain('75%');
+      expect(page.progress()?.requirements).toHaveLength(2);
+    });
+
+    it('renders NOTHING when there is no application, rather than 0%', () => {
+      // An invited clinician who never applied has no progress to report. "0%" would tell them
+      // they have done nothing wrong-but-everything, which is not what the server said.
+      fixture.detectChanges();
+      flushPreferences();
+      httpMock.expectOne(request => request.url.endsWith(PROGRESS_URL)).flush({}, { status: 404, statusText: 'Not Found' });
+      httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
+      fixture.detectChanges();
+
+      expect(page.progress()).toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-test="completion-meter"]')).toBeNull();
+    });
+  });
+
+  describe('the fields the meter counts', () => {
+    it('fills the nested address and next-of-kin from the loaded profile', () => {
+      loadProfile({
+        firstName: 'Ama',
+        address: { streetAddress: '12 Ring Road', city: 'Accra', region: 'Greater Accra', country: 'GH', town: 'Osu' },
+        emergencyContact: { name: 'Kofi', relationship: 'Brother', phone: '024' },
+      });
+
+      expect(page.street).toBe('12 Ring Road');
+      expect(page.region).toBe('Greater Accra');
+      expect(page.kinRelationship).toBe('Brother');
+    });
+
+    it('preserves nested fields the form does NOT offer', () => {
+      // town, district and digital address are optional to the server and absent from this form. A
+      // save that dropped them would quietly delete data the clinician entered on the web.
+      loadProfile({ address: { streetAddress: '12 Ring Road', town: 'Osu', digitalAddress: 'GA-123-4567' } });
+
+      page.city = 'Accra';
+      page.save();
+
+      const put = httpMock.expectOne(request => request.method === 'PUT' && request.url.endsWith(PROFILE_URL));
+      expect(put.request.body.address).toEqual(
+        expect.objectContaining({ town: 'Osu', digitalAddress: 'GA-123-4567', city: 'Accra', streetAddress: '12 Ring Road' }),
+      );
+      put.flush(put.request.body);
+      flushProgress();
+    });
+
+    it('sends an untouched optional field as undefined, not as an empty string', () => {
+      // hasText() on the server treats blank as absent, so either would do — but an empty string
+      // stored on the document is a value somebody later has to explain.
+      loadProfile({});
+
+      page.save();
+
+      const put = httpMock.expectOne(request => request.method === 'PUT');
+      expect(put.request.body.birthDate).toBeUndefined();
+      expect(put.request.body.cardNumber).toBeUndefined();
+      put.flush({});
+      flushProgress();
+    });
+  });
+
+  describe('changing the password', () => {
+    it('refuses a mismatched confirmation before touching the network', () => {
+      // The server takes one new password and trusts the client to have asked twice — there is no
+      // second field for it to compare against, so this check exists nowhere else.
+      loadProfile();
+      page.currentPassword = 'old';
+      page.newPassword = 'new-one';
+      page.confirmPassword = 'new-two';
+
+      page.changePassword();
+
+      httpMock.expectNone(request => request.url.endsWith(CHANGE_PASSWORD_URL));
+      expect(page.passwordMessage()).toBe('me.passwordMismatch');
+    });
+
+    it('refuses a password below the gateway bound, so a JHipster problem document is never the message', () => {
+      loadProfile();
+      page.newPassword = 'ab';
+      page.confirmPassword = 'ab';
+
+      page.changePassword();
+
+      httpMock.expectNone(request => request.url.endsWith(CHANGE_PASSWORD_URL));
+      expect(page.passwordMessage()).toBe('me.passwordLength');
+    });
+
+    it('posts to the GATEWAY, not to professionalservice', () => {
+      // The gateway owns users and authentication; api/ only validates tokens and has no account
+      // resource at all. Building this URL with a microservice argument would 404.
+      loadProfile();
+      page.currentPassword = 'old-password';
+      page.newPassword = 'new-password';
+      page.confirmPassword = 'new-password';
+
+      page.changePassword();
+
+      const request = httpMock.expectOne(r => r.method === 'POST' && r.url.endsWith(CHANGE_PASSWORD_URL));
+      expect(request.request.url).not.toContain('professionalservice');
+      expect(request.request.body).toEqual({ currentPassword: 'old-password', newPassword: 'new-password' });
+      request.flush(null);
+
+      expect(page.passwordFailed()).toBe(false);
+      expect(page.passwordMessage()).toBe('me.passwordChanged');
+    });
+
+    it('clears the three fields on success, so nothing is left on screen', () => {
+      loadProfile();
+      page.currentPassword = 'old-password';
+      page.newPassword = 'new-password';
+      page.confirmPassword = 'new-password';
+      page.changePassword();
+
+      httpMock.expectOne(r => r.method === 'POST' && r.url.endsWith(CHANGE_PASSWORD_URL)).flush(null);
+
+      expect(page.currentPassword).toBe('');
+      expect(page.newPassword).toBe('');
+    });
+
+    it('reads a 400 as the wrong CURRENT password, having already ruled out length', () => {
+      loadProfile();
+      page.currentPassword = 'wrong';
+      page.newPassword = 'new-password';
+      page.confirmPassword = 'new-password';
+      page.changePassword();
+
+      httpMock
+        .expectOne(r => r.method === 'POST' && r.url.endsWith(CHANGE_PASSWORD_URL))
+        .flush({}, { status: 400, statusText: 'Bad Request' });
+
+      expect(page.passwordFailed()).toBe(true);
+      expect(page.passwordMessage()).toBe('me.passwordWrong');
     });
   });
 

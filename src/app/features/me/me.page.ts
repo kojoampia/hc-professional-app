@@ -20,7 +20,9 @@ import {
   NavController,
 } from '@ionic/angular/standalone';
 
-import { ClinicianProfileDto, ProfileApiService } from '../../core/api/profile-api.service';
+import { ClinicianProfileDto, OnboardingProgressDto, ProfileApiService } from '../../core/api/profile-api.service';
+import { AccountApiService, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../core/api/account-api.service';
+import { CompletionMeterComponent } from '../../shared/completion-meter.component';
 import { NotificationsApiService } from '../../core/api/notifications-api.service';
 import { WriteQueue } from '../../core/offline/write-queue.service';
 import { DutyRosterApiService } from '../../core/api/duty-roster-api.service';
@@ -45,6 +47,7 @@ import { formatRosterSummary } from './roster-summary';
   selector: 'hpd-me',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CompletionMeterComponent,
     FormsModule,
     TranslateModule,
     IonHeader,
@@ -71,6 +74,9 @@ import { formatRosterSummary } from './roster-summary';
     </ion-header>
 
     <ion-content class="ion-padding">
+      <!-- Above the form, because it is the reason to fill the form in. -->
+      <hpd-completion-meter [progress]="progress()"></hpd-completion-meter>
+
       <ion-list>
         <ion-list-header>{{ 'me.profile' | translate }}</ion-list-header>
 
@@ -112,6 +118,83 @@ import { formatRosterSummary } from './roster-summary';
             type="tel"
             [(ngModel)]="mobilePhone"
             data-test="phone"
+          ></ion-input>
+        </ion-item>
+
+        <ion-item>
+          <ion-input
+            label="{{ 'me.birthDate' | translate }}"
+            labelPlacement="stacked"
+            type="date"
+            [(ngModel)]="birthDate"
+            data-test="birth-date"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <!-- Server enum values, deliberately untranslated: the administrator's review queue shows
+               them in exactly this form, and translating only the phone's copy would have the two
+               describing one person differently.
+
+               Bound from an array rather than written out, so untranslated-literals.spec.ts sees
+               an interpolation instead of eight capitalised literals it is right to object to. The
+               alternative was teaching that scanner an ALL_CAPS exemption, which would also let a
+               genuinely untranslated shout through. (No backticks in here: this template IS a
+               backtick string, and one inside a comment ends it several hundred lines early.) -->
+          <ion-select label="{{ 'me.sex' | translate }}" labelPlacement="stacked" [(ngModel)]="sex" data-test="sex">
+            @for (value of SEXES; track value) {
+              <ion-select-option [value]="value">{{ value }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-select label="{{ 'me.cardType' | translate }}" labelPlacement="stacked" [(ngModel)]="cardType" data-test="card-type">
+            @for (value of CARD_TYPES; track value) {
+              <ion-select-option [value]="value">{{ value }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="{{ 'me.cardNumber' | translate }}"
+            labelPlacement="stacked"
+            [(ngModel)]="cardNumber"
+            data-test="card-number"
+          ></ion-input>
+        </ion-item>
+
+        <ion-list-header>{{ 'me.address' | translate }}</ion-list-header>
+        <ion-item>
+          <ion-input label="{{ 'me.street' | translate }}" labelPlacement="stacked" [(ngModel)]="street" data-test="street"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input label="{{ 'me.city' | translate }}" labelPlacement="stacked" [(ngModel)]="city" data-test="city"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input label="{{ 'me.region' | translate }}" labelPlacement="stacked" [(ngModel)]="region" data-test="region"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input label="{{ 'me.country' | translate }}" labelPlacement="stacked" [(ngModel)]="country" data-test="country"></ion-input>
+        </ion-item>
+
+        <ion-list-header>{{ 'me.nextOfKin' | translate }}</ion-list-header>
+        <ion-item>
+          <ion-input label="{{ 'me.kinName' | translate }}" labelPlacement="stacked" [(ngModel)]="kinName" data-test="kin-name"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="{{ 'me.kinRelationship' | translate }}"
+            labelPlacement="stacked"
+            [(ngModel)]="kinRelationship"
+            data-test="kin-relationship"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="{{ 'me.kinPhone' | translate }}"
+            labelPlacement="stacked"
+            type="tel"
+            [(ngModel)]="kinPhone"
+            data-test="kin-phone"
           ></ion-input>
         </ion-item>
 
@@ -214,6 +297,52 @@ import { formatRosterSummary } from './roster-summary';
           <ion-note>{{ 'me.signOutDetail' | translate }}</ion-note>
         </ion-item>
       </ion-list>
+      <ion-list>
+        <ion-list-header>{{ 'me.password' | translate }}</ion-list-header>
+        @if (passwordMessage(); as message) {
+          <ion-item lines="none">
+            <ion-note [color]="passwordFailed() ? 'danger' : 'success'" data-test="password-message">{{ message | translate }}</ion-note>
+          </ion-item>
+        }
+        <ion-item>
+          <ion-input
+            label="{{ 'me.currentPassword' | translate }}"
+            labelPlacement="stacked"
+            type="password"
+            [(ngModel)]="currentPassword"
+            data-test="current-password"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="{{ 'me.newPassword' | translate }}"
+            labelPlacement="stacked"
+            type="password"
+            [(ngModel)]="newPassword"
+            data-test="new-password"
+          ></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input
+            label="{{ 'me.confirmPassword' | translate }}"
+            labelPlacement="stacked"
+            type="password"
+            [(ngModel)]="confirmPassword"
+            data-test="confirm-password"
+          ></ion-input>
+        </ion-item>
+        <ion-item lines="none">
+          <ion-button (click)="changePassword()" [disabled]="changingPassword()" data-test="change-password">
+            {{ 'me.changePassword' | translate }}
+          </ion-button>
+        </ion-item>
+        <ion-item lines="none">
+          <!-- Said rather than left to be discovered: the session survives, because the gateway's
+               change-password does not revoke the token family. -->
+          <ion-note>{{ 'me.changePasswordDetail' | translate }}</ion-note>
+        </ion-item>
+      </ion-list>
+
       <ion-alert
         [isOpen]="signOutBlocked()"
         [header]="'me.signOutBlocked' | translate"
@@ -244,6 +373,33 @@ export class MePage implements OnInit {
   email = '';
   mobilePhone = '';
 
+  // The fields the completion meter counts. See ClinicianProfileDto — these are what
+  // OnboardingService requires for `profile`, `address` and `nextOfKin`.
+  birthDate = '';
+  sex = '';
+  cardType = '';
+  cardNumber = '';
+  street = '';
+  city = '';
+  region = '';
+  country = '';
+  kinName = '';
+  kinRelationship = '';
+  kinPhone = '';
+
+  /** Server enums. Never translated — see the note in the template. */
+  readonly SEXES = ['FEMALE', 'MALE', 'UNSPECIFIED'];
+  readonly CARD_TYPES = ['PASSPORT', 'NATIONAL_ID', 'DRIVERS_LICENSE'];
+
+  readonly progress = signal<OnboardingProgressDto | null>(null);
+
+  currentPassword = '';
+  newPassword = '';
+  confirmPassword = '';
+  readonly changingPassword = signal(false);
+  readonly passwordFailed = signal(false);
+  readonly passwordMessage = signal<string | null>(null);
+
   readonly saving = signal(false);
   readonly saveFailed = signal(false);
   readonly loadFailed = signal(false);
@@ -260,10 +416,13 @@ export class MePage implements OnInit {
   readonly pushSenderName = signal(false);
   readonly prefsFailed = signal(false);
 
+  private readonly accountApi = inject(AccountApiService);
+
   private profile: ClinicianProfileDto = {};
 
   ngOnInit(): void {
     this.loadPreferences();
+    this.loadProgress();
     this.profiles.mine().subscribe({
       next: profile => {
         this.profile = profile ?? {};
@@ -271,10 +430,77 @@ export class MePage implements OnInit {
         this.lastName = profile?.lastName ?? '';
         this.email = profile?.email ?? '';
         this.mobilePhone = profile?.mobilePhone ?? '';
+        this.birthDate = profile?.birthDate ?? '';
+        this.sex = profile?.sex ?? '';
+        this.cardType = profile?.cardType ?? '';
+        this.cardNumber = profile?.cardNumber ?? '';
+        this.street = profile?.address?.streetAddress ?? '';
+        this.city = profile?.address?.city ?? '';
+        this.region = profile?.address?.region ?? '';
+        this.country = profile?.address?.country ?? '';
+        this.kinName = profile?.emergencyContact?.name ?? '';
+        this.kinRelationship = profile?.emergencyContact?.relationship ?? '';
+        this.kinPhone = profile?.emergencyContact?.phone ?? '';
       },
       // A clinician who has not completed onboarding has no profile yet; that is a normal state and
       // the form should simply start empty rather than shouting about it.
       error: () => this.loadFailed.set(true),
+    });
+  }
+
+  /**
+   * Reads the completion figure.
+   *
+   * <p>A failure is silent: an account with no application at all has no progress to report, and
+   * that is an ordinary state for a clinician who was invited rather than one who applied. Showing
+   * an error where a section simply does not apply would be noise.
+   */
+  private loadProgress(): void {
+    this.profiles.progress().subscribe({
+      next: progress => this.progress.set(progress),
+      error: () => this.progress.set(null),
+    });
+  }
+
+  /**
+   * Changes the password.
+   *
+   * <p>Confirmation is checked here rather than server-side because the server has no second field
+   * to compare against — it takes one new password and trusts the client to have asked twice. The
+   * length bound is checked here too, so a rejection reads as a sentence rather than as a JHipster
+   * problem document.
+   *
+   * <p>A 400 from the server means the <b>current</b> password was wrong, since length was already
+   * ruled out. Saying so is the difference between a usable message and "Bad Request".
+   */
+  changePassword(): void {
+    this.passwordMessage.set(null);
+    this.passwordFailed.set(true);
+
+    if (this.newPassword !== this.confirmPassword) {
+      this.passwordMessage.set('me.passwordMismatch');
+      return;
+    }
+    if (this.newPassword.length < PASSWORD_MIN_LENGTH || this.newPassword.length > PASSWORD_MAX_LENGTH) {
+      this.passwordMessage.set('me.passwordLength');
+      return;
+    }
+
+    this.changingPassword.set(true);
+    this.accountApi.changePassword({ currentPassword: this.currentPassword, newPassword: this.newPassword }).subscribe({
+      next: () => {
+        this.changingPassword.set(false);
+        this.passwordFailed.set(false);
+        this.passwordMessage.set('me.passwordChanged');
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.confirmPassword = '';
+      },
+      error: () => {
+        this.changingPassword.set(false);
+        this.passwordFailed.set(true);
+        this.passwordMessage.set('me.passwordWrong');
+      },
     });
   }
 
@@ -284,13 +510,41 @@ export class MePage implements OnInit {
     // Spread the loaded document so fields this page does not edit — identity card, address,
     // notification preferences — are preserved rather than blanked by a partial write.
     this.profiles
-      .save({ ...this.profile, firstName: this.firstName, lastName: this.lastName, email: this.email, mobilePhone: this.mobilePhone })
+      .save({
+        ...this.profile,
+        firstName: this.firstName,
+        lastName: this.lastName,
+        email: this.email,
+        mobilePhone: this.mobilePhone,
+        birthDate: this.birthDate || undefined,
+        sex: this.sex || undefined,
+        cardType: this.cardType || undefined,
+        cardNumber: this.cardNumber || undefined,
+        // Nested documents are spread from the loaded profile so the optional fields this form does
+        // not offer — town, district, digital address — survive a save rather than being blanked.
+        address: {
+          ...this.profile.address,
+          streetAddress: this.street || undefined,
+          city: this.city || undefined,
+          region: this.region || undefined,
+          country: this.country || undefined,
+        },
+        emergencyContact: {
+          ...this.profile.emergencyContact,
+          name: this.kinName || undefined,
+          relationship: this.kinRelationship || undefined,
+          phone: this.kinPhone || undefined,
+        },
+      })
       .subscribe({
         next: saved => {
           this.profile = saved ?? this.profile;
           this.saving.set(false);
           this.saveFailed.set(false);
           this.savedMessage.set('me.saved');
+          // The meter is computed from what was just written, so it must be re-read rather than
+          // left showing the figure from before the save.
+          this.loadProgress();
         },
         error: () => {
           this.saving.set(false);
