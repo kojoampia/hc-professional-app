@@ -299,6 +299,39 @@ Needs two accounts that can message each other, and at least three unread thread
      lost — this is a change from Phase 1, where a failed send kept the draft on screen.
 146. Repeat 137 and 141 in French and German.
 
+## Phase 9 — password and the clinical profile
+
+Needs an account that is **not** yet ACTIVE, so the completion meter has something to say, plus a
+real inbox for the reset email. Step 154 is the one that cannot be checked any other way.
+
+147. Open **Me**. The completion meter sits above the form, shows the server's percentage, and lists
+     what is outstanding with the finished items struck through.
+148. Fill in the address and save. The meter **re-reads** and the percentage moves — a meter still
+     claiming the address is missing right after it was entered is the failure this step exists for.
+149. Confirm the requirement labels are translated but the ID type and sex values are **not**: they
+     read `PASSPORT` and `FEMALE` in all four languages, matching the administrator's review queue.
+150. On an account with no application at all, confirm **no meter renders** — not a 0% one.
+151. Change the password with a mismatched confirmation, then with a three-character one. Both are
+     refused on the phone, with a sentence, before anything is sent.
+152. Change it with the wrong current password: the message says the current password was wrong, not
+     "Bad Request".
+153. Change it properly. **You stay signed in** — the gateway does not revoke the token family — and
+     the screen says so. Force-quit, relaunch, and confirm the session is still good.
+154. **Sign out and sign in with the new password.** Then sign out and try the old one: refused.
+155. Tap **Forgotten your password?**. The email field is pre-filled from whatever was typed as the
+     username.
+156. Request a key for an address that does not exist. The screen says _"if that address is
+     registered"_ — it must not say "sent", and it must not say "not found". The server answers 200
+     either way so that nobody can use it to discover which clinicians have accounts.
+157. Request one for a real address, read the email **on the phone**, and confirm the link opens a
+     **browser** rather than the app. That is expected — there is no deep link. Copy the key.
+158. Paste the key with a three-character password: refused locally. Paste it with a good one: the
+     screen confirms, and signing in with it works.
+159. Paste a key that has already been used: the screen says the key was not recognised and suggests
+     asking for a new one.
+160. Repeat 147 and 155 in Spanish and German, and confirm the reset screens are fully translated —
+     they are reached by someone who cannot get in, which is the worst moment for English to leak.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_

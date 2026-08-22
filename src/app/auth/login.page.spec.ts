@@ -6,6 +6,7 @@ import { TranslateLoader, TranslateModule, TranslateService } from '@ngx-transla
 
 import { AuthService } from '../core/auth/auth.service';
 import { AccountService } from '../core/auth/account.service';
+import { AccountApiService } from '../core/api/account-api.service';
 import { BundledTranslateLoader } from '../core/i18n/language.service';
 import { LoginPage } from './login.page';
 
@@ -32,6 +33,12 @@ describe('LoginPage — renders in the selected language', () => {
         { provide: AuthService, useValue: { signOutReason: signal(null), login: jest.fn() } },
         { provide: AccountService, useValue: { identity: jest.fn() } },
         { provide: NavController, useValue: { navigateRoot: jest.fn() } },
+        // The reset modal's service. Stubbed for the same reason as the other two — this file
+        // asserts what the four locales render, not what the network does.
+        {
+          provide: AccountApiService,
+          useValue: { requestPasswordReset: jest.fn(), finishPasswordReset: jest.fn(), changePassword: jest.fn() },
+        },
       ],
     });
     TestBed.inject(TranslateService).setDefaultLang('en');

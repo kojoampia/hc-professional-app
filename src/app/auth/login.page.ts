@@ -1,17 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { IonContent, IonSpinner, NavController } from '@ionic/angular/standalone';
+import { IonContent, IonModal, IonSpinner, NavController } from '@ionic/angular/standalone';
 
 import { AuthService } from '../core/auth/auth.service';
 import { AccountService } from '../core/auth/account.service';
+import { PasswordResetComponent } from './password-reset.component';
 
 @Component({
   selector: 'hpd-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslateModule, FormsModule, IonContent, IonSpinner],
+  imports: [TranslateModule, FormsModule, IonContent, IonSpinner, IonModal, PasswordResetComponent],
   template: `
     <ion-content>
       <div class="flex min-h-full flex-col justify-center px-6 py-10">
@@ -66,10 +67,28 @@ import { AccountService } from '../core/auth/account.service';
           </button>
         </form>
 
+        <button type="button" class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable mt-4" (click)="openReset()" data-test="open-reset">
+          {{ 'auth.forgotPassword' | translate }}
+        </button>
+
         @if (unprotectedDevice()) {
           <p class="mt-6 text-center text-hpd-muted">{{ 'auth.noScreenLock' | translate }}</p>
         }
       </div>
+
+      <!--
+        Two steps in one screen, and deliberately so. The reset email opens a BROWSER, not this app:
+        there is no deep link registered, only the LAUNCHER intent filter, and no associatedDomains
+        entitlement. So the clinician reads the key elsewhere and comes back to paste it, which
+        means step two must be reachable without having just completed step one.
+      -->
+      <ion-modal [isOpen]="resetting()" (didDismiss)="resetting.set(false)">
+        <ng-template>
+          <ion-content>
+            <hpd-password-reset #reset (closed)="resetting.set(false)"></hpd-password-reset>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
     </ion-content>
   `,
 })
@@ -88,6 +107,11 @@ export class LoginPage {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly unprotectedDevice = signal(false);
+
+  readonly resetting = signal(false);
+
+  /** The reset screens, present only while the modal is open. */
+  readonly reset = viewChild(PasswordResetComponent);
 
   /** Explains an involuntary sign-out, so an expired session is not mistaken for a bug. */
   readonly notice = signal<string | null>(this.signOutNotice());
@@ -129,6 +153,19 @@ export class LoginPage {
         );
       },
     });
+  }
+
+  /**
+   * Opens the reset screens.
+   *
+   * <p>The address is passed down rather than left for the clinician to re-type: someone who has
+   * just failed to sign in usually typed theirs into the username field, and that friction is what
+   * sends people to the web portal instead.
+   */
+  openReset(): void {
+    this.resetting.set(true);
+    // After the modal renders, so the child exists to seed.
+    queueMicrotask(() => this.reset()?.reset(this.username.trim()));
   }
 
   private returnUrl(): string {
