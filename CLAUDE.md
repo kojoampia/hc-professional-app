@@ -14,7 +14,9 @@ It builds no server, ships no Docker image, and is **not part of `deploy/`**. It
 
 Four tabs: **Today** (duty roster), **Messages**, **Documents**, **Me**. Every endpoint behind them already exists and is deployed.
 
-**Composing a new conversation is not implemented.** `POST /api/messaging/conversations` needs `recipientIds[]` or `recipientRole`, and the only directory endpoint is the gateway's `PublicUserResource`, which returns every gateway user unfiltered — not something to put behind a recipient picker on a clinical app. Reply-only until a role-scoped directory endpoint exists. Related: there is **no per-conversation read endpoint**, only `/read-all`, so opening one thread clears the badge for every unread message. Both belong on the Phase 2 backend list.
+**Composing a new conversation shipped in Phase 8** (2026-08-22), and so did per-conversation read. Both were blocked on the backend and both were unblocked by Phase 1. What this used to say, and why it mattered: `POST /api/messaging/conversations` needs `recipientIds[]` or `recipientRole`, and the only directory endpoint was the gateway's `PublicUserResource`, which returns every gateway user unfiltered — including accounts that are not clinicians at all, so not something to put behind a recipient picker on a clinical app. `GET /api/messaging/recipients` is role-scoped and sourced from the same records the broadcast resolves against, so the picker and the broadcast cannot disagree about who exists. And there was **no per-conversation read endpoint**, only `/read-all`, so opening one thread cleared the badge for every unread message — a clinician lost the signal that three others were waiting. `POST /conversations/{id}/read` answers with the new total, so the badge costs one round trip.
+
+**`markAllRead` is deliberately not wrapped on the client.** The `/read-all` endpoint still exists; there is no screen that clears every thread at once, and a method sitting unused is an invitation to reach for it the next time a badge needs clearing — which is exactly the mistake the per-conversation endpoint replaced.
 
 **Patients and Cases have shipped** (Phases 5–7 of `../docs/web-mobile-port.md`, 2026-08-22), both
 pushed from Today rather than made tabs. The dashboard is Phase 10. What follows is the record of why
@@ -24,7 +26,7 @@ they were blocked before, which is worth keeping because the stated reason was w
 
 The phased plan for all of it is `../docs/web-mobile-port.md`; its Phase 1 supersedes `MOB-P2-PRE`. **Do not start those screens ahead of it** — a screen built against the unpaginated shape is work that gets thrown away.
 
-Also deliberately out of scope: the **applicant onboarding wizard** (this app is for _active_ clinicians — any application status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal), and **composing new conversations** (no role-scoped directory endpoint exists; reply-only until Phase 8). **Offline writes are no longer out of scope** — the write queue shipped in Phase 2 and every clinical write goes through it.
+Also deliberately out of scope: the **applicant onboarding wizard** (this app is for _active_ clinicians — any application status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal). **Offline writes are no longer out of scope** — the write queue shipped in Phase 2 and every clinical write goes through it.
 
 ## The brand name
 

@@ -23,6 +23,18 @@ export interface CachedResource<T> {
   readonly fetchedAt: Signal<number | null>;
   /** Renders cache first, then revalidates. Never rejects. */
   refresh(): Promise<void>;
+  /**
+   * Adopts a value the caller already has from the server, without a second request.
+   *
+   * <p>For the case where a write's own response *is* the fresh value. Marking a thread read
+   * answers with the new total unread count, so re-fetching it would be a round trip to learn what
+   * the phone was just told — and a window in which the badge and the list disagree.
+   *
+   * <p><b>Only for a server's answer, never for an optimistic guess.</b> This writes the cache, and
+   * the cache is what the server said; a value that was never confirmed must not survive a restart
+   * looking like one that was.
+   */
+  set(value: T): Promise<void>;
 }
 
 export interface CachedResourceOptions<T> {
@@ -84,7 +96,18 @@ export function cachedResource<T>(cache: CacheStore, options: CachedResourceOpti
     }
   };
 
-  return { value: value.asReadonly(), status: status.asReadonly(), fetchedAt: fetchedAt.asReadonly(), refresh };
+  const set = async (fresh: T): Promise<void> => {
+    if (options.sensitive) {
+      await cache.setSensitive(options.key, fresh);
+    } else {
+      await cache.set(options.key, fresh);
+    }
+    value.set(fresh);
+    fetchedAt.set(Date.now());
+    status.set('fresh');
+  };
+
+  return { value: value.asReadonly(), status: status.asReadonly(), fetchedAt: fetchedAt.asReadonly(), refresh, set };
 }
 
 /** A translation key and its count, for the staleness chip. */

@@ -22,6 +22,27 @@ export interface MessageDto {
   recipientRole?: string | null;
 }
 
+/**
+ * Someone this clinician may address.
+ *
+ * <p>Carries an account id, a display name and a role — no contact details and nothing clinical.
+ * Sourced from the same records the role broadcast resolves against, so the picker and the
+ * broadcast cannot disagree about who exists.
+ */
+export interface RecipientDto {
+  accountId: string;
+  displayName: string;
+  role: string;
+}
+
+/** A new thread. Give explicit recipients or a role to broadcast to — the server requires one. */
+export interface NewConversationDto {
+  subject?: string;
+  body: string;
+  recipientIds?: string[];
+  recipientRole?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MessagingApiService {
   private readonly http = inject(HttpClient);
@@ -50,24 +71,54 @@ export class MessagingApiService {
     return this.http.get<MessageDto[]>(`${this.resourceUrl}/conversations/${encodeURIComponent(conversationId)}/messages`);
   }
 
+  /**
+   * Who this clinician may address.
+   *
+   * <p>Deliberately not the gateway's `/api/users`, which returns every gateway user unfiltered —
+   * including accounts that are not clinicians at all — and is not something to put behind a
+   * recipient picker on a clinical app.
+   */
+  recipients(query?: string, role?: string): Observable<RecipientDto[]> {
+    const params: Record<string, string> = {};
+    if (query) {
+      params['query'] = query;
+    }
+    if (role) {
+      params['role'] = role;
+    }
+    return this.http.get<RecipientDto[]>(`${this.resourceUrl}/recipients`, { params });
+  }
+
+  /**
+   * Starts a thread.
+   *
+   * <p>**422 means the role matched nobody** and must be surfaced, not swallowed. The server used
+   * to store such a message with zero recipients and answer 200 — the clinician saw their
+   * escalation sent and it reached no one, with nothing on either side ever saying so.
+   */
+  startConversation(request: NewConversationDto): Observable<MessageDto> {
+    return this.http.post<MessageDto>(`${this.resourceUrl}/conversations`, request);
+  }
+
   reply(conversationId: string, body: string): Observable<MessageDto> {
     return this.http.post<MessageDto>(`${this.resourceUrl}/conversations/${encodeURIComponent(conversationId)}/messages`, { body });
   }
 
   /**
-   * Marks everything read.
+   * Marks one thread read, and answers with the caller's new total unread count.
    *
-   * Takes no conversation id on purpose: `MessagingResource` exposes
-   * `/messages/{id}/read` and `/read-all`, but nothing per-conversation. Opening a
-   * thread on a phone means the whole thread has been seen, so `/read-all` is the
-   * honest approximation — and it is why the badge is re-read from the server
-   * afterwards rather than adjusted locally.
+   * <p>Returning the count is what makes the badge cost one round trip rather than two, and stops
+   * it briefly disagreeing with the list that prompted the call.
    *
-   * The cost is real: reading one thread clears the badge for every other unread
-   * message too. A per-conversation endpoint belongs on the Phase 2 backend list
-   * alongside the role-scoped directory (see MOB-P2-PRE in mobile-app-plan.md).
+   * <p>Until Phase 1 the only options were one message or everything; this client took everything,
+   * so opening one conversation cleared every unread badge in the app and a clinician lost the
+   * signal that three others were waiting.
+   *
+   * <p>`POST /read-all` still exists on the server and is deliberately **not** wrapped here. There
+   * is no screen that clears every thread at once, and a method sitting unused is an invitation to
+   * reach for it the next time a badge needs clearing — which is exactly the mistake this replaces.
    */
-  markAllRead(): Observable<number> {
-    return this.http.post<number>(`${this.resourceUrl}/read-all`, null);
+  markConversationRead(conversationId: string): Observable<number> {
+    return this.http.post<number>(`${this.resourceUrl}/conversations/${encodeURIComponent(conversationId)}/read`, null);
   }
 }
