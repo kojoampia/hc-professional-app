@@ -4,6 +4,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { provideRouter } from '@angular/router';
 
 import { PushRegistrationService } from '../core/push/push-registration.service';
+import { WriteQueue } from '../core/offline/write-queue.service';
 import { TabsPage } from './tabs.page';
 
 /**
@@ -32,7 +33,13 @@ describe('TabsPage', () => {
       imports: [TabsPage, TranslateModule.forRoot()],
       // The shell asks for push registration on mount (MOB10). Stubbed: what it does is
       // PushRegistrationService's own spec, and the real one would drag the messaging graph in.
-      providers: [provideRouter([]), { provide: PushRegistrationService, useValue: { start: jest.fn().mockResolvedValue(true) } }],
+      // Both stubbed: the shell starts the write queue and push registration on mount, and the real
+      // WriteQueue reaches the cache and the network plugin — which is a different spec's subject.
+      providers: [
+        provideRouter([]),
+        { provide: PushRegistrationService, useValue: { start: jest.fn().mockResolvedValue(true) } },
+        { provide: WriteQueue, useValue: { start: jest.fn().mockResolvedValue(undefined) } },
+      ],
     });
     fixture = TestBed.createComponent(TabsPage);
     fixture.detectChanges();
