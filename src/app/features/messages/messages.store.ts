@@ -1,13 +1,15 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { ConversationDto, MessageDto, MessagingApiService } from '../../core/api/messaging-api.service';
+import { ConversationDto, MessageDto, MessagingApiService, NewConversationDto, RecipientDto } from '../../core/api/messaging-api.service';
 import { MessageSocketService } from '../../core/api/message-socket.service';
 import { AppStateService } from '../../core/native/app-state.service';
 import { PushService } from '../../core/native/push.service';
 import { SecureTokenStore } from '../../core/native/secure-token-store.service';
 import { CacheStore } from '../../core/offline/cache-store.service';
 import { CachedResource, cachedResource } from '../../core/offline/cached-resource';
+import { QueuedWrite } from '../../core/offline/queued-write.model';
+import { WriteQueue } from '../../core/offline/write-queue.service';
 
 const CONVERSATIONS_TTL_MS = 5 * 60 * 1000;
 
@@ -39,6 +41,7 @@ export class MessagesStore {
   private readonly appState = inject(AppStateService);
   private readonly push = inject(PushService);
   private readonly tokens = inject(SecureTokenStore);
+  private readonly queue = inject(WriteQueue);
 
   readonly conversations: CachedResource<ConversationDto[]> = cachedResource(this.cache, {
     key: 'messaging.conversations',
@@ -66,6 +69,17 @@ export class MessagesStore {
   private started = false;
 
   constructor() {
+    // Both message writes go through the queue, so a reply typed in a lift is kept rather than
+    // lost. The subject id is the conversation for a reply and a generated id for a new thread —
+    // FIFO is per (kind, subjectId), so two replies to one thread arrive in the order they were
+    // written while a reply to another thread is not held up behind them.
+    this.queue.register('message.reply', (write: QueuedWrite) =>
+      firstValueFrom(this.api.reply(write.subjectId, write.payload['body'] as string)),
+    );
+    this.queue.register('message.start', (write: QueuedWrite) =>
+      firstValueFrom(this.api.startConversation(write.payload['request'] as NewConversationDto)),
+    );
+
     // Reconnect whenever the access token changes — a refresh mints a new one every
     // 15 minutes, and the socket must present the current one or the server drops it.
     effect(() => {
@@ -119,10 +133,11 @@ export class MessagesStore {
       const messages = await firstValueFrom(this.api.messagesIn(conversationId));
       this.threadState.set(messages);
       await this.cache.setSensitive(key, messages);
-      // Everything on screen counts as read; the server is the source of truth for
-      // the badge, so re-read rather than decrementing locally.
-      await firstValueFrom(this.api.markAllRead());
-      await this.unread.refresh();
+      // THIS thread counts as read — not every thread. Until Phase 1 the only endpoints were one
+      // message or everything, and this took everything, so opening one conversation cleared every
+      // unread badge in the app. The server answers with the new total, so the badge is written
+      // from that rather than re-fetched or decremented locally.
+      await this.unread.set(await firstValueFrom(this.api.markConversationRead(conversationId)));
     } catch {
       // Offline: whatever was cached stays on screen. The thread is still readable.
     }
@@ -133,12 +148,51 @@ export class MessagesStore {
     this.threadState.set([]);
   }
 
-  async reply(body: string): Promise<void> {
+  /**
+   * Queues a reply.
+   *
+   * <p>Through the queue rather than straight to the API, so a reply typed with no signal is kept
+   * and sent later rather than failing at the send button. The thread is refreshed afterwards only
+   * when the op left the queue immediately; otherwise the pending op is what the screen shows.
+   */
+  async reply(body: string): Promise<QueuedWrite | null> {
     const conversationId = this.openThreadId();
     if (!conversationId || !body.trim()) {
-      return;
+      return null;
     }
-    await firstValueFrom(this.api.reply(conversationId, body.trim()));
+    const write = await this.queue.submit('message.reply', conversationId, { body: body.trim() });
+    await this.refreshThreadAndList(conversationId);
+    return write;
+  }
+
+  /**
+   * Queues a new thread.
+   *
+   * <p>The subject id is generated rather than taken from anything on the server, because the
+   * conversation does not exist yet. It only has to be unique per op for the queue's per-subject
+   * FIFO to mean something.
+   */
+  async startConversation(request: NewConversationDto): Promise<QueuedWrite | null> {
+    if (!request.body.trim()) {
+      return null;
+    }
+    const write = await this.queue.submit('message.start', `new-${request.recipientRole ?? (request.recipientIds ?? []).join(',')}`, {
+      request: { ...request, body: request.body.trim() },
+    });
+    await this.conversations.refresh();
+    return write;
+  }
+
+  /** Who this clinician may address. Not cached — a directory is not clinical content to keep. */
+  async recipients(query?: string, role?: string): Promise<RecipientDto[]> {
+    try {
+      return await firstValueFrom(this.api.recipients(query, role));
+    } catch {
+      return [];
+    }
+  }
+
+  private async refreshThreadAndList(conversationId: string): Promise<void> {
     await this.openThread(conversationId);
     await this.conversations.refresh();
   }

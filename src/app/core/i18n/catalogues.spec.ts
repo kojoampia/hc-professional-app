@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { CATALOGUES, LANGUAGE_NAMES, SUPPORTED_LANGUAGES } from './catalogues';
 
 /**
@@ -15,6 +18,53 @@ describe('translation catalogues', () => {
       : [prefix];
 
   const keysOf = (language: keyof typeof CATALOGUES): string[] => flatten(CATALOGUES[language]).sort();
+
+  /**
+   * A key written twice in one group.
+   *
+   * <p>Read from the <b>source text</b>, because by the time the module is imported the duplicate
+   * is gone — JavaScript keeps the last one and every other assertion here sees a perfectly
+   * consistent object. That is exactly how one shipped: `messages.close` was added a second time,
+   * both the key-parity and the blank-value checks stayed green, and only `tsc` objected.
+   *
+   * <p>The later value silently wins, so the visible symptom is a string that reverts for no
+   * reason when someone edits what looks like the only definition.
+   */
+  it('defines no key twice — the parity check structurally cannot see this', () => {
+    const source = readFileSync(join(__dirname, 'catalogues.ts'), 'utf8');
+    const duplicates: string[] = [];
+    let group = '';
+    const seen = new Map<string, Set<string>>();
+
+    let catalogue = '';
+    for (const line of source.split('\n')) {
+      // Reset at each catalogue: all four legitimately define `messages.close`, and only a repeat
+      // WITHIN one of them is a fault. Without this the check reports every key in the file.
+      const catalogueMatch = /^export const ([A-Z]{2})(?:: typeof EN)? = \{$/.exec(line);
+      if (catalogueMatch) {
+        catalogue = catalogueMatch[1];
+        seen.clear();
+        continue;
+      }
+      const groupMatch = /^ {2}([A-Za-z][A-Za-z0-9]*): \{$/.exec(line);
+      if (groupMatch) {
+        group = groupMatch[1];
+        continue;
+      }
+      const keyMatch = /^ {4}([A-Za-z][A-Za-z0-9]*): /.exec(line);
+      if (!keyMatch || !group || !catalogue) {
+        continue;
+      }
+      const bucket = seen.get(group) ?? new Set<string>();
+      if (bucket.has(keyMatch[1])) {
+        duplicates.push(`${catalogue}: ${group}.${keyMatch[1]}`);
+      }
+      bucket.add(keyMatch[1]);
+      seen.set(group, bucket);
+    }
+
+    expect(duplicates).toEqual([]);
+  });
 
   it('ships exactly the four languages web/ does', () => {
     expect([...SUPPORTED_LANGUAGES]).toEqual(['en', 'es', 'fr', 'de']);

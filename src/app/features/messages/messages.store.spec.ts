@@ -39,7 +39,9 @@ describe('MessagesStore', () => {
     unreadCount: jest.Mock;
     messagesIn: jest.Mock;
     reply: jest.Mock;
-    markAllRead: jest.Mock;
+    markConversationRead: jest.Mock;
+    startConversation: jest.Mock;
+    recipients: jest.Mock;
   };
   let push: { clearDelivered: jest.Mock };
 
@@ -63,7 +65,11 @@ describe('MessagesStore', () => {
       unreadCount: jest.fn(() => of(2)),
       messagesIn: jest.fn(() => of([message])),
       reply: jest.fn(() => of(message)),
-      markAllRead: jest.fn(() => of(0)),
+      // Answers with the caller's NEW total unread count — 3 rather than 0, so a test cannot pass
+      // by the store happening to reset the badge to zero.
+      markConversationRead: jest.fn(() => of(3)),
+      startConversation: jest.fn(() => of(message)),
+      recipients: jest.fn(() => of([{ accountId: 'u1', displayName: 'Ama Mensah', role: 'ROLE_NURSE' }])),
     };
     push = { clearDelivered: jest.fn(async () => undefined) };
 
@@ -171,16 +177,25 @@ describe('MessagesStore', () => {
   describe('threads', () => {
     beforeEach(() => store.start());
 
-    it('loads messages and marks the conversation read', async () => {
+    it('marks THIS conversation read, not every conversation', async () => {
+      // The whole point of Phase 8's backend half. Before it, opening one thread cleared every
+      // unread badge in the app and a clinician lost the signal that three others were waiting.
       await store.openThread('c1');
 
       expect(store.thread()).toEqual([message]);
-      // No per-conversation read endpoint exists, so opening a thread clears
-      // everything. Noted as a Phase 2 backend gap.
-      expect(api.markAllRead).toHaveBeenCalled();
-      // The badge is re-read from the server rather than decremented locally: only
-      // the server knows the true count.
-      expect(api.unreadCount).toHaveBeenCalledTimes(2);
+      expect(api.markConversationRead).toHaveBeenCalledWith('c1');
+      // There is no `markAllRead` on the API service to call any more — it was removed rather than
+      // left unused, so this cannot regress by someone reaching for the convenient one again.
+      expect(api).not.toHaveProperty('markAllRead');
+    });
+
+    it('takes the new badge count from the read response, not a second request', async () => {
+      // The endpoint answers with the new total precisely so the badge costs one round trip and
+      // cannot briefly disagree with the list that prompted the call.
+      await store.openThread('c1');
+
+      expect(store.unread.value()).toBe(3);
+      expect(api.unreadCount).toHaveBeenCalledTimes(1);
     });
 
     it('caches bodies SEALED, since they carry clinical content', async () => {
@@ -213,7 +228,10 @@ describe('MessagesStore', () => {
   describe('replying', () => {
     beforeEach(() => store.start());
 
-    it('posts and reloads the thread', async () => {
+    it('goes through the write queue, which then sends it', async () => {
+      // Asserted end to end rather than against a stubbed queue: this is the only test that proves
+      // the op kind was actually registered. A store that queues an op nobody handles looks
+      // identical on screen and never sends.
       await store.openThread('c1');
       await store.reply('  on my way  ');
 
@@ -230,6 +248,37 @@ describe('MessagesStore', () => {
     it('does nothing when no thread is open', async () => {
       await store.reply('hello');
       expect(api.reply).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('composing', () => {
+    beforeEach(() => store.start());
+
+    it('starts a thread through the queue, trimming the body', async () => {
+      await store.startConversation({ subject: 'Handover', body: '  see notes  ', recipientIds: ['u1'] });
+
+      expect(api.startConversation).toHaveBeenCalledWith({ subject: 'Handover', body: 'see notes', recipientIds: ['u1'] });
+    });
+
+    it('refuses an empty body without queueing anything', async () => {
+      await store.startConversation({ body: '   ', recipientIds: ['u1'] });
+
+      expect(api.startConversation).not.toHaveBeenCalled();
+    });
+
+    it('reads the recipient directory', async () => {
+      const found = await store.recipients('ama');
+
+      expect(api.recipients).toHaveBeenCalledWith('ama', undefined);
+      expect(found).toHaveLength(1);
+    });
+
+    it('answers with nothing rather than throwing when the directory is unreachable', async () => {
+      // A picker that explodes offline is worse than one that finds nobody: the clinician can still
+      // broadcast to a role, which needs no directory read to compose.
+      api.recipients.mockReturnValue(throwError(() => new Error('offline')));
+
+      await expect(store.recipients('ama')).resolves.toEqual([]);
     });
   });
 

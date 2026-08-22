@@ -272,6 +272,33 @@ Needs a clinical account with at least two cases, one of them urgent, and a read
      action. `web/`'s archive is client-side only and archives nothing.
 136. Repeat 126 and 131 in Spanish and German.
 
+## Phase 8 — composing, and reading one thread
+
+Needs two accounts that can message each other, and at least three unread threads on the first.
+
+137. **With three threads unread, open one.** The badge drops by _that thread's_ count only — the
+     other two stay unread. This is the whole point of the phase: before it, opening one thread
+     cleared every unread badge in the app.
+138. Confirm the badge updates **without a visible second delay**. It is taken from the read
+     response, not re-fetched, so it must not flicker through an old value.
+139. Tap **New message → To people** and type one letter. Nothing is searched. Type a second and the
+     directory returns clinicians only — no non-clinical gateway accounts.
+140. Choose two people, write a message, send. It arrives on the web portal as one thread with both
+     recipients.
+141. **Tap New message → To a role.** Choose a role and send. A confirmation states the count —
+     _"this goes to N people holding ROLE_NURSE"_ — **before** anything is sent. Cancel it and
+     confirm nothing was sent.
+142. Confirm the role names in the picker are **not translated**: they read `ROLE_NURSE` in all four
+     languages, the same as in the administrator's console.
+143. **Choose a role nobody holds.** The screen says so and refuses, rather than reporting a send
+     that reached no one. Compare against the old behaviour: the server used to store that message
+     with zero recipients and answer 200.
+144. **Compose with airplane mode on.** It is accepted and queued. Restore signal and confirm it
+     arrives once.
+145. **Reply with airplane mode on.** Same. The draft clears, because the reply is kept rather than
+     lost — this is a change from Phase 1, where a failed send kept the draft on screen.
+146. Repeat 137 and 141 in French and German.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_
