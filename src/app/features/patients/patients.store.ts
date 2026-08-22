@@ -3,6 +3,8 @@ import { firstValueFrom } from 'rxjs';
 
 import { PatientApiService, PatientListItemDto, PatientRecordDto } from '../../core/api/patient-api.service';
 import { CacheStore } from '../../core/offline/cache-store.service';
+import { QueuedWrite } from '../../core/offline/queued-write.model';
+import { WriteQueue } from '../../core/offline/write-queue.service';
 import { ResourceStatus } from '../../core/offline/cached-resource';
 
 /** Where the offline copy of page zero lives. */
@@ -22,6 +24,14 @@ const DIRECTORY_TTL_MS = 6 * 60 * 60 * 1000;
  * use and that nobody would ever notice.
  */
 export const RECORD_CACHE_LIMIT = 20;
+
+/** An entry a clinician has written that has not reached the server yet. */
+export interface PendingEntry {
+  write: QueuedWrite;
+  patientId: string;
+  kind: 'activity' | 'report';
+  label: string;
+}
 
 /** Filters the directory offers, matching the two the web dashboard has. */
 export interface PatientFilters {
@@ -51,6 +61,7 @@ export interface PatientFilters {
 export class PatientsStore {
   private readonly api = inject(PatientApiService);
   private readonly cache = inject(CacheStore);
+  private readonly queue = inject(WriteQueue);
 
   private readonly filtersSignal = signal<PatientFilters>({ query: '', sex: null, childrenOnly: false });
   readonly filters = this.filtersSignal.asReadonly();
@@ -110,6 +121,39 @@ export class PatientsStore {
 
   /** Ids of cached records, oldest first, so the bound can be enforced. */
   private recentRecordIds: string[] = [];
+
+  /**
+   * Optimistic entries, kept only in memory.
+   *
+   * <p>Deliberately NOT written into the cached record: the cache is what the server said, and
+   * mixing an unsent note into it would survive a restart as though it had been filed. The queue is
+   * the durable half — this is only what to draw while it works.
+   */
+  private readonly pendingSignal = signal<readonly PendingEntry[]>([]);
+
+  constructor() {
+    // The queue owns WHEN a write is attempted; this store owns HOW. Registered here rather than
+    // inside the queue so that class never grows a dependency on every feature in the app — and
+    // without it a queued op sits pending forever, which is the quietest possible failure.
+    this.queue.register('activity.append', write =>
+      firstValueFrom(
+        this.api.appendActivity(write.subjectId, {
+          title: write.payload['title'] as string,
+          description: write.payload['description'] as string,
+          clientRef: write.clientRef,
+        }),
+      ),
+    );
+    this.queue.register('report.append', write =>
+      firstValueFrom(
+        this.api.appendReport(write.subjectId, {
+          name: write.payload['name'] as string,
+          reportType: write.payload['reportType'] as string,
+          clientRef: write.clientRef,
+        }),
+      ),
+    );
+  }
 
   /**
    * Loads the directory from scratch, honouring the current filters.
@@ -217,6 +261,47 @@ export class PatientsStore {
       this.recordLoadingSignal.set(false);
     }
   }
+
+  /**
+   * Files an activity-log entry — through the queue, never straight to HTTP.
+   *
+   * <p>The entry appears on the record immediately, <b>marked</b> as unsent rather than merged in
+   * indistinguishably. `web/`'s repository does the latter, which is fine at an 80 ms round trip on
+   * a desk and is not fine on a phone that may hold the write for hours: a clinician scrolling a
+   * record must never be shown something that looks filed and is not.
+   *
+   * <p>The optimistic entry carries the queued op's id so the chip can follow its state, and it is
+   * replaced by the server's own copy on the next successful read.
+   */
+  async fileActivity(patientId: string, entry: { title: string; description: string }): Promise<void> {
+    const write = await this.queue.submit('activity.append', patientId, { patientId, ...entry });
+    this.pendingSignal.update(existing => [...existing, { write, patientId, kind: 'activity', label: entry.title }]);
+  }
+
+  /** Files a clinical report. Metadata only — see `PatientApiService.appendReport`. */
+  async fileReport(patientId: string, report: { name: string; reportType: string }): Promise<void> {
+    const write = await this.queue.submit('report.append', patientId, { patientId, ...report });
+    this.pendingSignal.update(existing => [...existing, { write, patientId, kind: 'report', label: report.name }]);
+  }
+
+  /** Unsent entries for the record currently open, so they render above the filed ones. */
+  readonly pendingForOpenRecord = computed(() => {
+    const open = this.recordSignal()?.id;
+    if (!open) {
+      return [];
+    }
+    const live = new Set(this.queue.writes().map(write => write.id));
+    return (
+      this.pendingSignal()
+        .filter(entry => entry.patientId === open)
+        // An op that has left the queue has landed; the next read shows the server's own copy.
+        .filter(entry => live.has(entry.write.id))
+        .map(entry => ({
+          ...entry,
+          state: this.queue.writes().find(write => write.id === entry.write.id)?.state ?? 'pending',
+        }))
+    );
+  });
 
   closeRecord(): void {
     this.recordSignal.set(null);

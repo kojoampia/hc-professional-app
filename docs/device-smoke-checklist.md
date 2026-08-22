@@ -223,6 +223,27 @@ exists to make visible.
 117. Confirm the record says filing notes is not yet available, rather than simply having no button.
 118. Repeat 112 in German and confirm dates and headings are translated.
 
+## Phase 6 — filing notes on a patient
+
+Needs two accounts: a clinical one (nurse or doctor) and a **read-only** one (carer). Step 123 is the
+one that cannot be checked any other way.
+
+119. As a nurse, open a patient and file an entry. It appears at the top of the activity list
+     **marked as unsent**, with a coloured left border — not merged in looking like a filed note.
+120. Wait for it to send: the chip and the border disappear and the entry appears in the list
+     proper, from the server.
+121. **File an entry with airplane mode on.** It is accepted, marked unsent, and the dialog says it
+     will be sent when there is signal. Restore signal and watch it clear.
+122. **File offline, force-quit, relaunch, restore signal.** The entry sends once — not twice. This
+     is the `clientRef` path and the failure it prevents is invisible until someone reads the
+     record back.
+123. **Sign in as a carer and open a patient.** There is no _Add an entry_ button; the record says
+     the role cannot file notes. Confirm the record itself still reads normally — read-only is not
+     no-access.
+124. As a nurse again, file an entry and immediately open a different patient: the unsent entry must
+     NOT appear on the second patient's record.
+125. Repeat 119 in German and confirm the queued-note wording is translated.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_

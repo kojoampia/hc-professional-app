@@ -48,6 +48,23 @@ export interface PatientRecordDto extends PatientListItemDto {
   reports: ClinicalReportDto[];
 }
 
+/** What a clinician types to file an activity. `occurredAt` absent means now. */
+export interface CreateActivityDto {
+  title: string;
+  description: string;
+  occurredAt?: string;
+  clientRef?: string;
+}
+
+/** Metadata for a report. The server carries no bytes for this and does not pretend to. */
+export interface CreateReportDto {
+  name: string;
+  reportType: string;
+  description?: string;
+  url?: string;
+  clientRef?: string;
+}
+
 export interface PatientQuery {
   page?: number;
   size?: number;
@@ -114,5 +131,25 @@ export class PatientApiService {
   /** One patient's full record. 404 for a patient outside the caller's caseload, same as absent. */
   find(id: string): Observable<PatientRecordDto> {
     return this.http.get<PatientRecordDto>(`${this.resourceUrl}/${encodeURIComponent(id)}`);
+  }
+
+  /**
+   * Files an activity-log entry.
+   *
+   * <p>`clientRef` is the idempotency key the server keys its write receipts on, and it is what
+   * stops a retried send filing the note twice. Sent on every write from this client, because every
+   * write from this client goes through a queue that may retry it.
+   *
+   * <p>`title`/`description` are this client's names and the server translates them to
+   * patientservice's `summary`/`detail` — the same contract `web/` posts, chosen so neither client
+   * had to rename.
+   */
+  appendActivity(patientId: string, body: CreateActivityDto): Observable<ActivityLogEntryDto> {
+    return this.http.post<ActivityLogEntryDto>(`${this.resourceUrl}/${encodeURIComponent(patientId)}/activities`, body);
+  }
+
+  /** Files a clinical report. Metadata only — this is not a file upload, and never was. */
+  appendReport(patientId: string, body: CreateReportDto): Observable<ClinicalReportDto> {
+    return this.http.post<ClinicalReportDto>(`${this.resourceUrl}/${encodeURIComponent(patientId)}/reports`, body);
   }
 }
