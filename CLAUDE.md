@@ -16,11 +16,15 @@ Four tabs: **Today** (duty roster), **Messages**, **Documents**, **Me**. Every e
 
 **Composing a new conversation is not implemented.** `POST /api/messaging/conversations` needs `recipientIds[]` or `recipientRole`, and the only directory endpoint is the gateway's `PublicUserResource`, which returns every gateway user unfiltered — not something to put behind a recipient picker on a clinical app. Reply-only until a role-scoped directory endpoint exists. Related: there is **no per-conversation read endpoint**, only `/read-all`, so opening one thread clears the badge for every unread message. Both belong on the Phase 2 backend list.
 
-**Dashboard, Patients and Cases are Phase 2 — and as of 2026-08-22 the reason has changed.** This used to say they were blocked because `api/` had no `Patient` entity, no `ClinicalCase` entity and no `/api/dashboard/*` endpoints. **That is no longer true**: `PatientResource` and `DashboardResource` exist and answer 200, and cases are reachable through the gateway's `patientservice` route. What blocks them now is **shape** — every clinician-facing collection GET is still a bare unpaginated `List<T>` with no ETag, which a phone on mobile data cannot download — and, for writes, **two endpoints that were never built**: `POST /api/patients/{id}/activities` and `/reports` return 404 although `web/` calls them.
+**Patients and Cases have shipped** (Phases 5–7 of `../docs/web-mobile-port.md`, 2026-08-22), both
+pushed from Today rather than made tabs. The dashboard is Phase 10. What follows is the record of why
+they were blocked before, which is worth keeping because the stated reason was wrong for a while:
+
+**Dashboard, Patients and Cases were Phase 2 — and as of 2026-08-22 the reason had changed.** This used to say they were blocked because `api/` had no `Patient` entity, no `ClinicalCase` entity and no `/api/dashboard/*` endpoints. **That is no longer true**: `PatientResource` and `DashboardResource` exist and answer 200, and cases are reachable through the gateway's `patientservice` route. What blocks them now is **shape** — every clinician-facing collection GET is still a bare unpaginated `List<T>` with no ETag, which a phone on mobile data cannot download — and, for writes, **two endpoints that were never built**: `POST /api/patients/{id}/activities` and `/reports` return 404 although `web/` calls them.
 
 The phased plan for all of it is `../docs/web-mobile-port.md`; its Phase 1 supersedes `MOB-P2-PRE`. **Do not start those screens ahead of it** — a screen built against the unpaginated shape is work that gets thrown away.
 
-Also deliberately out of scope: the **applicant onboarding wizard** (this app is for _active_ clinicians — any application status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal), **composing new conversations** (no role-scoped directory endpoint exists; reply-only in v1), and **offline writes**.
+Also deliberately out of scope: the **applicant onboarding wizard** (this app is for _active_ clinicians — any application status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal), and **composing new conversations** (no role-scoped directory endpoint exists; reply-only until Phase 8). **Offline writes are no longer out of scope** — the write queue shipped in Phase 2 and every clinical write goes through it.
 
 ## The brand name
 
@@ -168,9 +172,14 @@ moving between app areas** (sign-in, sign-out, boot). Two related requirements:
   the cache is readable. A roster that vanishes when the signal does is worse than
   useless — the data is still correct, just old. `error` is reachable only when there
   is nothing cached at all.
-- **Whole-collection replace.** `api/` has no ETags, no pagination and no
-  `X-Total-Count`, so there is nothing to diff. Every fetch returns a complete list
-  and is written whole; no merge, no partial state.
+- **Whole-collection replace, and page zero only where a collection is paged.**
+  This used to say `api/` had no ETags, no pagination and no `X-Total-Count`; since
+  Phase 1 it has all three on the clinician collections. The contract did not change
+  — a fetch still replaces what it covers, with no merge and no partial state. What
+  changed is what a fetch covers: for the patient directory and the case queue that
+  is **page zero and nothing further**. Nobody needs page seven of a list in a
+  basement; what they need offline is the records they opened, which are cached
+  individually. Cases are the exception on both counts — see below.
 - **`setSensitive` seals with AES-GCM** under a key kept in the OS keystore next to
   the refresh token — so `SecureTokenStore.clear()` destroys it, and a cache whose key
   is gone is unreadable even if rows survive the wipe. Roster and document metadata
@@ -180,8 +189,16 @@ moving between app areas** (sign-in, sign-out, boot). Two related requirements:
 - **The cache is wiped when a different account signs in.** Two clinicians sharing a
   ward device is ordinary; serving one the other's cached roster would be a data leak
   wearing the costume of a performance optimisation.
-- The offline interceptor short-circuits **GETs only**. There is no offline write
-  queue, so a mutation must fail visibly rather than vanish into a synthetic error.
+- The offline interceptor short-circuits **GETs only**, and that rule is unchanged
+  by the write queue. The queue sits _above_ HTTP: a store calls `WriteQueue.submit`
+  instead of the API service, so a mutation that reaches `HttpClient` directly still
+  fails visibly rather than vanishing into a synthetic success. Inverting the rule so
+  mutations got a fake 200 is exactly what the interceptor's comment was written to
+  prevent.
+- **A case body is never cached.** Unlike a patient record, which is. Several people
+  edit one case at once, so a stale diagnosis rendered as current is a worse failure
+  than a detail screen that will not open without signal. The queue _row_ is cached;
+  the case is not.
 
 ### Camera captures are ALWAYS re-encoded
 

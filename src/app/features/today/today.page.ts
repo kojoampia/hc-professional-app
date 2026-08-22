@@ -147,6 +147,10 @@ import { TodayStore } from './today.store';
           {{ 'patients.open' | translate }}
         </button>
 
+        <button class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable" (click)="openCases()" data-test="open-cases">
+          {{ 'cases.open' | translate }}
+        </button>
+
         <!-- The next seven days -->
         <ion-list [inset]="true">
           <ion-list-header
@@ -263,6 +267,10 @@ export class TodayPage implements OnInit {
 
   openPatients(): void {
     void this.nav.navigateForward('/patients');
+  }
+
+  openCases(): void {
+    void this.nav.navigateForward('/cases');
   }
 
   openDocuments(): void {

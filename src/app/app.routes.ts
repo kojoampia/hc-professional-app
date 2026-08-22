@@ -45,6 +45,12 @@ export const routes: Routes = [
     ],
   },
   {
+    // Same reasoning as patients: the queue is where a clinician goes to work, not where they live.
+    path: 'cases',
+    canActivate: [unlockGuard],
+    loadComponent: () => import('./features/cases/cases.page').then(m => m.CasesPage),
+  },
+  {
     // Pushed, like the roster: a caseload is somewhere a clinician goes when they need it, and the
     // four-tab shell is the app's shape.
     path: 'patients',
