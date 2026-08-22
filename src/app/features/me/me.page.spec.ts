@@ -18,6 +18,7 @@ describe('MePage', () => {
   let nav: { navigateRoot: jest.Mock };
 
   const PROFILE_URL = 'services/professionalservice/api/onboarding/profile';
+  const PREFERENCES_URL = 'services/professionalservice/api/notifications/preferences';
   const ROSTER_URL = 'services/professionalservice/api/duty-rosters/my';
 
   beforeEach(() => {
@@ -41,8 +42,14 @@ describe('MePage', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
+  /** ngOnInit reads the notification preferences too (MOB10); most tests do not care what they are. */
+  const flushPreferences = (body: unknown = { messages: true, compliance: true, showSenderName: false }): void => {
+    httpMock.expectOne(request => request.method === 'GET' && request.url.endsWith(PREFERENCES_URL)).flush(body);
+  };
+
   const loadProfile = (body: unknown = { firstName: 'Ama', lastName: 'Mensah', email: 'ama@example.com', mobilePhone: '024' }): void => {
     fixture.detectChanges();
+    flushPreferences();
     httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush(body);
   };
 
@@ -86,6 +93,7 @@ describe('MePage', () => {
   it('treats a missing profile as an empty form, not an error state to block on', () => {
     // Normal for an account that has registered but not completed onboarding.
     fixture.detectChanges();
+    flushPreferences();
     httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({}, { status: 404, statusText: 'Not Found' });
 
     expect(page.loadFailed()).toBe(true);
@@ -141,6 +149,53 @@ describe('MePage', () => {
 
     expect(auth.logout).toHaveBeenCalledWith('user');
     expect(nav.navigateRoot).toHaveBeenCalledWith(['/login'], { replaceUrl: true });
+  });
+
+  describe('notification preferences (MOB10)', () => {
+    it('shows what the server says, not what the switches defaulted to', () => {
+      fixture.detectChanges();
+      flushPreferences({ messages: false, compliance: true, showSenderName: true });
+      httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
+
+      expect(page.pushMessages()).toBe(false);
+      expect(page.pushSenderName()).toBe(true);
+    });
+
+    it('keeps the server defaults when the read fails, rather than showing everything off', () => {
+      // All-off would tell a clinician they receive nothing while the server happily sends.
+      fixture.detectChanges();
+      httpMock
+        .expectOne(request => request.method === 'GET' && request.url.endsWith(PREFERENCES_URL))
+        .flush({}, { status: 503, statusText: 'Service Unavailable' });
+      httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
+
+      expect(page.pushMessages()).toBe(true);
+      expect(page.pushCompliance()).toBe(true);
+      expect(page.pushSenderName()).toBe(false);
+    });
+
+    it('writes all three on any single change', () => {
+      loadProfile();
+
+      page.setSenderName(true);
+
+      // The endpoint replaces all three; a partial body would be indistinguishable from "off".
+      const request = httpMock.expectOne(r => r.method === 'PUT' && r.url.endsWith(PREFERENCES_URL));
+      expect(request.request.body).toEqual({ messages: true, compliance: true, showSenderName: true });
+      request.flush({ messages: true, compliance: true, showSenderName: true });
+      expect(page.prefsFailed()).toBe(false);
+    });
+
+    it('reports a failed write instead of leaving a switch lying about the server state', () => {
+      loadProfile();
+
+      page.setMessages(false);
+      httpMock
+        .expectOne(r => r.method === 'PUT' && r.url.endsWith(PREFERENCES_URL))
+        .flush({}, { status: 503, statusText: 'Service Unavailable' });
+
+      expect(page.prefsFailed()).toBe(true);
+    });
   });
 
   afterEach(() => httpMock.verify());

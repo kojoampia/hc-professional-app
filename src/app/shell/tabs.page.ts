@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { IonIcon, IonLabel, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { documentTextOutline, chatbubblesOutline, personOutline, todayOutline } from 'ionicons/icons';
+
+import { PushRegistrationService } from '../core/push/push-registration.service';
 
 /**
  * The four-tab shell: Today, Messages, Documents, Me.
@@ -50,8 +52,22 @@ import { documentTextOutline, chatbubblesOutline, personOutline, todayOutline } 
     </ion-tabs>
   `,
 })
-export class TabsPage {
+export class TabsPage implements OnInit {
+  private readonly pushRegistration = inject(PushRegistrationService);
+
   constructor() {
     addIcons({ todayOutline, chatbubblesOutline, documentTextOutline, personOutline });
+  }
+
+  /**
+   * Register for push here, because this shell is exactly the signed-in surface (MOB10).
+   *
+   * <p>Not in `AppComponent`, which also runs for someone who has never signed in and would ask an
+   * unauthenticated stranger for notification permission — a prompt you get one chance at on iOS,
+   * and declining it is sticky. Not in the login page either: a restored session never passes
+   * through it. `start()` is idempotent, so mounting this shell again costs nothing.
+   */
+  async ngOnInit(): Promise<void> {
+    await this.pushRegistration.start();
   }
 }

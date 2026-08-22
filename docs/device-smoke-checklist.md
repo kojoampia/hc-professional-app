@@ -95,6 +95,47 @@ Needs a second account (or the web dashboard) to send from.
 66. Upload with **airplane mode on**: fails visibly with a retry, and nothing is silently queued.
 67. First camera use prompts for permission with **Abofonsa BridgeCare-specific wording** about photographing licences — not a generic string.
 
-## MOB9+ — added as each work package lands
+## MOB10 — push in the app
 
-_(Push. Each MOB adds its steps here as part of its gate.)_
+Needs **two accounts** and a second client (the web dashboard) to send from. Steps 76–79 are the MOB9
+gate items too — they could never be checked before the client registered a token at all. **On iOS,
+everything here is blocked until an APNs `.p8` exists**: that transport logs and skips, so an iPhone
+registers a token the server stores and never sends to.
+
+68. Sign in on a fresh install and **accept** the notification permission prompt. It appears on first
+    reaching the tab bar, not on the login screen.
+69. In Mongo, `db.device_token.find({accountId: "<login>"})` shows one row with `platform`,
+    `appVersion` and **`langKey` matching the app's current language** — not null. A null `langKey`
+    means the registration went out before the language was resolved.
+70. Change the language on the Me tab. The **same** row's `langKey` updates within a second; no
+    second row appears.
+71. Background the app, wait past the 30 s socket grace period, and have the other account send a
+    message. **Exactly one** tray row appears — not two, which would mean the socket also fired.
+72. Tap it. The app opens **the thread that message is in**, not the inbox and not Today.
+73. Send three more messages to the same thread while backgrounded. They **collapse into one tray
+    row**, not four.
+74. With the app **open on the Messages tab**, receive a message: the badge and list update and **no
+    tray row appears at all**.
+75. With the app open on **Today**, receive a message: the Messages tab badge increments, still with
+    no tray row.
+76. Turn **New messages** off on the Me tab, then have the other account send one. No tray row, and
+    the badge still updates when the app is next opened — the preference silences push, not the app.
+77. With **Show who sent it** off (the default), a tray row says "New message" and **names nobody**.
+    Turn it on and the next one names the sender.
+78. Set the device language to German, sign in again, and receive a message: the tray text is
+    **German**, including the sender line. Repeat for Spanish and French. This is the gate item the
+    old loc-key design silently failed on every locale.
+79. Sign out. `db.device_token.find({token: "<that token>"})` returns **nothing** — the row is
+    deleted, not merely disabled.
+80. Sign in as a **different clinician on the same handset** and have the first account be sent a
+    message. Nothing arrives on this phone. This is the reassign-on-conflict path, and getting it
+    wrong delivers one clinician's notifications to another.
+81. Sign out with **airplane mode on**. The app still signs out, and the stale row is pruned the
+    first time a send to it fails.
+82. Sign in as a **carer, angel, chemist or technician** — a read-only role — and confirm the device
+    registers and the preference toggles save. Under the `POST|PUT /api/**` rules these would 403
+    silently, and the clinician would simply never be notified, with nothing to point at.
+
+## MOB11+ — added as each work package lands
+
+_(Each MOB adds its steps here as part of its gate.)_
