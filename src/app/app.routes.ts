@@ -45,6 +45,13 @@ export const routes: Routes = [
     ],
   },
   {
+    // Pushed from Today rather than made a fifth tab: the four-tab shell is the app's shape, and a
+    // calendar is somewhere a clinician goes occasionally rather than a place they live.
+    path: 'roster',
+    canActivate: [unlockGuard],
+    loadComponent: () => import('./features/roster/roster.page').then(m => m.RosterPage),
+  },
+  {
     // MOB1 bootstrap probe. Kept reachable: it is the first screen the device smoke
     // checklist opens, and the only place that reports every native wrapper at once.
     path: 'diagnostics',

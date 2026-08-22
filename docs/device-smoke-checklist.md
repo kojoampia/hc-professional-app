@@ -42,7 +42,7 @@ Needs a real account on `professional.abofonsa.com`.
 24. Force-quit and relaunch → biometric prompt appears, and unlocking reaches the signed-in screen **in under 2 seconds** without retyping a password.
 25. Cancel the biometric prompt → "Use password" path reaches the sign-in screen.
 26. Fail biometrics three times → the stored session is discarded and you must sign in with a password.
-27. **Turn airplane mode on, then force-quit and relaunch.** You must get "could not reach the server / your session is still valid" with a **Try again** button — *not* a sign-out. Turn the network back on, tap Try again, and you land signed in. This is the single most important step here: a transient network failure must never discard a valid session.
+27. **Turn airplane mode on, then force-quit and relaunch.** You must get "could not reach the server / your session is still valid" with a **Try again** button — _not_ a sign-out. Turn the network back on, tap Try again, and you land signed in. This is the single most important step here: a transient network failure must never discard a valid session.
 28. Leave the app backgrounded for more than 5 minutes, return → biometric prompt again.
 29. **On a device with no screen lock at all** (remove the PIN in system settings): sign in, force-quit, relaunch → you are asked for your password again, and the sign-in screen explains why. The refresh token must not have been stored.
 30. Sign out from the signed-in screen → returns to sign-in; force-quit and relaunch → still signed out.
@@ -135,6 +135,35 @@ registers a token the server stores and never sends to.
 82. Sign in as a **carer, angel, chemist or technician** — a read-only role — and confirm the device
     registers and the preference toggles save. Under the `POST|PUT /api/**` rules these would 403
     silently, and the clinician would simply never be notified, with nothing to point at.
+
+## Phase 4 — roster calendar and own time off
+
+Needs a rostered account and, for steps 88–89, an administrator to approve leave from the web
+portal. Steps 84 and 90 are the ones that cannot be checked any other way.
+
+83. Today shows an **Open my roster** button; tapping it pushes the calendar and the back button
+    returns to Today rather than exiting the app.
+84. **Days with a shift are navy; days on leave are gold with DARK ink.** White on gold is 2.74:1
+    and fails AA — if the gold days read white, the mark colours have drifted from the tokens.
+85. A day that is **both rostered and on leave** shows as leave and still appears in the roster —
+    neither mark suppresses the other. That is the day an administrator needs to see.
+86. Tap a rostered day: the round, its shift window and each visit's time and customer appear.
+87. **Turn airplane mode on and tap a day.** The calendar marks and the leave list still render from
+    cache; the day view says it needs a connection. It must NOT show a previously-opened day's
+    rounds — that read refreshes visit snapshots server-side, so a cached copy would be both stale
+    and a skipped write.
+88. Request time off for a future range. It appears immediately as **Requested**, in gold.
+89. Have an administrator approve it on the web portal, pull to refresh, and it reads **Approved**
+    in green.
+90. Request time off with **airplane mode on**: it refuses visibly and says so before sending.
+    Nothing is queued — there is no offline write queue yet, and a mutation must fail loudly rather
+    than vanish into a synthetic success.
+91. Set the device to German, reopen the calendar: month and weekday names are German, and so are
+    the absence dates. `ion-datetime` localises through `LOCALE_ID`, which ngx-translate does not
+    touch — English month names beside German copy means that binding was lost.
+92. Repeat step 91 in Spanish and French.
+93. An **EVENING** shift shows a window of 15:00–23:00 and, during it, Today reads "On duty until
+    23:00". Before 2026-08-22 this shift had no window at all and Today called it off duty.
 
 ## MOB11+ — added as each work package lands
 
