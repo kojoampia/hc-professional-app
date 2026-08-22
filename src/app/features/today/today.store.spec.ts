@@ -65,7 +65,7 @@ describe('TodayStore', () => {
     date: iso(0),
     duty: 'NURSE',
     professionalId: 'p1',
-    shift: 'MORNING',
+    shift: 'DAY',
     name: 'Ward B',
     ...over,
   });

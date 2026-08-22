@@ -6,7 +6,7 @@ describe('formatRosterSummary', () => {
     date: '2026-08-12',
     duty: 'DOCTOR',
     professionalId: 'professional-1',
-    shift: 'MORNING',
+    shift: 'DAY',
     name: 'Ward 3',
     ...over,
   });
@@ -54,9 +54,9 @@ describe('formatRosterSummary', () => {
   });
 
   it('includes the shift window when the shift has one', () => {
-    const text = formatRosterSummary([assignment({ shift: 'MORNING' })], { title: 'My duty roster', from: NOW });
+    const text = formatRosterSummary([assignment({ shift: 'DAY' })], { title: 'My duty roster', from: NOW });
 
-    expect(text).toContain('MORNING');
+    expect(text).toContain('DAY');
     // FLEXIBLE has no fixed window, so it must not gain a parenthesised empty one.
     const flexible = formatRosterSummary([assignment({ shift: 'FLEXIBLE' })], { title: 'My duty roster', from: NOW });
     expect(flexible).not.toContain('()');

@@ -4,7 +4,16 @@ import { Observable } from 'rxjs';
 
 import { ApplicationConfigService } from '../config/application-config.service';
 
-export type DutyRosterShift = 'MORNING' | 'AFTERNOON' | 'NIGHT' | 'DAY' | 'FLEXIBLE';
+/**
+ * The shift types the server actually has.
+ *
+ * <p><b>MORNING and AFTERNOON were retired in DR1 (2026-08-20)</b> and existing rows migrated by
+ * nearest window — MORNING → DAY, AFTERNOON → EVENING, by `ShiftTypeMigration`. This union carried
+ * both of them and was missing EVENING entirely, which is what every migrated AFTERNOON became.
+ * Do not reintroduce them: the five-value set they belonged to overlapped, since the old DAY
+ * (08–17) straddled both.
+ */
+export type DutyRosterShift = 'DAY' | 'EVENING' | 'NIGHT' | 'FLEXIBLE';
 
 export interface DutyRosterAssignmentDto {
   id?: string;
@@ -14,6 +23,34 @@ export interface DutyRosterAssignmentDto {
   shift: DutyRosterShift;
   name: string;
   description?: string | null;
+  /** Present on the day read only. Treat as optional at every call site. */
+  visits?: VisitDto[] | null;
+}
+
+/** One visit inside a rostered round. Present on the day read; absent from the range read. */
+export interface VisitDto {
+  id?: string;
+  customerId: string;
+  /** `HH:mm[:ss]` local to the shift's date. NIGHT wraps: 01:00 belongs to the previous date's shift. */
+  startTime: string;
+  endTime: string;
+  customerName?: string | null;
+  customerAddress?: string | null;
+  customerPhone?: string | null;
+}
+
+/**
+ * One day in the year summary.
+ *
+ * <p><b>A day can carry both a round and an absence, and neither suppresses the other.</b> Leave
+ * asked for over a shift that has not been reassigned is exactly the day worth seeing, and it is
+ * what the server's 409 refuses to approve. Rendering only one of the two hides the conflict.
+ */
+export interface DaySummaryDto {
+  date: string;
+  shifts: DutyRosterShift[];
+  visits: number;
+  absence: { type: string; status: string } | null;
 }
 
 export interface ShiftLabel {
@@ -28,19 +65,25 @@ export interface ShiftLabel {
  * deliberately has no window — it stands for individually agreed 2–4 hour time
  * blocks on the assignment date and is labelled separately.
  *
- * Copied from `web/src/main/webapp/app/health-connect/api/duty-roster-assignments.service.ts`
- * (web commit 48a12fc). These windows are a cross-repo invariant, documented on
- * `api/domain/enumeration/ShiftType` — change them here and they must change there.
+ * Copied from `web/src/main/webapp/app/health-connect/health-connect.models.ts`, where DR1 moved
+ * the table so the union and its hours sit in one place. These windows are a cross-repo invariant
+ * documented on `api/domain/enumeration/ShiftType` — change them here and they must change there.
+ *
+ * <p><b>Corrected 2026-08-22.</b> This table held the PRE-DR1 windows: DAY 08–17, NIGHT 22–06, plus
+ * MORNING and AFTERNOON, and no EVENING at all. Three things were wrong on a clinician's phone as a
+ * result. An EVENING shift — what every migrated AFTERNOON became — found no window, so the card
+ * could not say when it ended and `selectShift` never reported "on duty" during one. A DAY shift
+ * read 08:00–17:00 when it is 07:00–15:00, so someone on shift at 07:30 was told they were not. And
+ * NIGHT was an hour out at both ends, which is the boundary the whole wrapping rule exists for.
  */
 const SHIFT_WINDOWS: Partial<Record<DutyRosterShift, { start: number; end: number }>> = {
-  MORNING: { start: 6, end: 14 },
-  AFTERNOON: { start: 14, end: 22 },
-  NIGHT: { start: 22, end: 6 },
-  DAY: { start: 8, end: 17 },
+  DAY: { start: 7, end: 15 },
+  EVENING: { start: 15, end: 23 },
+  NIGHT: { start: 23, end: 7 },
 };
 
-/** Sorting anchor for windowless (FLEXIBLE) shifts. */
-const DEFAULT_START_HOUR = 8;
+/** Sorting anchor for FLEXIBLE, which spans the day and so has no meaningful start. */
+const DEFAULT_START_HOUR = 7;
 
 const startHour = (shift: DutyRosterShift): number => SHIFT_WINDOWS[shift]?.start ?? DEFAULT_START_HOUR;
 
@@ -149,15 +192,55 @@ export class DutyRosterApiService {
   private readonly config = inject(ApplicationConfigService);
 
   private get resourceUrl(): string {
-    // /api/duty-rosters, not /api/onboarding/duty-rosters: the roster is owned by
-    // professionalservice and left the onboarding prefix WP6 had put it under (api 0b2cfbb). The
-    // old path is gone rather than aliased, so this would 404 — the Today tab's roster strip is
-    // what breaks. Safe to change outright because the app has never shipped: no tags, MOB12/MOB13
-    // unstarted, so there is no installed build still calling the old surface.
-    return this.config.getEndpointFor('api/duty-rosters', 'professionalservice');
+    // SINGULAR, and the bare GET means "mine".
+    //
+    // This read `api/duty-rosters` with a `/my` suffix and 404'd on every request — the Today tab's
+    // roster strip and Me → share my roster have both been empty in production. The comment that
+    // stood here argued the plural path was correct, which is why the 404 survived review, and
+    // `me.page.spec.ts` hardcoded the same wrong URL so the suite was green because of the bug.
+    //
+    // The rename went half-way: WP6 moved the resource off the onboarding prefix, and DR1 then made
+    // it singular AND inverted the meaning of the bare GET, so `/my` no longer exists. Confirmed
+    // against the deployed service — `api/duty-roster` 200s, `api/duty-rosters/my` 404s — and
+    // `web/`'s duty-roster-assignments.service.ts uses the same singular resource.
+    //
+    // `/all` is the admin list and is deliberately not reachable from this client.
+    return this.config.getEndpointFor('api/duty-roster', 'professionalservice');
   }
 
+  /** The caller's own assignments. The bare GET is already scoped to them server-side. */
   myAssignments(): Observable<DutyRosterAssignmentDto[]> {
-    return this.http.get<DutyRosterAssignmentDto[]>(`${this.resourceUrl}/my`);
+    return this.http.get<DutyRosterAssignmentDto[]>(this.resourceUrl);
+  }
+
+  /**
+   * The caller's assignments between two dates, inclusive.
+   *
+   * <p>Ported from `web/`'s `range()`. Used by the roster calendar so a month view costs one request
+   * rather than one per day.
+   */
+  range(from: string, to: string): Observable<DutyRosterAssignmentDto[]> {
+    return this.http.get<DutyRosterAssignmentDto[]>(this.resourceUrl, { params: { from, to } });
+  }
+
+  /**
+   * Per-day counts for a whole year, for the calendar's density marks.
+   *
+   * <p>Cheap enough to cache; `day()` deliberately is not — see below.
+   */
+  summary(year: number): Observable<DaySummaryDto[]> {
+    return this.http.get<DaySummaryDto[]>(`${this.resourceUrl}/summary`, { params: { year } });
+  }
+
+  /**
+   * One day in full: rounds, visits, and the customer details a clinician needs at the door.
+   *
+   * <p><b>Never cache this and never prefetch it.</b> The server refreshes visit snapshots as it
+   * reads — a write on the read path, deliberate and documented on `DutyRosterResource`, and the
+   * reason `/day/{date}` is excluded from the ETag filter. Skipping the call to serve a cached copy
+   * skips the write it exists to perform. Fetch it when the clinician taps a day, and only then.
+   */
+  day(date: string): Observable<DutyRosterAssignmentDto[]> {
+    return this.http.get<DutyRosterAssignmentDto[]>(`${this.resourceUrl}/day/${encodeURIComponent(date)}`);
   }
 }

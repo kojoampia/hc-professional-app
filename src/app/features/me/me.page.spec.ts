@@ -19,7 +19,7 @@ describe('MePage', () => {
 
   const PROFILE_URL = 'services/professionalservice/api/onboarding/profile';
   const PREFERENCES_URL = 'services/professionalservice/api/notifications/preferences';
-  const ROSTER_URL = 'services/professionalservice/api/duty-rosters/my';
+  const ROSTER_URL = 'services/professionalservice/api/duty-roster';
 
   beforeEach(() => {
     share = { canShare: jest.fn().mockResolvedValue(true), shareText: jest.fn().mockResolvedValue(undefined) };
@@ -106,7 +106,7 @@ describe('MePage', () => {
     page.shareRoster();
     httpMock
       .expectOne(request => request.url.endsWith(ROSTER_URL))
-      .flush([{ date: '2999-01-01', duty: 'DOCTOR', professionalId: 'p1', shift: 'MORNING', name: 'Ward 3' }]);
+      .flush([{ date: '2999-01-01', duty: 'DOCTOR', professionalId: 'p1', shift: 'DAY', name: 'Ward 3' }]);
     await fixture.whenStable();
 
     expect(share.shareText).toHaveBeenCalled();
@@ -132,7 +132,7 @@ describe('MePage', () => {
     page.shareRoster();
     httpMock
       .expectOne(request => request.url.endsWith(ROSTER_URL))
-      .flush([{ date: '2999-01-01', duty: 'DOCTOR', professionalId: 'p1', shift: 'MORNING', name: 'Ward 3' }]);
+      .flush([{ date: '2999-01-01', duty: 'DOCTOR', professionalId: 'p1', shift: 'DAY', name: 'Ward 3' }]);
     await fixture.whenStable();
 
     expect(share.shareText).not.toHaveBeenCalled();
