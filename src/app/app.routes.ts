@@ -45,6 +45,13 @@ export const routes: Routes = [
     ],
   },
   {
+    // Pushed like the rest. It is a summary a clinician checks, not a place they work from — the
+    // four-tab shell is the app's shape and Today is the screen that opens on a shift.
+    path: 'dashboard',
+    canActivate: [unlockGuard],
+    loadComponent: () => import('./features/dashboard/dashboard.page').then(m => m.DashboardPage),
+  },
+  {
     // Same reasoning as patients: the queue is where a clinician goes to work, not where they live.
     path: 'cases',
     canActivate: [unlockGuard],

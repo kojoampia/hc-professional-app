@@ -8,25 +8,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 It builds no server, ships no Docker image, and is **not part of `deploy/`**. It is one more client of the same API the web dashboard uses. It lives in the `hc-professional` multi-repo workspace alongside `gateway/`, `api/`, `web/` and `deploy/`.
 
-**The authoritative plan is `mobile-app-plan.md` at the workspace root** — scope, the `MOB<N>` work packages and their gates, and the Phase 1 backend work this app depends on. Read it before starting anything here.
+**Two plans, and they cover different things.** `../docs/mobile-app-plan.md` is the original: scope,
+the `MOB<N>` work packages and their gates, and the Phase 1 backend work. `../docs/web-mobile-port.md`
+is the web-to-mobile port, Phases 0–10, and its Phase 1 supersedes that document's `MOB-P2-PRE`.
+Both are **records, not prompts** — where a plan and the code disagree, the code wins.
 
-### Phase 1 scope — and what is deliberately absent
+### What the app has, and what it deliberately does not
 
-Four tabs: **Today** (duty roster), **Messages**, **Documents**, **Me**. Every endpoint behind them already exists and is deployed.
+Four tabs — **Today** (duty roster), **Messages**, **Documents**, **Me** — plus five screens pushed
+from Today rather than made into a fifth tab: **Roster**, **Patients**, **Cases**, **Dashboard**,
+and own absences. The four-tab shell is the app's shape; a calendar, a caseload and a summary are
+places a clinician goes when they need them, not places they live.
 
-**Composing a new conversation shipped in Phase 8** (2026-08-22), and so did per-conversation read. Both were blocked on the backend and both were unblocked by Phase 1. What this used to say, and why it mattered: `POST /api/messaging/conversations` needs `recipientIds[]` or `recipientRole`, and the only directory endpoint was the gateway's `PublicUserResource`, which returns every gateway user unfiltered — including accounts that are not clinicians at all, so not something to put behind a recipient picker on a clinical app. `GET /api/messaging/recipients` is role-scoped and sourced from the same records the broadcast resolves against, so the picker and the broadcast cannot disagree about who exists. And there was **no per-conversation read endpoint**, only `/read-all`, so opening one thread cleared the badge for every unread message — a clinician lost the signal that three others were waiting. `POST /conversations/{id}/read` answers with the new total, so the badge costs one round trip.
+**The web-to-mobile port is complete** (`../docs/web-mobile-port.md`, Phases 0–10, 2026-08-22). Its
+status log records what each phase shipped and where the delivered code diverged from the plan —
+read that before assuming a feature exists in the shape the plan describes.
 
-**`markAllRead` is deliberately not wrapped on the client.** The `/read-all` endpoint still exists; there is no screen that clears every thread at once, and a method sitting unused is an invitation to reach for it the next time a badge needs clearing — which is exactly the mistake the per-conversation endpoint replaced.
+What is **deliberately absent**, with the decision behind each:
 
-**Patients and Cases have shipped** (Phases 5–7 of `../docs/web-mobile-port.md`, 2026-08-22), both
-pushed from Today rather than made tabs. The dashboard is Phase 10. What follows is the record of why
-they were blocked before, which is worth keeping because the stated reason was wrong for a while:
+| Absent                                                                                                                  | Why                                                                                                                                                                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Every admin surface — review queue, review detail, compliance, absence approval, round builder, JHipster health/metrics | Decision 1: this is a clinician app. Admins use the web portal                                                                                                                                                                                                       |
+| Charts and the earnings screen                                                                                          | Decision 7. Charts are ~300 lines plus ~80 strings ×4 for axes and legends, unreadable at 390px, and fed by the unpaginated cross-service fetch Phase 1 existed to remove. Earnings come from `adminservice`, outside this workspace, with no pagination and no ETag |
+| Archiving a case                                                                                                        | Decision 6. No endpoint exists anywhere; `web/`'s button is client-side only and archives nothing. The screen says archiving is a web-portal action rather than shipping a device-local lie                                                                          |
+| Self-registration, and the careers `?track/locale/src` handoff                                                          | Decision 8. Registration in an app store invites Apple 5.1.1 scrutiny plus a mandatory in-app account-deletion path, and the careers handoff is a web-campaign mechanism with no mobile analogue. **Password reset only**                                            |
+| The applicant onboarding wizard                                                                                         | This app is for _active_ clinicians; any status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal                                                                                                                                               |
+| A `markAllRead` wrapper                                                                                                 | `/read-all` still exists on the server, but no screen clears every thread at once. A method sitting unused is an invitation to reach for it the next time a badge needs clearing — which is the exact mistake `POST /conversations/{id}/read` replaced               |
+| The patient-record file upload                                                                                          | `web/`'s sends `url: file.name` and moves no bytes. Porting a no-op as if it worked is worse than omitting it                                                                                                                                                        |
+| A recommendation checklist on a case                                                                                    | No such field exists, here or on patientservice's `ClinicalCase`. The dashboard migration plan describes one; it was never given anywhere to live                                                                                                                    |
 
-**Dashboard, Patients and Cases were Phase 2 — and as of 2026-08-22 the reason had changed.** This used to say they were blocked because `api/` had no `Patient` entity, no `ClinicalCase` entity and no `/api/dashboard/*` endpoints. **That is no longer true**: `PatientResource` and `DashboardResource` exist and answer 200, and cases are reachable through the gateway's `patientservice` route. What blocks them now is **shape** — every clinician-facing collection GET is still a bare unpaginated `List<T>` with no ETag, which a phone on mobile data cannot download — and, for writes, **two endpoints that were never built**: `POST /api/patients/{id}/activities` and `/reports` return 404 although `web/` calls them.
-
-The phased plan for all of it is `../docs/web-mobile-port.md`; its Phase 1 supersedes `MOB-P2-PRE`. **Do not start those screens ahead of it** — a screen built against the unpaginated shape is work that gets thrown away.
-
-Also deliberately out of scope: the **applicant onboarding wizard** (this app is for _active_ clinicians — any application status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal). **Offline writes are no longer out of scope** — the write queue shipped in Phase 2 and every clinical write goes through it.
+**Offline writes are supported.** The write queue shipped in Phase 2 and every clinical write goes
+through it. This section used to list them as out of scope.
 
 ## The brand name
 
@@ -351,6 +363,16 @@ as outstanding; all four shipped and are deployed:
 **iOS push is still inert**, and it is a credential rather than code: no APNs `.p8` exists, so that
 transport logs and skips. An iPhone registers a token the server stores and never sends to.
 
-**What Phase 2 needs is in `../docs/web-mobile-port.md` § Phase 1** — pagination on the clinician
-collections, `ETag`/`If-None-Match`, the two missing patient write endpoints, per-conversation
-mark-read, and a role-scoped recipient directory. That supersedes `MOB-P2-PRE`.
+**Everything the port needed has landed too.** `web-mobile-port.md` § Phase 1 asked for pagination
+on the clinician collections, `ETag`/`If-None-Match`, the two missing patient write endpoints,
+per-conversation mark-read and a role-scoped recipient directory; all shipped on 2026-08-22, along
+with two things the plan did not anticipate — a per-case detail read, and a 422 for a role broadcast
+that matches nobody (it used to store a message with zero recipients and answer 200).
+
+**Two findings belong to the `hc-patient` owners and are not ours to fix.**
+`POST /clinical-cases/{id}/archive` is `@PreAuthorize(ROLE_PROFESSIONAL)`, an authority no token this
+portal issues carries — doctor, nurse and admin all get 403. And their
+`requireWrite(ClinicalDomain.DIAGNOSIS)` passes for any authenticated non-patient caller, so a carer
+could PATCH a diagnosis by going through the gateway's `patientservice` route directly. That second
+one is why **every case write from this app is routed through professionalservice**, where
+`CLINICAL_MUTATION` and the caseload check both apply.
