@@ -332,6 +332,25 @@ real inbox for the reset email. Step 154 is the one that cannot be checked any o
 160. Repeat 147 and 155 in Spanish and German, and confirm the reset screens are fully translated —
      they are reached by someone who cannot get in, which is the worst moment for English to leak.
 
+## Phase 10 — the dashboard
+
+The last phase of the web-to-mobile port. Step 163 is the one worth the trip.
+
+161. Open **Dashboard** from Today. Four patient tiles and three case tiles show numbers.
+162. Compare the case numbers against the case queue's own `X-Total-Count` for each filter. They
+     must agree — the dashboard counts the **whole** queue, not a page, which is the difference
+     between it and the tiles on the queue screen.
+163. **Turn airplane mode on and pull to refresh.** Patient tiles keep their saved figures and the
+     banner says they are saved; the three case tiles go to **—** and a note says case figures are
+     unavailable. Neither half may show a zero, and the note must be there — three bare dashes read
+     as "no cases".
+164. **Force-quit in airplane mode and relaunch.** The patient tiles still show their figures: that
+     summary is cached in the clear, deliberately, so the screen can render before the keystore is
+     unlocked. The case tiles are dashes, because those are never cached.
+165. Confirm there are **no charts and no earnings**, and that the screen says both live on the web
+     portal rather than leaving their absence to be noticed.
+166. Repeat 161 and 163 in Spanish and German.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_

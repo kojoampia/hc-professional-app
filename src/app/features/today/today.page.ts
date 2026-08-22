@@ -151,6 +151,10 @@ import { TodayStore } from './today.store';
           {{ 'cases.open' | translate }}
         </button>
 
+        <button class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable" (click)="openDashboard()" data-test="open-dashboard">
+          {{ 'dashboard.open' | translate }}
+        </button>
+
         <!-- The next seven days -->
         <ion-list [inset]="true">
           <ion-list-header
@@ -271,6 +275,10 @@ export class TodayPage implements OnInit {
 
   openCases(): void {
     void this.nav.navigateForward('/cases');
+  }
+
+  openDashboard(): void {
+    void this.nav.navigateForward('/dashboard');
   }
 
   openDocuments(): void {
