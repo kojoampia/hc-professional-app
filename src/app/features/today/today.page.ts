@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { DatePipe, TitleCasePipe } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
@@ -27,6 +27,7 @@ import { isWorkingClinician } from '../../core/api/onboarding-api.service';
 import { AccountService } from '../../core/auth/account.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { RelativeTime } from '../../core/i18n/relative-time.service';
+import { AsyncBannerComponent } from '../../shared/async-banner.component';
 import { NetworkService } from '../../core/native/network.service';
 
 import { TodayStore } from './today.store';
@@ -41,6 +42,7 @@ import { TodayStore } from './today.store';
   selector: 'hpd-today',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    AsyncBannerComponent,
     TranslateModule,
     DatePipe,
     TitleCasePipe,
@@ -75,12 +77,11 @@ import { TodayStore } from './today.store';
       </ion-refresher>
 
       <div class="px-4 py-4 flex flex-col gap-4">
-        @if (!network.connected() || store.isStale()) {
-          <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status">
-            {{ (network.connected() ? 'today.savedData' : 'today.savedDataOffline') | translate }} · {{ 'today.updated' | translate }}
-            {{ age() }}
-          </p>
-        }
+        <hpd-async-banner
+          [status]="store.isStale() ? 'stale' : 'fresh'"
+          [fetchedAt]="store.oldestFetchedAt()"
+          savedDataKey="today.savedData"
+        ></hpd-async-banner>
 
         @if (needsPortal()) {
           <ion-card>
@@ -187,9 +188,6 @@ export class TodayPage implements OnInit {
   readonly expiring = this.store.expiringDocuments;
   readonly unread = computed(() => this.store.unread.value() ?? 0);
 
-  private readonly nowTick = signal(Date.now());
-  readonly age = computed(() => this.relativeTime.describe(this.store.oldestFetchedAt(), this.nowTick()));
-
   /** True only once we actually know the status — an unknown status must not nag. */
   readonly needsPortal = computed(() => {
     const application = this.store.application.value();
@@ -243,12 +241,10 @@ export class TodayPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.store.refresh();
-    this.nowTick.set(Date.now());
   }
 
   async pullToRefresh(event: Event): Promise<void> {
     await this.store.refresh();
-    this.nowTick.set(Date.now());
     (event as CustomEvent).detail?.complete?.();
   }
 

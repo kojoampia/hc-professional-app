@@ -30,6 +30,8 @@ import {
 import { AccountService } from '../../core/auth/account.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { RelativeTime } from '../../core/i18n/relative-time.service';
+import { AsyncBannerComponent } from '../../shared/async-banner.component';
+import { EmptyRowComponent } from '../../shared/empty-row.component';
 import { NetworkService } from '../../core/native/network.service';
 
 import { MessagesStore } from './messages.store';
@@ -47,6 +49,8 @@ import { MessagesStore } from './messages.store';
   selector: 'hpd-messages',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    AsyncBannerComponent,
+    EmptyRowComponent,
     TranslateModule,
     DatePipe,
     FormsModule,
@@ -87,12 +91,11 @@ import { MessagesStore } from './messages.store';
       </ion-refresher>
 
       <div class="px-4 py-4 flex flex-col gap-3">
-        @if (!network.connected() || store.conversations.status() === 'stale') {
-          <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status">
-            {{ (network.connected() ? 'messages.savedData' : 'messages.savedDataOffline') | translate }} ·
-            {{ 'today.updated' | translate }} {{ age() }}
-          </p>
-        }
+        <hpd-async-banner
+          [status]="store.conversations.status()"
+          [fetchedAt]="store.conversations.fetchedAt()"
+          savedDataKey="messages.savedData"
+        ></hpd-async-banner>
 
         <ion-list [inset]="true">
           @for (conversation of conversations(); track conversation.id) {
@@ -103,11 +106,11 @@ import { MessagesStore } from './messages.store';
               </ion-label>
             </ion-item>
           } @empty {
-            <ion-item lines="none">
-              <ion-label class="text-hpd-muted">
-                {{ (store.conversations.status() === 'error' ? 'messages.loadFailed' : 'messages.empty') | translate }}
-              </ion-label>
-            </ion-item>
+            <hpd-empty-row
+              [status]="store.conversations.status()"
+              emptyKey="messages.empty"
+              failedKey="messages.loadFailed"
+            ></hpd-empty-row>
           }
         </ion-list>
       </div>
@@ -205,9 +208,6 @@ export class MessagesPage implements OnInit {
   readonly sending = signal(false);
   readonly sendError = signal(false);
 
-  private readonly nowTick = signal(Date.now());
-  readonly age = computed(() => this.relativeTime.describe(this.store.conversations.fetchedAt(), this.nowTick()));
-
   readonly conversations = computed(() =>
     [...(this.store.conversations.value() ?? [])].sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? '')),
   );
@@ -222,7 +222,6 @@ export class MessagesPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.store.start();
-    this.nowTick.set(Date.now());
     this.openFromNotificationTaps();
   }
 
@@ -277,7 +276,6 @@ export class MessagesPage implements OnInit {
 
   async pullToRefresh(event: Event): Promise<void> {
     await this.store.refresh();
-    this.nowTick.set(Date.now());
     (event as CustomEvent).detail?.complete?.();
   }
 }

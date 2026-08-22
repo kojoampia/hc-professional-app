@@ -23,6 +23,8 @@ import {
 import { DocumentType, PersonalDocumentDto } from '../../core/api/onboarding-api.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { RelativeTime } from '../../core/i18n/relative-time.service';
+import { AsyncBannerComponent } from '../../shared/async-banner.component';
+import { EmptyRowComponent } from '../../shared/empty-row.component';
 import { NetworkService } from '../../core/native/network.service';
 
 import { DocumentsStore } from './documents.store';
@@ -34,6 +36,8 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
   selector: 'hpd-documents',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    AsyncBannerComponent,
+    EmptyRowComponent,
     TranslateModule,
     FormsModule,
     IonHeader,
@@ -66,12 +70,11 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
       </ion-refresher>
 
       <div class="px-4 py-4 flex flex-col gap-4">
-        @if (!network.connected() || store.documents.status() === 'stale') {
-          <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status">
-            {{ (network.connected() ? 'documents.savedData' : 'documents.savedDataOffline') | translate }} ·
-            {{ 'today.updated' | translate }} {{ age() }}
-          </p>
-        }
+        <hpd-async-banner
+          [status]="store.documents.status()"
+          [fetchedAt]="store.documents.fetchedAt()"
+          savedDataKey="documents.savedData"
+        ></hpd-async-banner>
 
         <button class="hpd-btn hpd-btn-primary hpd-btn-block hpd-focusable" [disabled]="busy()" (click)="openForm()">
           {{ 'documents.addOrRenew' | translate }}
@@ -94,11 +97,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
               </ion-badge>
             </ion-item>
           } @empty {
-            <ion-item lines="none">
-              <ion-label class="text-hpd-muted">
-                {{ (store.documents.status() === 'error' ? 'documents.loadFailed' : 'documents.empty') | translate }}
-              </ion-label>
-            </ion-item>
+            <hpd-empty-row [status]="store.documents.status()" emptyKey="documents.empty" failedKey="documents.loadFailed"></hpd-empty-row>
           }
         </ion-list>
       </div>
@@ -233,8 +232,6 @@ export class DocumentsPage implements OnInit {
   expiryDate = '';
 
   readonly formOpen = signal(false);
-  private readonly nowTick = signal(Date.now());
-  readonly age = computed(() => this.relativeTime.describe(this.store.documents.fetchedAt(), this.nowTick()));
 
   readonly busy = computed(() => ['preparing', 'uploading'].includes(this.store.upload().stage));
 
@@ -243,7 +240,6 @@ export class DocumentsPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.store.refresh();
-    this.nowTick.set(Date.now());
   }
 
   label(doc: PersonalDocumentDto): string {
@@ -286,7 +282,6 @@ export class DocumentsPage implements OnInit {
 
   async pullToRefresh(event: Event): Promise<void> {
     await this.store.refresh();
-    this.nowTick.set(Date.now());
     (event as CustomEvent).detail?.complete?.();
   }
 

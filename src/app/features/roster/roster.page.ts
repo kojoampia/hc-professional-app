@@ -28,6 +28,8 @@ import { AbsenceType } from '../../core/api/absence-api.service';
 import { isoDate, shiftWindowText } from '../../core/api/duty-roster-api.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { RelativeTime } from '../../core/i18n/relative-time.service';
+import { AsyncBannerComponent } from '../../shared/async-banner.component';
+import { EmptyRowComponent } from '../../shared/empty-row.component';
 import { NetworkService } from '../../core/native/network.service';
 import { RosterStore } from './roster.store';
 
@@ -57,6 +59,8 @@ import { RosterStore } from './roster.store';
   selector: 'hpd-roster',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    AsyncBannerComponent,
+    EmptyRowComponent,
     DatePipe,
     TitleCasePipe,
     FormsModule,
@@ -97,12 +101,11 @@ import { RosterStore } from './roster.store';
       </ion-refresher>
 
       <div class="flex flex-col gap-4">
-        @if (!network.connected() || store.isStale()) {
-          <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status">
-            {{ (network.connected() ? 'roster.savedData' : 'roster.savedDataOffline') | translate }} · {{ 'today.updated' | translate }}
-            {{ age() }}
-          </p>
-        }
+        <hpd-async-banner
+          [status]="store.isStale() ? 'stale' : 'fresh'"
+          [fetchedAt]="store.oldestFetchedAt()"
+          savedDataKey="roster.savedData"
+        ></hpd-async-banner>
 
         <!-- The month view. Marks come from the year summary, which is cached. -->
         <ion-datetime
@@ -130,11 +133,7 @@ import { RosterStore } from './roster.store';
               </ion-badge>
             </ion-item>
           } @empty {
-            <ion-item lines="none">
-              <ion-label class="text-hpd-muted">
-                {{ (store.absences.status() === 'error' ? 'roster.loadFailed' : 'absence.none') | translate }}
-              </ion-label>
-            </ion-item>
+            <hpd-empty-row [status]="store.absences.status()" emptyKey="absence.none" failedKey="roster.loadFailed"></hpd-empty-row>
           }
           <ion-item lines="none">
             <button class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable" (click)="openRequest()" data-test="request-absence">
@@ -265,9 +264,6 @@ export class RosterPage implements OnInit {
   /** DatePipe formats through LOCALE_ID, which ngx-translate does not touch — pass it explicitly. */
   readonly locale = this.language.current;
 
-  private readonly nowTick = signal(Date.now());
-  readonly age = computed(() => this.relativeTime.describe(this.store.oldestFetchedAt(), this.nowTick()));
-
   readonly requesting = signal(false);
   readonly submitting = signal(false);
   readonly requestError = signal<string | null>(null);
@@ -294,7 +290,6 @@ export class RosterPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.store.refresh();
-    this.nowTick.set(Date.now());
   }
 
   windowText(shift: Parameters<typeof shiftWindowText>[0]): string | null {
@@ -343,7 +338,6 @@ export class RosterPage implements OnInit {
 
   async pullToRefresh(event: Event): Promise<void> {
     await this.store.refresh();
-    this.nowTick.set(Date.now());
     (event as CustomEvent).detail?.complete?.();
   }
 }
