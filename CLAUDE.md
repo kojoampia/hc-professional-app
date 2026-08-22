@@ -16,7 +16,9 @@ Four tabs: **Today** (duty roster), **Messages**, **Documents**, **Me**. Every e
 
 **Composing a new conversation is not implemented.** `POST /api/messaging/conversations` needs `recipientIds[]` or `recipientRole`, and the only directory endpoint is the gateway's `PublicUserResource`, which returns every gateway user unfiltered — not something to put behind a recipient picker on a clinical app. Reply-only until a role-scoped directory endpoint exists. Related: there is **no per-conversation read endpoint**, only `/read-all`, so opening one thread clears the badge for every unread message. Both belong on the Phase 2 backend list.
 
-**Dashboard, Patients and Cases are Phase 2 and are blocked**, not merely unbuilt: `api/` has no `Patient` entity, no `ClinicalCase` entity and no `/api/dashboard/*` endpoints, and every entity collection GET returns a bare unpaginated `List<T>` that a phone on mobile data cannot download. See `MOB-P2-PRE` in the plan. Do not start those screens.
+**Dashboard, Patients and Cases are Phase 2 — and as of 2026-08-22 the reason has changed.** This used to say they were blocked because `api/` had no `Patient` entity, no `ClinicalCase` entity and no `/api/dashboard/*` endpoints. **That is no longer true**: `PatientResource` and `DashboardResource` exist and answer 200, and cases are reachable through the gateway's `patientservice` route. What blocks them now is **shape** — every clinician-facing collection GET is still a bare unpaginated `List<T>` with no ETag, which a phone on mobile data cannot download — and, for writes, **two endpoints that were never built**: `POST /api/patients/{id}/activities` and `/reports` return 404 although `web/` calls them.
+
+The phased plan for all of it is `../docs/web-mobile-port.md`; its Phase 1 supersedes `MOB-P2-PRE`. **Do not start those screens ahead of it** — a screen built against the unpaginated shape is work that gets thrown away.
 
 Also deliberately out of scope: the **applicant onboarding wizard** (this app is for _active_ clinicians — any application status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal), **composing new conversations** (no role-scoped directory endpoint exists; reply-only in v1), and **offline writes**.
 
@@ -313,11 +315,21 @@ capacitor.config.ts      # appId com.abofonsa.bridgecare.professional, androidSc
 
 `androidScheme: 'https'` is explicit in `capacitor.config.ts` though it is the Capacitor default, because two things depend on it: the gateway CORS allowlist must contain `https://localhost` (**not** `http://localhost`) for Android, and a secure context is what makes `crypto.subtle` — the MOB6 cache encryption — and the camera available.
 
-## Backend dependencies not yet built
+## Backend dependencies
 
-This app cannot reach its Phase 1 gates until the backend work in `mobile-app-plan.md` lands:
+**Every Phase 1 backend dependency has landed** (corrected 2026-08-22). This section used to list four
+as outstanding; all four shipped and are deployed:
 
-- **Refresh tokens** (`gateway/`, MOB3) — there is no refresh flow today, only a single 24 h / 30 d HS512 token.
-- **CORS** (`gateway/`, MOB4) — production is single-origin by design and currently emits no CORS headers at all. This app is the first client ever to need them.
-- **`spring.servlet.multipart.max-file-size`** (`api/`, MOB4) — unset, so Spring's 1 MB default fires before the documented 5 MB check. Camera captures land squarely in the broken range.
-- **Device-token registry + FCM sender + Kafka push consumer** (`api/`, MOB9) — no push infrastructure exists at all.
+| Was blocked on                                              | Status                                                                                                                                             |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Refresh tokens (`gateway/`, MOB3)                           | Deployed 2026-08-05. Rotating refresh tokens with reuse detection; `POST /api/auth/refresh`, `/logout`, `GET\|DELETE /api/auth/sessions`           |
+| CORS (`gateway/`, MOB4)                                     | Deployed 2026-08-05, and the gate as first written was wrong — see `mobile-app-plan.md` § _MOB4's CORS gate was wrong_                             |
+| `spring.servlet.multipart.max-file-size` (`api/`, MOB4)     | **6MB / 8MB** at `api/src/main/resources/config/application.yml:115`, above the app's own 5 MB check so its clear error wins. Camera captures work |
+| Device-token registry + FCM + Kafka consumer (`api/`, MOB9) | Deployed 2026-08-07, Android server-verified 2026-08-11. The client half landed in MOB10 (2026-08-22)                                              |
+
+**iOS push is still inert**, and it is a credential rather than code: no APNs `.p8` exists, so that
+transport logs and skips. An iPhone registers a token the server stores and never sends to.
+
+**What Phase 2 needs is in `../docs/web-mobile-port.md` § Phase 1** — pagination on the clinician
+collections, `ETag`/`If-None-Match`, the two missing patient write endpoints, per-conversation
+mark-read, and a role-scoped recipient directory. That supersedes `MOB-P2-PRE`.
