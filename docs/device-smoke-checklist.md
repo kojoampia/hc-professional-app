@@ -194,6 +194,35 @@ are the two that matter most: one proves nothing is lost, the other proves nothi
       clinician's unsent note must never surface in another's session.
 104.  Repeat step 94 in German and confirm the pending and "not sent" copy is translated.
 
+## Phase 5 — patients, read-only
+
+Needs an account with more than 20 patients for steps 106–108; without one the paging cannot be
+seen at all, and a directory that silently shows only the first page is exactly what this phase
+exists to make visible.
+
+105. Today shows **My patients**; tapping it pushes the directory and the back button returns.
+106. Scroll to the bottom: more rows load without a pagination control anywhere on screen.
+107. Keep scrolling past three pages, background the app, resume — the list is still where it was.
+108. Scroll to the very end: loading stops rather than looping. The count that stops it is the
+     server's match count, not the number of rows on screen.
+109. Type a name in the search bar. The list narrows **from the server** — watch the request, not
+     just the result: filtering in the browser would still look right on a small caseload.
+110. Search for something with no matches: it says no patients match, not that you have none. Clear
+     the search and confirm the full list returns.
+111. Tap each segment (All / Female / Male / Children) and confirm the list changes and the search
+     text is kept.
+112. Tap a patient: the record opens full-screen with contact details, cases, activity and reports.
+113. **Turn airplane mode on and reopen the directory.** The first page still renders from cache and
+     the banner says so. Scrolling for more does nothing rather than emptying the list.
+114. **Still offline, open a patient you opened earlier.** The record renders from cache with the
+     "saved on this phone" note. Open one you have NOT opened before: it says it could not load.
+115. Inspect the app sandbox with something queued and records cached. Neither the directory nor any
+     record may be readable — no patient names, no diagnoses in plaintext.
+116. Open 21 different patients, then go offline and try the first one. It is gone, by design: the
+     cache keeps the 20 most recently opened so a long career cannot fill the sandbox.
+117. Confirm the record says filing notes is not yet available, rather than simply having no button.
+118. Repeat 112 in German and confirm dates and headings are translated.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_

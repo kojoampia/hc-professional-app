@@ -143,6 +143,10 @@ import { TodayStore } from './today.store';
           {{ 'roster.open' | translate }}
         </button>
 
+        <button class="hpd-btn hpd-btn-ghost hpd-btn-block hpd-focusable" (click)="openPatients()" data-test="open-patients">
+          {{ 'patients.open' | translate }}
+        </button>
+
         <!-- The next seven days -->
         <ion-list [inset]="true">
           <ion-list-header
@@ -255,6 +259,10 @@ export class TodayPage implements OnInit {
   openRoster(): void {
     // The full calendar and own time off. Pushed rather than a fifth tab — see app.routes.ts.
     void this.nav.navigateForward('/roster');
+  }
+
+  openPatients(): void {
+    void this.nav.navigateForward('/patients');
   }
 
   openDocuments(): void {

@@ -45,6 +45,13 @@ export const routes: Routes = [
     ],
   },
   {
+    // Pushed, like the roster: a caseload is somewhere a clinician goes when they need it, and the
+    // four-tab shell is the app's shape.
+    path: 'patients',
+    canActivate: [unlockGuard],
+    loadComponent: () => import('./features/patients/patients.page').then(m => m.PatientsPage),
+  },
+  {
     // Pushed from Today rather than made a fifth tab: the four-tab shell is the app's shape, and a
     // calendar is somewhere a clinician goes occasionally rather than a place they live.
     path: 'roster',
