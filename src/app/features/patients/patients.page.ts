@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import {
   IonBackButton,
@@ -9,6 +10,7 @@ import {
   IonHeader,
   IonInfiniteScroll,
   IonInfiniteScrollContent,
+  IonInput,
   IonItem,
   IonLabel,
   IonList,
@@ -21,6 +23,7 @@ import {
   IonSegment,
   IonSegmentButton,
   IonSpinner,
+  IonTextarea,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
@@ -29,6 +32,9 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { NetworkService } from '../../core/native/network.service';
 import { AsyncBannerComponent } from '../../shared/async-banner.component';
 import { EmptyRowComponent } from '../../shared/empty-row.component';
+import { AccountService } from '../../core/auth/account.service';
+import { hasClinicalPermission } from '../../core/auth/clinical-permissions';
+import { PendingChipComponent } from '../../shared/pending-chip.component';
 import { PatientsStore } from './patients.store';
 
 /**
@@ -65,6 +71,8 @@ import { PatientsStore } from './patients.store';
     TranslateModule,
     AsyncBannerComponent,
     EmptyRowComponent,
+    PendingChipComponent,
+    FormsModule,
     IonHeader,
     IonToolbar,
     IonTitle,
@@ -86,6 +94,8 @@ import { PatientsStore } from './patients.store';
     IonSpinner,
     IonInfiniteScroll,
     IonInfiniteScrollContent,
+    IonInput,
+    IonTextarea,
   ],
   template: `
     <ion-header>
@@ -262,6 +272,55 @@ import { PatientsStore } from './patients.store';
           </ion-content>
         </ng-template>
       </ion-modal>
+
+      <ion-modal [isOpen]="filing()" (didDismiss)="filing.set(false)">
+        <ng-template>
+          <ion-header>
+            <ion-toolbar>
+              <ion-title>{{ 'patients.fileActivity' | translate }}</ion-title>
+              <ion-buttons slot="end">
+                <button class="hpd-btn hpd-btn-ghost hpd-focusable" (click)="filing.set(false)">
+                  {{ 'patients.close' | translate }}
+                </button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+          <ion-content class="ion-padding">
+            @if (filingError(); as error) {
+              <p class="mb-3 rounded-hpd-sm bg-hpd-danger-tint px-3 py-2 text-hpd-danger" role="alert">{{ error | translate }}</p>
+            }
+            <ion-list>
+              <ion-item>
+                <ion-input
+                  label="{{ 'patients.activityTitle' | translate }}"
+                  labelPlacement="stacked"
+                  [(ngModel)]="activityTitle"
+                  data-test="activity-title"
+                ></ion-input>
+              </ion-item>
+              <ion-item>
+                <ion-textarea
+                  label="{{ 'patients.activityDetail' | translate }}"
+                  labelPlacement="stacked"
+                  [autoGrow]="true"
+                  [rows]="3"
+                  [(ngModel)]="activityDetail"
+                  data-test="activity-detail"
+                ></ion-textarea>
+              </ion-item>
+              <ion-item lines="none">
+                <button class="hpd-btn hpd-btn-primary hpd-btn-block hpd-focusable" (click)="file()" data-test="activity-submit">
+                  {{ 'patients.file' | translate }}
+                </button>
+              </ion-item>
+              <ion-item lines="none">
+                <!-- Stated up front: with no signal this is kept, not lost, and not sent yet. -->
+                <ion-note>{{ 'patients.fileQueued' | translate }}</ion-note>
+              </ion-item>
+            </ion-list>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
     </ion-content>
   `,
 })
@@ -269,11 +328,27 @@ export class PatientsPage implements OnInit {
   readonly store = inject(PatientsStore);
   readonly network = inject(NetworkService);
   private readonly language = inject(LanguageService);
+  private readonly accounts = inject(AccountService);
 
   /** DatePipe formats through LOCALE_ID, which ngx-translate does not touch — pass it explicitly. */
   readonly locale = this.language.current;
 
   readonly filter = signal('all');
+
+  readonly filing = signal(false);
+  readonly filingError = signal<string | null>(null);
+  activityTitle = '';
+  activityDetail = '';
+
+  /**
+   * Whether this clinician may file at all.
+   *
+   * <p>Mirrors the server rather than replacing it: `/api/patients/**` requires CLINICAL_MUTATION,
+   * so a carer's write is refused whatever this says. What it buys is the difference between a
+   * button that 403s and a button that is not offered — and with a queue in play, between a note
+   * held for hours before rejection and one never accepted.
+   */
+  readonly canFile = computed(() => hasClinicalPermission(this.accounts.account()?.authorities, 'manageActivity'));
 
   readonly hasFilters = computed(() => {
     const { query, sex, childrenOnly } = this.store.filters();
@@ -302,6 +377,30 @@ export class PatientsPage implements OnInit {
 
   close(): void {
     this.store.closeRecord();
+  }
+
+  openFiling(): void {
+    this.activityTitle = '';
+    this.activityDetail = '';
+    this.filingError.set(null);
+    this.filing.set(true);
+  }
+
+  /**
+   * Queues the entry. No spinner and no network check: the queue takes it either way, and telling
+   * the clinician it is saved-and-will-send is the honest description of both cases.
+   */
+  async file(): Promise<void> {
+    if (!this.activityTitle.trim()) {
+      this.filingError.set('patients.fileNeedsText');
+      return;
+    }
+    const patientId = this.store.record()?.id;
+    if (!patientId) {
+      return;
+    }
+    await this.store.fileActivity(patientId, { title: this.activityTitle.trim(), description: this.activityDetail.trim() });
+    this.filing.set(false);
   }
 
   async loadMore(event: Event): Promise<void> {

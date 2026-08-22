@@ -1,12 +1,17 @@
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
 import { PatientApiService, PatientListItemDto } from '../../core/api/patient-api.service';
 import { CacheStore } from '../../core/offline/cache-store.service';
 import { PreferencesService } from '../../core/native/preferences.service';
 import { SecureTokenStore } from '../../core/native/secure-token-store.service';
+import { WriteQueue } from '../../core/offline/write-queue.service';
 import { PAGE_SIZE, PatientsStore, RECORD_CACHE_LIMIT } from './patients.store';
+
+/** The queue's own list, so a spec can move an op's state and watch the record follow. */
+const queueWrites = signal<any[]>([]);
 
 const disk = new Map<string, unknown>();
 jest.mock('idb-keyval', () => ({
@@ -19,7 +24,8 @@ jest.mock('idb-keyval', () => ({
 
 describe('PatientsStore', () => {
   let store: PatientsStore;
-  let api: { query: jest.Mock; find: jest.Mock };
+  let api: { query: jest.Mock; find: jest.Mock; appendActivity: jest.Mock; appendReport: jest.Mock };
+  let queue: { submit: jest.Mock; register: jest.Mock; writes: typeof queueWrites };
 
   const row = (id: string, over: Partial<PatientListItemDto> = {}): PatientListItemDto => ({
     id,
@@ -38,12 +44,29 @@ describe('PatientsStore', () => {
     const preferences = new Map<string, string>();
     const secrets = new Map<string, string>();
 
-    api = { query: jest.fn(() => of(page([row('p1'), row('p2')]))), find: jest.fn(() => of({ id: 'p1', patientName: 'Ama' })) };
+    api = {
+      query: jest.fn(() => of(page([row('p1'), row('p2')]))),
+      find: jest.fn(() => of({ id: 'p1', patientName: 'Ama' })),
+      appendActivity: jest.fn(() => of({ id: 'a1' })),
+      appendReport: jest.fn(() => of({ id: 'r1' })),
+    };
+    queueWrites.set([]);
+    let nextId = 0;
+    queue = {
+      register: jest.fn(),
+      writes: queueWrites,
+      submit: jest.fn(async (kind: string, subjectId: string, payload: unknown) => {
+        const write = { id: `w${++nextId}`, kind, subjectId, payload, state: 'pending', clientRef: `ref-${nextId}` };
+        queueWrites.update(existing => [...existing, write]);
+        return write;
+      }),
+    };
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
         { provide: PatientApiService, useValue: api },
+        { provide: WriteQueue, useValue: queue },
         {
           provide: PreferencesService,
           useValue: {
@@ -231,6 +254,69 @@ describe('PatientsStore', () => {
       store.closeRecord();
 
       expect(store.record()).toBeNull();
+    });
+  });
+
+  describe('filing (Phase 6)', () => {
+    it('goes through the QUEUE, never straight to the API', async () => {
+      // The whole architecture: a mutation reaching HttpClient directly still fails loudly offline.
+      await store.fileActivity('p1', { title: 'Wound dressed', description: 'No exudate' });
+
+      expect(queue.submit).toHaveBeenCalledWith('activity.append', 'p1', expect.objectContaining({ title: 'Wound dressed' }));
+      expect(api.appendActivity).not.toHaveBeenCalled();
+    });
+
+    it('registers a sender for each kind it can queue', () => {
+      // The queue owns WHEN; the store owns HOW. Without this the op sits pending forever.
+      expect(queue.register).toHaveBeenCalledWith('activity.append', expect.any(Function));
+      expect(queue.register).toHaveBeenCalledWith('report.append', expect.any(Function));
+    });
+
+    it('sends the clientRef the server keys its receipts on', async () => {
+      const sender = queue.register.mock.calls.find(([kind]) => kind === 'activity.append')?.[1];
+      await sender({ subjectId: 'p1', clientRef: 'ref-1', payload: { title: 't', description: 'd' } });
+
+      expect(api.appendActivity).toHaveBeenCalledWith('p1', expect.objectContaining({ clientRef: 'ref-1' }));
+    });
+
+    it('shows the entry immediately, MARKED rather than merged', async () => {
+      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] }));
+      await store.openRecord('p1');
+
+      await store.fileActivity('p1', { title: 'Wound dressed', description: 'd' });
+
+      expect(store.pendingForOpenRecord()).toHaveLength(1);
+      expect(store.pendingForOpenRecord()[0].label).toBe('Wound dressed');
+    });
+
+    it('does not show another patient s unsent entries', async () => {
+      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] }));
+      await store.openRecord('p1');
+
+      await store.fileActivity('p2', { title: 'Someone else', description: 'd' });
+
+      expect(store.pendingForOpenRecord()).toHaveLength(0);
+    });
+
+    it('DROPS the optimistic entry once the op leaves the queue', async () => {
+      // It has landed; the next read shows the server's own copy. Leaving it would double the row.
+      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] }));
+      await store.openRecord('p1');
+      await store.fileActivity('p1', { title: 'Wound dressed', description: 'd' });
+
+      queueWrites.set([]);
+
+      expect(store.pendingForOpenRecord()).toHaveLength(0);
+    });
+
+    it('reflects the queued op s state, so a conflict is visible on the record', async () => {
+      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] }));
+      await store.openRecord('p1');
+      await store.fileActivity('p1', { title: 'Wound dressed', description: 'd' });
+
+      queueWrites.update(writes => writes.map(write => ({ ...write, state: 'rejected' })));
+
+      expect(store.pendingForOpenRecord()[0].state).toBe('rejected');
     });
   });
 });
