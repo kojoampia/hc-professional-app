@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
+  IonAlert,
   IonButton,
   IonContent,
   IonHeader,
@@ -21,6 +22,7 @@ import {
 
 import { ClinicianProfileDto, ProfileApiService } from '../../core/api/profile-api.service';
 import { NotificationsApiService } from '../../core/api/notifications-api.service';
+import { WriteQueue } from '../../core/offline/write-queue.service';
 import { DutyRosterApiService } from '../../core/api/duty-roster-api.service';
 import { AccountService } from '../../core/auth/account.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -59,6 +61,7 @@ import { formatRosterSummary } from './roster-summary';
     IonSelect,
     IonSelectOption,
     IonToggle,
+    IonAlert,
   ],
   template: `
     <ion-header>
@@ -172,6 +175,35 @@ import { formatRosterSummary } from './roster-summary';
         }
       </ion-list>
 
+      @if (queue.needingAttention().length > 0) {
+        <ion-list>
+          <ion-list-header>{{ 'me.unsent' | translate }}</ion-list-header>
+          @for (write of queue.needingAttention(); track write.id) {
+            <ion-item>
+              <ion-label>
+                <h3>{{ write.kind }}</h3>
+                <p class="text-hpd-danger">
+                  {{
+                    (write.state === 'conflict'
+                      ? 'me.unsentConflict'
+                      : write.state === 'expired'
+                        ? 'me.unsentExpired'
+                        : 'me.unsentRejected'
+                    ) | translate
+                  }}
+                </p>
+              </ion-label>
+              <ion-button slot="end" fill="clear" (click)="retryWrite(write.id)" data-test="retry-write">
+                {{ 'me.unsentRetry' | translate }}
+              </ion-button>
+              <ion-button slot="end" fill="clear" color="danger" (click)="discardWrite(write.id)" data-test="discard-write">
+                {{ 'me.unsentDiscard' | translate }}
+              </ion-button>
+            </ion-item>
+          }
+        </ion-list>
+      }
+
       <ion-list>
         <ion-item lines="none">
           <ion-button expand="block" color="danger" fill="outline" (click)="signOut()" data-test="sign-out">
@@ -182,12 +214,20 @@ import { formatRosterSummary } from './roster-summary';
           <ion-note>{{ 'me.signOutDetail' | translate }}</ion-note>
         </ion-item>
       </ion-list>
+      <ion-alert
+        [isOpen]="signOutBlocked()"
+        [header]="'me.signOutBlocked' | translate"
+        [message]="'me.signOutBlockedDetail' | translate"
+        [buttons]="signOutButtons()"
+        (didDismiss)="signOutBlocked.set(false)"
+      ></ion-alert>
     </ion-content>
   `,
 })
 export class MePage implements OnInit {
   private readonly profiles = inject(ProfileApiService);
   private readonly notifications = inject(NotificationsApiService);
+  readonly queue = inject(WriteQueue);
   private readonly rosters = inject(DutyRosterApiService);
   private readonly share = inject(ShareService);
   private readonly auth = inject(AuthService);
@@ -343,7 +383,65 @@ export class MePage implements OnInit {
     });
   }
 
+  readonly signOutBlocked = signal(false);
+
+  /** Built here rather than in the template so the labels go through the translate service. */
+  readonly signOutButtons = computed(() => {
+    this.language.current();
+    return [
+      { text: this.translate.instant('common.cancel'), role: 'cancel' },
+      { text: this.translate.instant('me.signOutSendNow'), handler: () => void this.sendThenSignOut() },
+      {
+        text: this.translate.instant('me.signOutDiscardAndLeave'),
+        role: 'destructive',
+        handler: () => void this.discardAndSignOut(),
+      },
+    ];
+  });
+
+  /**
+   * Signs out — unless there is unsent work, in which case it says so first.
+   *
+   * <p>`CacheStore.clear()` destroys the AES key the queue is sealed under, so signing out really
+   * does discard unsent clinical notes. That is the right posture on a ward phone, where the
+   * alternative is one clinician's note surviving into another's session — but it makes sign-out
+   * destructive, and a destructive action has to be announced before it happens rather than
+   * discovered afterwards.
+   */
   signOut(): void {
+    if (this.auth.hasUnsentWrites()) {
+      this.signOutBlocked.set(true);
+      return;
+    }
+    this.doSignOut();
+  }
+
+  /** Tries the queue again, then signs out only if it actually emptied. */
+  async sendThenSignOut(): Promise<void> {
+    await this.queue.drain();
+    if (this.auth.hasUnsentWrites()) {
+      return;
+    }
+    this.signOutBlocked.set(false);
+    this.doSignOut();
+  }
+
+  /** The clinician chose to lose them. Explicit, never implicit. */
+  async discardAndSignOut(): Promise<void> {
+    await this.queue.discardAll();
+    this.signOutBlocked.set(false);
+    this.doSignOut();
+  }
+
+  async retryWrite(id: string): Promise<void> {
+    await this.queue.retry(id);
+  }
+
+  async discardWrite(id: string): Promise<void> {
+    await this.queue.discard(id);
+  }
+
+  private doSignOut(): void {
     // logout() is an ordered sequence — revoke the refresh family server-side while the token is
     // still valid, then wipe locally. AuthService owns that order; this only handles the UI after.
     this.auth.logout('user').subscribe(() => {

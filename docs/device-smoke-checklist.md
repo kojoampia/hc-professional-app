@@ -165,6 +165,35 @@ portal. Steps 84 and 90 are the ones that cannot be checked any other way.
 93. An **EVENING** shift shows a window of 15:00–23:00 and, during it, Today reads "On duty until
     23:00". Before 2026-08-22 this shift had no window at all and Today called it off duty.
 
+## Phase 2 — the offline write queue
+
+The queue holds clinical content, so most of these cannot be checked in a browser. Steps 96 and 99
+are the two that matter most: one proves nothing is lost, the other proves nothing is duplicated.
+
+94. Request time off with **airplane mode on**. It is accepted and shows as pending rather than
+    refused — this is the behaviour Phase 4 shipped without and that this phase replaces.
+95. Restore signal. It sends within a second or two without being asked.
+96. **Queue something offline, force-quit the app, relaunch, THEN restore signal.** It still sends.
+    A queue that only survives while the process does is not a queue.
+97. With something queued, inspect the app sandbox (Device Explorer / Xcode container). The stored
+    row must be **unreadable** — no note text, no patient name in plaintext.
+98. Queue something and wait past ten minutes with no signal: the shell says so. Under ten minutes
+    it stays quiet — a clinician in a lift does not need a banner.
+99. **Kill the app mid-send** (airplane mode on at the moment the spinner appears), relaunch, let it
+    retry. The entry must appear in the record **once**. This is the `clientRef` path, and a
+    duplicated observation is invisible until someone reads the record back.
+100.  Have an administrator change the same case from the web portal, then send a queued edit to it.
+      It stops as a conflict and says who to re-apply against — it must **not** silently overwrite.
+101.  Sign out with something queued. A dialog appears offering **Send now** and **Discard and sign
+      out**; cancelling leaves you signed in. Choosing _Send now_ with no signal must not sign you
+      out.
+102.  Choose **Discard and sign out**, sign back in, and confirm the queue is empty — the entries are
+      genuinely gone, not hiding.
+103.  Sign in as a **different clinician on the same handset** with the first one's entry queued. The
+      queue is empty for the second clinician: the cache key is destroyed on account change, and one
+      clinician's unsent note must never surface in another's session.
+104.  Repeat step 94 in German and confirm the pending and "not sent" copy is translated.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_

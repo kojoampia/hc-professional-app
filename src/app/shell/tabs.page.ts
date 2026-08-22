@@ -5,6 +5,7 @@ import { addIcons } from 'ionicons';
 import { documentTextOutline, chatbubblesOutline, personOutline, todayOutline } from 'ionicons/icons';
 
 import { PushRegistrationService } from '../core/push/push-registration.service';
+import { WriteQueue } from '../core/offline/write-queue.service';
 
 /**
  * The four-tab shell: Today, Messages, Documents, Me.
@@ -54,6 +55,7 @@ import { PushRegistrationService } from '../core/push/push-registration.service'
 })
 export class TabsPage implements OnInit {
   private readonly pushRegistration = inject(PushRegistrationService);
+  private readonly writeQueue = inject(WriteQueue);
 
   constructor() {
     addIcons({ todayOutline, chatbubblesOutline, documentTextOutline, personOutline });
@@ -68,6 +70,10 @@ export class TabsPage implements OnInit {
    * through it. `start()` is idempotent, so mounting this shell again costs nothing.
    */
   async ngOnInit(): Promise<void> {
+    // The queue loads what a previous session left unsent and drains it. Started here for the same
+    // reason push registration is: this shell is exactly the signed-in surface, and the queue is
+    // sealed under a key that only exists once a session does.
+    await this.writeQueue.start();
     await this.pushRegistration.start();
   }
 }

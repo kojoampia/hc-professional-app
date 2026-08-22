@@ -9,6 +9,7 @@ import { PushService } from '../native/push.service';
 import { SecureTokenStore } from '../native/secure-token-store.service';
 import { MessageSocketService } from '../api/message-socket.service';
 import { CacheStore } from '../offline/cache-store.service';
+import { WriteQueue } from '../offline/write-queue.service';
 import { DeviceService } from './device.service';
 import type { MobileTokenResponse, SignOutReason } from './session.model';
 
@@ -43,6 +44,7 @@ export class AuthService {
   private readonly push = inject(PushService);
   private readonly notifications = inject(NotificationsApiService);
   private readonly cache = inject(CacheStore);
+  private readonly writeQueue = inject(WriteQueue);
   private readonly socket = inject(MessageSocketService);
 
   /** Why the last session ended — the login screen reads this to explain itself. */
@@ -199,6 +201,18 @@ export class AuthService {
     }
     await this.tokens.clear();
     this.signOutReasonSignal.set(reason);
+  }
+
+  /**
+   * Whether signing out would discard unsent work.
+   *
+   * <p>`CacheStore.clear()` destroys the AES key, so the queue becomes unreadable even if its rows
+   * survive — which is the right posture on a ward phone, where the alternative is one clinician's
+   * unsent note surviving into another's session. It also means sign-out is destructive in a way the
+   * clinician has to be told about first, rather than after.
+   */
+  hasUnsentWrites(): boolean {
+    return !this.writeQueue.isEmpty();
   }
 
   /** Discards the stored credential without contacting the server. */

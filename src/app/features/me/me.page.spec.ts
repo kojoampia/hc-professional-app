@@ -6,6 +6,7 @@ import { NavController } from '@ionic/angular/standalone';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { WriteQueue } from '../../core/offline/write-queue.service';
 import { ShareService } from '../../core/native/share.service';
 import { MePage } from './me.page';
 
@@ -23,7 +24,8 @@ describe('MePage', () => {
 
   beforeEach(() => {
     share = { canShare: jest.fn().mockResolvedValue(true), shareText: jest.fn().mockResolvedValue(undefined) };
-    auth = { logout: jest.fn().mockReturnValue(of(undefined)) };
+    // hasUnsentWrites gates sign-out now: a queue holding clinical notes must not be wiped silently.
+    auth = { logout: jest.fn().mockReturnValue(of(undefined)), hasUnsentWrites: jest.fn().mockReturnValue(false) };
     nav = { navigateRoot: jest.fn().mockResolvedValue(true) };
 
     TestBed.configureTestingModule({
@@ -33,6 +35,10 @@ describe('MePage', () => {
         provideHttpClientTesting(),
         { provide: ShareService, useValue: share },
         { provide: AuthService, useValue: auth },
+        {
+          provide: WriteQueue,
+          useValue: { needingAttention: () => [], drain: jest.fn(), discardAll: jest.fn(), retry: jest.fn(), discard: jest.fn() },
+        },
         { provide: NavController, useValue: nav },
       ],
     });
