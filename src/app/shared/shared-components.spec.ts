@@ -7,6 +7,7 @@ import { NetworkService } from '../core/native/network.service';
 import { AsyncBannerComponent } from './async-banner.component';
 import { EmptyRowComponent } from './empty-row.component';
 import { PendingChipComponent } from './pending-chip.component';
+import { StatTileComponent } from './stat-tile.component';
 
 /**
  * The three shared components.
@@ -123,6 +124,32 @@ describe('shared components', () => {
       expect(render('pending').componentInstance.colour()).toBe('warning');
       expect(render('conflict').componentInstance.colour()).toBe('danger');
       expect(render('expired').componentInstance.colour()).toBe('danger');
+    });
+  });
+
+  describe('hpd-stat-tile', () => {
+    const render = (value: number | null): ComponentFixture<StatTileComponent> => {
+      const fixture = TestBed.createComponent(StatTileComponent);
+      fixture.componentRef.setInput('labelKey', 'patients.title');
+      fixture.componentRef.setInput('value', value);
+      fixture.detectChanges();
+      return fixture;
+    };
+
+    it('shows the number', () => {
+      expect(render(7).nativeElement.textContent).toContain('7');
+    });
+
+    it('shows a REAL zero, because none is a fact worth stating', () => {
+      expect(render(0).nativeElement.textContent).toContain('0');
+    });
+
+    it('shows a dash for an UNKNOWN value, never a zero', () => {
+      // "0 urgent" is a clinical claim. A tile that makes it because a request failed is worse
+      // than one that admits it does not know — the server takes the same position.
+      const text = render(null).nativeElement.textContent;
+      expect(text).toContain('—');
+      expect(text).not.toContain('0');
     });
   });
 

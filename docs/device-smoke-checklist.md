@@ -244,6 +244,34 @@ one that cannot be checked any other way.
      NOT appear on the second patient's record.
 125. Repeat 119 in German and confirm the queued-note wording is translated.
 
+## Phase 7 — the case queue
+
+Needs a clinical account with at least two cases, one of them urgent, and a read-only carer.
+
+126. Open **Cases** from Today. The three tiles show numbers and the list fills. Confirm the tiles
+     count what is on screen, not something larger.
+127. **Turn airplane mode on and pull to refresh.** The tiles show **— , not 0**. This is the one
+     step that catches the failure the tile exists to prevent: a zero rendered because a request
+     failed reads as a clinical statement about the caseload.
+128. Tap each of the four filter segments. Each re-queries — watch the list change, and confirm the
+     count does not disagree with what is listed.
+129. **Open a case.** Symptoms and diagnosis appear; neither is on the list row, so a case that
+     opens blank means the detail read failed rather than the case being empty.
+130. **Open a case with airplane mode on.** It fails and says so. This is deliberate: a case body is
+     never cached, because several people edit one and a stale diagnosis shown as current is worse
+     than a screen that will not open.
+131. **Edit a diagnosis offline.** It is accepted, the text stays on screen marked unsent. Restore
+     signal and watch it clear. Reopen the case and confirm the server has it.
+132. **Edit the same case twice offline.** Only the later edit sends — the collapse rule. Confirm
+     the sent value is the second one, not the first.
+133. **Have a colleague edit the same case on the web while yours is queued.** The op stops as a
+     conflict and asks you to re-apply; it does not overwrite them.
+134. **Sign in as a carer and open a case.** The symptom and diagnosis boxes are absent and the
+     screen says the role cannot edit. The case itself still reads normally.
+135. Confirm **there is no archive button**, and that the screen says archiving is a web-portal
+     action. `web/`'s archive is client-side only and archives nothing.
+136. Repeat 126 and 131 in Spanish and German.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_
