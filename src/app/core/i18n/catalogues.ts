@@ -315,7 +315,7 @@ export const EN = {
     requestFailed: 'Could not send your request.',
     withdrawFailed: 'Could not withdraw it.',
     datesInvalid: 'The last day cannot be before the first.',
-    offline: 'You are offline, so this cannot be sent yet.',
+    willSendLater: 'You are offline. This will be sent when you have signal.',
   },
   me: {
     birthDate: 'Date of birth',
@@ -676,7 +676,7 @@ export const ES: typeof EN = {
     requestFailed: 'No se pudo enviar su solicitud.',
     withdrawFailed: 'No se pudo retirar.',
     datesInvalid: 'El último día no puede ser anterior al primero.',
-    offline: 'Está sin conexión, así que no se puede enviar todavía.',
+    willSendLater: 'Está sin conexión. Esto se enviará cuando tenga cobertura.',
   },
   me: {
     birthDate: 'Fecha de nacimiento',
@@ -1038,7 +1038,7 @@ export const FR: typeof EN = {
     requestFailed: "Impossible d'envoyer votre demande.",
     withdrawFailed: 'Impossible de le retirer.',
     datesInvalid: 'Le dernier jour ne peut pas précéder le premier.',
-    offline: "Vous êtes hors ligne : l'envoi est impossible pour le moment.",
+    willSendLater: 'Vous êtes hors ligne. Ceci sera envoyé dès que vous aurez du réseau.',
   },
   me: {
     birthDate: 'Date de naissance',
@@ -1399,7 +1399,7 @@ export const DE: typeof EN = {
     requestFailed: 'Ihr Antrag konnte nicht gesendet werden.',
     withdrawFailed: 'Sie konnte nicht zurückgezogen werden.',
     datesInvalid: 'Der letzte Tag kann nicht vor dem ersten liegen.',
-    offline: 'Sie sind offline, daher kann dies noch nicht gesendet werden.',
+    willSendLater: 'Sie sind offline. Dies wird gesendet, sobald Sie Empfang haben.',
   },
   me: {
     birthDate: 'Geburtsdatum',

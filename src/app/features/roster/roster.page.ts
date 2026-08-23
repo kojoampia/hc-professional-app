@@ -216,7 +216,15 @@ import { RosterStore } from './roster.store';
           </ion-header>
           <ion-content class="ion-padding">
             @if (requestError(); as error) {
-              <p class="mb-3 rounded-hpd-sm bg-hpd-danger-tint px-3 py-2 text-hpd-danger" role="alert">{{ error | translate }}</p>
+              <p class="rounded-hpd-sm bg-hpd-danger-tint text-hpd-danger mb-3 px-3 py-2" role="alert">{{ error | translate }}</p>
+            }
+            @if (!network.connected()) {
+              <!-- A note, not a refusal. Leave goes through the write queue, so with no signal the
+                   request is kept and sent later — the same promise the note and case screens make.
+                   This said "you are offline, so this cannot be sent yet" and blocked the submit. -->
+              <p class="rounded-hpd-sm bg-hpd-warning-tint text-hpd-warning mb-3 px-3 py-2" role="status" data-test="absence-queued-note">
+                {{ 'absence.willSendLater' | translate }}
+              </p>
             }
             <ion-list>
               <ion-item>
@@ -318,12 +326,10 @@ export class RosterPage implements OnInit {
       this.requestError.set('absence.datesInvalid');
       return;
     }
-    if (!this.network.connected()) {
-      // No offline write queue yet, so a mutation must fail visibly rather than vanish into a
-      // synthetic success. Stated before the attempt so the clinician is not left guessing.
-      this.requestError.set('absence.offline');
-      return;
-    }
+    // NO CONNECTIVITY GUARD. This used to refuse with "you are offline, so this cannot be sent
+    // yet", which was right while leave went straight to the API and is wrong now that it goes
+    // through the write queue: the request is kept and sent when there is signal. Leaving the guard
+    // in place meant the store could queue and the page would never let it.
     this.submitting.set(true);
     this.requestError.set(null);
     try {
