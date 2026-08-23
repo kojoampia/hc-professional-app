@@ -5,6 +5,8 @@ import { AbsenceApiService, AbsenceDto, AbsenceType } from '../../core/api/absen
 import { DaySummaryDto, DutyRosterApiService, DutyRosterAssignmentDto, isoDate } from '../../core/api/duty-roster-api.service';
 import { CacheStore } from '../../core/offline/cache-store.service';
 import { CachedResource, cachedResource } from '../../core/offline/cached-resource';
+import { QueuedWrite } from '../../core/offline/queued-write.model';
+import { WriteQueue } from '../../core/offline/write-queue.service';
 
 /** A roster changes when an administrator edits it, which is rarely and never on the hour. */
 const SUMMARY_TTL_MS = 12 * 60 * 60 * 1000;
@@ -39,6 +41,18 @@ export interface RosterDay {
 export class RosterStore {
   private readonly rosterApi = inject(DutyRosterApiService);
   private readonly absenceApi = inject(AbsenceApiService);
+  private readonly queue = inject(WriteQueue);
+
+  constructor() {
+    // Registered here, and `register` drains — a leave request queued before a force-quit sends as
+    // soon as this store is constructed, without waiting for an unrelated event.
+    this.queue.register('absence.request', (write: QueuedWrite) =>
+      firstValueFrom(this.absenceApi.request(write.payload['request'] as { fromDate: string; toDate: string; type: AbsenceType })),
+    );
+    this.queue.register('absence.withdraw', (write: QueuedWrite) =>
+      firstValueFrom(this.absenceApi.withdraw(write.payload['id'] as string)),
+    );
+  }
   private readonly cache = inject(CacheStore);
 
   /** The year the calendar is showing. Drives which summary is loaded. */
@@ -135,20 +149,29 @@ export class RosterStore {
   }
 
   /**
-   * Requests leave, then re-reads.
+   * Requests leave, through the queue.
    *
-   * <p>No optimistic insert: an absence that appears on the calendar and then vanishes because the
-   * server refused it is worse than one that takes a moment to appear. There is no offline write
-   * queue yet, so this fails visibly with no signal — the same rule every other mutation in this app
-   * follows.
+   * <p>This used to call the API directly, with a comment saying there was no write queue yet.
+   * There is one, and leave is exactly the kind of thing a clinician submits from a ward with no
+   * signal — the request is not urgent, but losing it silently and finding out weeks later that the
+   * leave was never booked is the failure the queue exists to prevent.
+   *
+   * <p><b>Still no optimistic insert.</b> An absence that appears on the calendar and then vanishes
+   * because the server refused it is worse than one that takes a moment to appear, and unlike a
+   * clinical note there is no partial state worth showing: leave is either booked or it is not. The
+   * pending op is visible in the unsent list under Me, which is the honest place for it.
+   *
+   * <p>The subject id is the date range rather than a generated one, so two requests for the same
+   * dates are one queued op instead of two bookings.
    */
   async requestAbsence(request: { fromDate: string; toDate: string; type: AbsenceType }): Promise<void> {
-    await firstValueFrom(this.absenceApi.request(request));
+    await this.queue.submit('absence.request', `${request.fromDate}..${request.toDate}`, { request });
     await this.absences.refresh();
   }
 
+  /** Withdraws leave, through the queue. Keyed by the absence, so a double tap is one withdrawal. */
   async withdrawAbsence(id: string): Promise<void> {
-    await firstValueFrom(this.absenceApi.withdraw(id));
+    await this.queue.submit('absence.withdraw', id, { id });
     await this.absences.refresh();
   }
 }

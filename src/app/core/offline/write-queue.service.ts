@@ -44,6 +44,20 @@ export type WriteSender = (write: QueuedWrite) => Promise<unknown>;
  * should decide. It does not retry a 403 — that is a permissions problem, and retrying forever hides
  * it behind a spinner. And it never reports success it has not had.
  */
+/**
+ * Kinds where a second op on the same subject REPLACES the first.
+ *
+ * <p>The test is whether doing it twice means it twice. Editing a case twice means one case with
+ * the later text; requesting the same leave dates twice means one booking, not two; withdrawing the
+ * same absence twice means one withdrawal, and sending the second would 404 and show the clinician
+ * a failure that is not one.
+ *
+ * <p><b>Appends and messages are deliberately absent.</b> Two activity entries are two events and
+ * merging them loses one; two replies are two messages. That distinction is the whole reason this
+ * is a named set rather than a condition that grows a clause each time a kind is added.
+ */
+const COLLAPSIBLE_KINDS = new Set<QueuedWriteKind>(['case.patch', 'absence.request', 'absence.withdraw']);
+
 @Injectable({ providedIn: 'root' })
 export class WriteQueue {
   private readonly cache = inject(CacheStore);
@@ -168,10 +182,9 @@ export class WriteQueue {
       payload,
     };
 
-    // Consecutive edits to the same case collapse to the latest before sending — last-write-wins
-    // locally, which is what the clinician meant by editing twice. APPENDS NEVER COLLAPSE: two
-    // activity entries are two events, and merging them loses one.
-    const collapsible = kind === 'case.patch';
+    // Consecutive ops on the same subject collapse to the latest — last-write-wins locally, which is
+    // what the clinician meant by doing it twice.
+    const collapsible = COLLAPSIBLE_KINDS.has(kind);
     const next = collapsible
       ? this.writesSignal().filter(w => !(w.kind === kind && w.subjectId === subjectId && w.state === 'pending'))
       : [...this.writesSignal()];

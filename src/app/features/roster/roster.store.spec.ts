@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
 import { AbsenceApiService } from '../../core/api/absence-api.service';
@@ -6,6 +7,10 @@ import { DutyRosterApiService } from '../../core/api/duty-roster-api.service';
 import { CacheStore } from '../../core/offline/cache-store.service';
 import { PreferencesService } from '../../core/native/preferences.service';
 import { SecureTokenStore } from '../../core/native/secure-token-store.service';
+import { NetworkService } from '../../core/native/network.service';
+import { AppStateService } from '../../core/native/app-state.service';
+import { PlatformService } from '../../core/native/platform.service';
+import { WriteQueue } from '../../core/offline/write-queue.service';
 import { RosterStore, datesBetween } from './roster.store';
 
 // jsdom has no IndexedDB and the store caches through idb-keyval. Same in-memory stand-in the other
@@ -18,6 +23,17 @@ jest.mock('idb-keyval', () => ({
   keys: jest.fn(async () => [...disk.keys()]),
   clear: jest.fn(async () => disk.clear()),
 }));
+
+/** Connectivity, so a test can take the signal away. */
+const connected = signal(true);
+let nextId = 0;
+
+/** Lets the queue's fire-and-forget drain settle; AES-GCM does not resolve within a microtask. */
+const settle = async (): Promise<void> => {
+  for (let i = 0; i < 20; i++) {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+};
 
 describe('RosterStore', () => {
   let store: RosterStore;
@@ -33,6 +49,8 @@ describe('RosterStore', () => {
 
   beforeEach(async () => {
     disk.clear();
+    connected.set(true);
+    nextId = 0;
     rosterApi = {
       summary: jest.fn(() => of([summaryRow('2026-08-20'), summaryRow('2026-08-21')])),
       day: jest.fn(() => of([])),
@@ -59,6 +77,12 @@ describe('RosterStore', () => {
           },
         },
         { provide: SecureTokenStore, useValue: { readSecret: async () => null, writeSecret: async () => undefined } },
+        // The REAL WriteQueue, with connectivity under the test's control. Stubbing it would prove
+        // only that this store calls something; the point of routing leave through the queue is
+        // what happens with no signal, and that is the queue's behaviour, not this store's.
+        { provide: NetworkService, useValue: { connected } },
+        { provide: AppStateService, useValue: { initialize: async () => undefined, onChange: () => () => undefined } },
+        { provide: PlatformService, useValue: { randomId: () => `id-${++nextId}`, name: () => 'android', isNative: () => true } },
       ],
     });
     await TestBed.inject(CacheStore).initialize('nurse');
@@ -156,6 +180,63 @@ describe('RosterStore', () => {
 
     expect(absenceApi.withdraw).toHaveBeenCalledWith('a1');
     expect(absenceApi.mine).toHaveBeenCalled();
+  });
+
+  describe('leave goes through the write queue', () => {
+    it('does NOT reach the API with no signal, and is kept', async () => {
+      // The behaviour this rerouting exists for. Leave is not urgent, but losing it silently and
+      // finding out weeks later that it was never booked is exactly what the queue prevents.
+      connected.set(false);
+
+      await store.requestAbsence({ fromDate: '2026-09-01', toDate: '2026-09-03', type: 'HOLIDAY' });
+
+      expect(absenceApi.request).not.toHaveBeenCalled();
+      expect(TestBed.inject(WriteQueue).pending()).toHaveLength(1);
+    });
+
+    it('sends it once the signal is back', async () => {
+      connected.set(false);
+      await store.requestAbsence({ fromDate: '2026-09-01', toDate: '2026-09-03', type: 'HOLIDAY' });
+
+      connected.set(true);
+      await TestBed.inject(WriteQueue).drain();
+      await settle();
+
+      expect(absenceApi.request).toHaveBeenCalledWith({ fromDate: '2026-09-01', toDate: '2026-09-03', type: 'HOLIDAY' });
+      expect(TestBed.inject(WriteQueue).pending()).toHaveLength(0);
+    });
+
+    it('collapses two requests for the SAME dates into one booking', async () => {
+      // Keyed by the date range: a clinician who taps twice, or corrects the type and resubmits,
+      // must not end up with two bookings for one holiday.
+      connected.set(false);
+
+      await store.requestAbsence({ fromDate: '2026-09-01', toDate: '2026-09-03', type: 'HOLIDAY' });
+      await store.requestAbsence({ fromDate: '2026-09-01', toDate: '2026-09-03', type: 'SICK' });
+
+      const queued = TestBed.inject(WriteQueue).pending();
+      expect(queued).toHaveLength(1);
+      expect((queued[0].payload['request'] as { type: string }).type).toBe('SICK');
+    });
+
+    it('keeps requests for DIFFERENT dates apart', async () => {
+      connected.set(false);
+
+      await store.requestAbsence({ fromDate: '2026-09-01', toDate: '2026-09-03', type: 'HOLIDAY' });
+      await store.requestAbsence({ fromDate: '2026-10-01', toDate: '2026-10-02', type: 'HOLIDAY' });
+
+      expect(TestBed.inject(WriteQueue).pending()).toHaveLength(2);
+    });
+
+    it('queues a withdrawal too, keyed by the absence', async () => {
+      connected.set(false);
+
+      await store.withdrawAbsence('a1');
+      await store.withdrawAbsence('a1');
+
+      expect(absenceApi.withdraw).not.toHaveBeenCalled();
+      expect(TestBed.inject(WriteQueue).pending()).toHaveLength(1);
+    });
   });
 
   it('reloads the summary when the year changes', async () => {

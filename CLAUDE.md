@@ -38,7 +38,16 @@ What is **deliberately absent**, with the decision behind each:
 | A recommendation checklist on a case                                                                                    | No such field exists, here or on patientservice's `ClinicalCase`. The dashboard migration plan describes one; it was never given anywhere to live                                                                                                                    |
 
 **Offline writes are supported.** The write queue shipped in Phase 2 and every clinical write goes
-through it. This section used to list them as out of scope.
+through it, including leave requests and withdrawals — those called the API directly until
+2026-08-23, with a comment saying there was no queue yet.
+
+**Two rules about the queue that are easy to get wrong.** `register()` drains, because senders are
+registered by feature stores that Angular builds lazily; without it a write queued before a
+force-quit waits for an unrelated event, which on a device meant a note staying unsent through a
+reconnect, a relaunch and a screen visit. And `COLLAPSIBLE_KINDS` is a named set, not a condition:
+the test is whether doing something twice means it twice. Editing a case twice means one case;
+booking the same leave dates twice means one booking. Two activity entries are two events and two
+replies are two messages, so appends and messages must never be added to it. This section used to list them as out of scope.
 
 ## The brand name
 
