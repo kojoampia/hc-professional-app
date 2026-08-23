@@ -385,6 +385,39 @@ Two traps met while doing this. `adb shell input text` mangles `@`, so a seeded 
 typed in parts with `'\@'` between them. And a `BiometricPrompt` on screen blocks `screencap`,
 which returns a zero-byte file — dismiss it before concluding the screen is broken.
 
+## What the write-queue steps found, 2026-08-23
+
+Steps 121–122 and 131–132 were run on a Galaxy Note 20 (Android 13) against the quality stack. They
+pass now; recording what they caught, because none of it was visible to a test.
+
+**Step 131/132 passed first time.** Two offline edits to one case collapsed to a single PATCH
+carrying the later text — verified by counting `updateCase` server-side, not by watching the screen.
+Note when doing this that the logging aspect records at both the resource and the service layer, so
+a naive `grep -c` doubles every count; match on `PatientResource` to count real calls.
+
+**Step 122 failed, and the failure was the whole point of the step.** A note filed offline survived
+a force-quit and then never sent: reconnect, relaunch and opening the patient screen all left it
+`pending` with `attempts: 0`. Backgrounding and foregrounding the app sent it immediately. Senders
+are registered by feature stores, which Angular builds lazily, so a cold start drains against an
+empty sender map and nothing drains again once the store finally registers. Fixed by draining from
+`register()`.
+
+**Getting to step 121 at all took a fix first**: the record had no filing control. Phase 6's store,
+queue op, permission gate and form all existed with nothing to open them, and a stale line rendered
+the bare key `patients.readOnly` to the clinician.
+
+Three things worth knowing before running these again:
+
+- **Read the queue, do not infer it.** `ng.getComponent(document.querySelector('hpd-patients')).store['queue'].writes()`
+  over the DevTools protocol gives kind, state and `attempts` for every op. `attempts: 0` after a
+  reconnect is the signature of "never tried", which is a different bug from "tried and failed" and
+  looks identical from the screen.
+- **The queue on disk is encrypted**, so reading `hpd:writeQueue` out of IndexedDB tells you only
+  that something is queued. That is the design working; go through the app.
+- **`adb reverse` does not care about airplane mode.** The tunnel is USB, so it survives; what makes
+  the app behave as offline is the Network plugin reporting disconnected. Both halves are real, and
+  a request can still reach the server while the app believes it cannot.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_
