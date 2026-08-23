@@ -380,8 +380,18 @@ that matches nobody (it used to store a message with zero recipients and answer 
 
 **Two findings belong to the `hc-patient` owners and are not ours to fix.**
 `POST /clinical-cases/{id}/archive` is `@PreAuthorize(ROLE_PROFESSIONAL)`, an authority no token this
-portal issues carries — doctor, nurse and admin all get 403. And their
-`requireWrite(ClinicalDomain.DIAGNOSIS)` passes for any authenticated non-patient caller, so a carer
-could PATCH a diagnosis by going through the gateway's `patientservice` route directly. That second
-one is why **every case write from this app is routed through professionalservice**, where
-`CLINICAL_MUTATION` and the caseload check both apply.
+portal issues carries — hc-professional's gateway mints the nine clinical disciplines and never
+`ROLE_PROFESSIONAL`, which hc-patient's own `AuthoritiesConstants` javadoc already records. So
+doctor, nurse and admin all get 403 and archiving from here is impossible.
+
+**A second finding here was wrong and is retracted (2026-08-23).** It claimed their
+`requireWrite(DIAGNOSIS)` passed for any authenticated non-patient caller, so a carer could edit a
+diagnosis by going around this service. Re-probed: doctor **200**, carer **403**. Their
+`ScopeOfPractice` grants a carer OBSERVATION, CARE_PLAN and ENCOUNTER and deliberately not
+DIAGNOSIS. The original probe sent a merge-patch body missing the `id` that endpoint requires, so
+both callers got a 400 from body validation before authorisation was reached and the roles looked
+alike — a 4xx proves nothing about authorisation until you know the request reached the check.
+
+Case writes still route through professionalservice, for the reason that always applied:
+patientservice's generated CRUD is unscoped and unpaged, so a client calling it directly receives
+every case in the estate.

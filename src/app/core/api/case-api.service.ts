@@ -55,10 +55,11 @@ export interface CaseUpdateDto {
  * the list in the browser. That is how the web dashboard works today; it is not something to ship to
  * a phone, both for what it downloads and for what it exposes.
  *
- * <p>The PATCH goes the same way for a second reason, established by probing the deployed stack:
- * patientservice's own write gate passes for any authenticated non-patient caller, so a role that is
- * read-only here could edit a diagnosis by going around. Routed through professionalservice it is
- * behind CLINICAL_MUTATION and the caseload check.
+ * <p>The PATCH goes the same way, for the same scoping reason. An earlier version of this note gave
+ * a second, security reason — that patientservice's write gate passed for any authenticated
+ * non-patient caller — and that was **wrong**: re-probed on 2026-08-23, a carer PATCHing a diagnosis
+ * there gets 403, because their `ScopeOfPractice` does not grant a carer DIAGNOSIS. The original
+ * probe's 400 came from a malformed body, before authorisation was reached.
  */
 @Injectable({ providedIn: 'root' })
 export class CaseApiService {
