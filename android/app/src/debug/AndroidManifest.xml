@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only manifest overlay. The merger applies it to debug builds and never to release, so the
+  cleartext exception below cannot reach the app that ships.
+
+  `tools:replace` is required: the main manifest's <application> has no networkSecurityConfig, and
+  without it the merger treats this as a conflicting addition rather than an override.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:replace="android:networkSecurityConfig" />
+</manifest>

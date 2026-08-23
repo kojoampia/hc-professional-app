@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext HTTP to the loopback host, DEBUG BUILDS ONLY.
+
+  Android 9 and later refuse cleartext by default, which is right — and it is why a debug build
+  pointed at a local gateway fails every request with `CLEARTEXT communication ... not permitted`
+  before anything reaches the network. The local gateway speaks plain HTTP and always has.
+
+  This file lives in the `debug` source set, so the manifest merger applies it to debug builds and
+  never to release. A release build keeps Android's default: no cleartext, anywhere. That is the
+  whole reason for the split — putting this in `main` would silently permit cleartext in the app
+  that ships.
+
+  Three hosts and no more:
+    localhost   what `adb reverse tcp:5505 tcp:<port>` makes reachable over USB, on a real device
+    127.0.0.1   the same thing, when something resolves it literally
+    10.0.2.2    the Android emulator's alias for the host's loopback
+
+  A wildcard `cleartextTrafficPermitted="true"` on the base config would cover these too and would
+  also permit cleartext to every host on the internet in a build that runs on real hardware. Name
+  the hosts.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>
