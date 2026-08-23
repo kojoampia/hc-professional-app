@@ -264,8 +264,21 @@ Needs a clinical account with at least two cases, one of them urgent, and a read
      signal and watch it clear. Reopen the case and confirm the server has it.
 132. **Edit the same case twice offline.** Only the later edit sends — the collapse rule. Confirm
      the sent value is the second one, not the first.
-133. **Have a colleague edit the same case on the web while yours is queued.** The op stops as a
-     conflict and asks you to re-apply; it does not overwrite them.
+133. ~~Have a colleague edit the same case on the web while yours is queued.~~ **Not testable, and
+     that is a finding rather than an omission (2026-08-23).** There is no optimistic concurrency
+     anywhere on the case write path — no ETag, no `If-Match`, no `@Version` — so a concurrent edit
+     is silently overwritten, last write wins. Verified: two sequential PATCHes both return 200 and
+     the second value stands.
+
+     The queue's `conflict` state is implemented and unit-tested, and it _is_ reachable — but only
+     on the **append** path, where `PatientResource` answers 409 for a `clientRef` already spent on
+     a different write. Nothing produces a 409 or 412 for a case edit, so a clinician's queued edit
+     will overwrite a colleague's without either being told.
+
+     Making this step real needs a server change first: a version or ETag on the case, and a 409
+     when it does not match. Until then, do not write a test that "passes" by never hitting the
+     path — that is how a state nobody can reach comes to look verified.
+
 134. **Sign in as a carer and open a case.** The symptom and diagnosis boxes are absent and the
      screen says the role cannot edit. The case itself still reads normally.
 135. Confirm **there is no archive button**, and that the screen says archiving is a web-portal
@@ -417,6 +430,27 @@ Three things worth knowing before running these again:
 - **`adb reverse` does not care about airplane mode.** The tunnel is USB, so it survives; what makes
   the app behave as offline is the Network plugin reporting disconnected. Both halves are real, and
   a request can still reach the server while the app believes it cannot.
+
+## Open finding: shift names are English in every language
+
+Found during the Spanish pass, 2026-08-23. Today and the roster render a shift as
+`{{ assignment.shift | titlecase }}` — the server enum `DAY` put through `titlecase`, giving
+**"Day"**. In Spanish and German that is neither the enum nor a translation: a Spanish clinician sees
+`Hoy`, `Próximo turno`, `lun 24 ago` and then `Day`.
+
+It falls between this repo's two rules rather than under either:
+
+- _Server enum values are not translated_, which is why `DOCTOR` and document statuses stay as they
+  are — a clinician and an administrator must describe the same thing the same way. Under that rule
+  this should read `DAY`.
+- `web/` **does** translate them, via `healthConnect.roster.shiftNames.*`, and `docs/CLAUDE.md`
+  records that every `ShiftType` value is one of those keys. Under that rule this should read
+  `Día`.
+
+`titlecase` satisfies neither and is the one option nobody chose. Matching `web/` is almost certainly
+right — a shift name is a label, not an identifier a clinician quotes back to an administrator — but
+it is four keys across four catalogues plus every site that renders a shift: `today.page.ts`,
+the roster day list, and the roster summary under Me. Left as a finding rather than half-changed.
 
 ## MOB11+ — added as each work package lands
 
