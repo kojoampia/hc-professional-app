@@ -351,6 +351,40 @@ The last phase of the web-to-mobile port. Step 163 is the one worth the trip.
      portal rather than leaving their absence to be noticed.
 166. Repeat 161 and 163 in Spanish and German.
 
+## Pointing a physical Android at the quality stack
+
+Done once per machine. Nothing here works from a device without it, and each step failed loudly in a
+way that looked like a different problem.
+
+1. **Build the DEVELOPMENT configuration.** `npm run build` and `npm run sync` both use
+   `--configuration production`, because `angular.json` sets `defaultConfiguration: production`. A
+   production bundle points at `professional.abofonsa.com`, so a smoke test run that way exercises
+   **live production** — including the steps that file clinical notes. Use
+   `npx ng build --configuration development && npx cap sync android`, and confirm the base URL:
+   `grep -rho "5505" dist/hc-professional-app/browser/*.js` should show `apiBaseUrl` built from
+   `localhost`, with `production: false` beside it.
+2. **`adb reverse tcp:5505 tcp:15507`** — the quality ports bind to `127.0.0.1` and
+   `professional.abofonsa.local` resolves to loopback in jacserver's own hosts file, so there is no
+   LAN route to it. The reverse tunnel maps the device's `localhost:5505` to the host's gateway over
+   USB. `10.0.2.2` is an **emulator-only** alias and does not resolve on real hardware, so
+   `environment.development.ts` needs `localhost` for a device — see the note there.
+   **Re-run it after any force-stop or re-plug**; when it drops, `fetch` reports only
+   `TypeError: Failed to fetch`.
+3. **Cleartext** is handled by `android/app/src/debug/` and needs nothing.
+4. **CORS** is handled by `quality/compose.yml` and needs nothing. If it regresses the symptom is
+   sign-in succeeding and every screen failing.
+
+To see what the app itself thinks, attach to the WebView — it is debuggable in a debug build:
+
+```bash
+adb forward tcp:9222 localabstract:webview_devtools_remote_$(adb shell pidof com.abofonsa.bridgecare.professional)
+curl -s http://127.0.0.1:9222/json/list
+```
+
+Two traps met while doing this. `adb shell input text` mangles `@`, so a seeded password must be
+typed in parts with `'\@'` between them. And a `BiometricPrompt` on screen blocks `screencap`,
+which returns a zero-byte file — dismiss it before concluding the screen is broken.
+
 ## MOB11+ — added as each work package lands
 
 _(Each MOB adds its steps here as part of its gate.)_
