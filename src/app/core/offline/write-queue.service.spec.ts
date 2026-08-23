@@ -42,6 +42,20 @@ const secretStore = {
   writeSecret: async (key: string, value: string) => void secrets.set(key, value),
 };
 
+/**
+ * Lets a fire-and-forget promise chain settle.
+ *
+ * <p>Yields to the macrotask queue as well as the microtask one: the queue persists through
+ * `setSensitive`, whose AES-GCM goes via WebCrypto and does not resolve within a microtask drain.
+ * Awaiting `Promise.resolve()` alone leaves the send un-run and the assertion looking like a bug in
+ * the code rather than in the waiting.
+ */
+const settle = async (): Promise<void> => {
+  for (let i = 0; i < 20; i++) {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+};
+
 describe('WriteQueue', () => {
   let queue: WriteQueue;
   const connected = signal(true);
@@ -162,6 +176,53 @@ describe('WriteQueue', () => {
 
     expect(revived.pending()).toHaveLength(1);
     expect(revived.pending()[0].payload['title']).toBe('Wound dressed');
+  });
+
+  it('SENDS A REVIVED WRITE once its sender registers, without waiting for another event', async () => {
+    // The device bug this exists for. Senders are registered by feature stores, and Angular builds
+    // those lazily — when their screen is first opened. So on a cold start with a persisted queue,
+    // `start()` drains against an EMPTY sender map and skips everything; the op keeps `attempts: 0`,
+    // which is how it was spotted. Nothing drained again when the store was finally constructed, so
+    // the note waited for an unrelated event. On a real phone: filed offline, force-quit, back
+    // online, relaunched, patient screen opened — still unsent. Backgrounding and foregrounding the
+    // app sent it at once.
+    connected.set(false);
+    queue.register('activity.append', jest.fn());
+    await queue.submit('activity.append', 'p1', { title: 'Filed in a basement' });
+
+    const previous = disk.get('hpd:writeQueue');
+    TestBed.resetTestingModule();
+    disk.set('hpd:writeQueue', previous);
+    // ONLINE on relaunch, and deliberately so: there is no false->true edge to lean on, which is
+    // exactly the case the old code had no trigger for.
+    connected.set(true);
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: NetworkService, useValue: { connected } },
+        { provide: AppStateService, useValue: { initialize: async () => undefined, onChange: () => () => undefined } },
+        { provide: PlatformService, useValue: { randomId: () => 'id-x', name: () => 'android', isNative: () => true } },
+        { provide: PreferencesService, useValue: preferencesStore },
+        { provide: SecureTokenStore, useValue: secretStore },
+      ],
+    });
+    await TestBed.inject(CacheStore).initialize('nurse');
+    const revived = TestBed.inject(WriteQueue);
+
+    // Start with no senders — the cold-start state.
+    await revived.start();
+    expect(revived.pending()).toHaveLength(1);
+    expect(revived.pending()[0].attempts).toBe(0);
+
+    // The feature store is constructed and registers. THIS MUST BE ENOUGH — no drain() here on
+    // purpose. Calling one would make the test pass whether or not `register` triggers it, which is
+    // the mistake this very test was written to avoid and which it made on the first attempt.
+    const sender = jest.fn().mockResolvedValue({});
+    revived.register('activity.append', sender);
+    // `register` fires the drain without awaiting it, so let the microtasks it queued run.
+    await settle();
+
+    expect(sender).toHaveBeenCalledTimes(1);
+    expect(revived.pending()).toHaveLength(0);
   });
 
   it('is UNREADABLE on disk — the clinical text never appears in plaintext', async () => {

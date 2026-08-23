@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { RelativeTime } from '../core/i18n/relative-time.service';
@@ -55,10 +55,31 @@ export class AsyncBannerComponent {
    */
   readonly savedDataKey = input('today.savedData');
 
-  /** Re-read on each render so the age advances without every host owning a ticker. */
+  /**
+   * The clock the age is measured against.
+   *
+   * <p>Re-stamped whenever `fetchedAt` changes, which is the moment a refresh landed. It used to be
+   * set once at construction and re-stamped by a public `markRefreshed()` that hosts were expected
+   * to call after a pull-to-refresh — **and not one of the five hosts called it**, so the age was
+   * measured against whenever the banner happened to be created. The method was dead code and the
+   * behaviour it existed to provide never happened.
+   *
+   * <p>Doing it here rather than asking hosts to remember is the point: an API that five callers
+   * must each remember to call is one that will be wrong again the next time a screen is added.
+   */
   private readonly nowTick = signal(Date.now());
 
   readonly age = computed(() => this.relativeTime.describe(this.fetchedAt(), this.nowTick()));
+
+  constructor() {
+    // A landed refresh moves `fetchedAt`; the age must be measured from now, not from whenever this
+    // banner was constructed. Without it a screen left open for hours shows "updated 3 h ago"
+    // immediately after a successful pull-to-refresh.
+    effect(() => {
+      this.fetchedAt();
+      this.nowTick.set(Date.now());
+    });
+  }
 
   /**
    * Which message to show, or none.
@@ -72,9 +93,4 @@ export class AsyncBannerComponent {
     }
     return this.status() === 'stale' ? this.savedDataKey() : null;
   });
-
-  /** Called by a host after a pull-to-refresh, so the age does not read "2 h ago" straight after. */
-  markRefreshed(): void {
-    this.nowTick.set(Date.now());
-  }
 }

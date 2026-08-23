@@ -264,9 +264,24 @@ import { PatientsStore } from './patients.store';
                   }
                 </ion-list>
 
-                <!-- Said rather than hidden: a clinician who expects to file a note and finds no
-                   button will assume the app is broken. -->
-                <p class="px-4 py-2 text-hpd-muted">{{ 'patients.readOnly' | translate }}</p>
+                <!-- Phase 6's way in. This was missing: the modal, the handler, the queue op and the
+                     permission gate all existed and nothing opened them, so filing was unreachable
+                     and a stale Phase-5 line sat here naming a translation key that was never
+                     added, rendering the text patients.readOnly to the clinician verbatim. (No
+                     backticks in this comment: the template IS a backtick string and one inside a
+                     comment ends it hundreds of lines early.)
+
+                     Said rather than hidden for a read-only role: someone who expects to file and
+                     finds no button assumes the app is broken. -->
+                @if (canFile()) {
+                  <ion-item lines="none">
+                    <button class="hpd-btn hpd-btn-primary hpd-btn-block hpd-focusable" (click)="openFiling()" data-test="open-filing">
+                      {{ 'patients.fileActivity' | translate }}
+                    </button>
+                  </ion-item>
+                } @else {
+                  <p class="text-hpd-muted px-4 py-2">{{ 'patients.cannotFile' | translate }}</p>
+                }
               }
             }
           </ion-content>

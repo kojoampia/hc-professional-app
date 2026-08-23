@@ -104,6 +104,23 @@ export class WriteQueue {
    */
   register(kind: QueuedWriteKind, sender: WriteSender): void {
     this.senders.set(kind, sender);
+    // AND DRAIN. Registering a sender is the event that unblocks ops of this kind, and without this
+    // a queued write could sit unsent indefinitely.
+    //
+    // Found on a device. Senders are registered by feature stores, and Angular constructs those
+    // lazily — the first time something injects them, which is when their screen is opened. So on a
+    // cold start with a persisted queue, `start()` drains against an EMPTY sender map, skips every
+    // op (leaving `attempts` at 0, which is what gave this away), and nothing drains again when the
+    // store is finally constructed. The clinician's note then waits for an unrelated event: a
+    // connectivity edge that already happened before launch, an app resume, or another submit.
+    //
+    // Observed sequence: file offline, force-quit, come back online, relaunch, open the patient
+    // screen — still unsent. Backgrounding and foregrounding the app sent it immediately. That is
+    // the failure this queue exists to prevent, arriving late and only by luck.
+    //
+    // Fire-and-forget on purpose: callers are store constructors, and `drain()` neither throws nor
+    // injects anything, so there is nothing for them to await or handle.
+    void this.drain();
   }
 
   /** Loads the persisted queue and starts draining on the signals that matter. Idempotent. */
