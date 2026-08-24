@@ -43,8 +43,8 @@ export const AUTHORITY = {
  */
 const CLINICAL_MUTATION_ROLES: readonly string[] = [AUTHORITY.NURSE, AUTHORITY.PARAMEDIC, AUTHORITY.THERAPIST, AUTHORITY.PHARMACIST];
 
-/** What a clinician might want to do. Only the three this app offers are listed. */
-export type ClinicalPermission = 'manageActivity' | 'manageReport' | 'manageCase';
+/** What a clinician might want to do. Only the four this app offers are listed. */
+export type ClinicalPermission = 'manageActivity' | 'manageReport' | 'manageCase' | 'archiveCase';
 
 /**
  * Whether these authorities may perform this action.
@@ -52,9 +52,22 @@ export type ClinicalPermission = 'manageActivity' | 'manageReport' | 'manageCase
  * <p>Admin and doctor return true by an early return rather than by being in the set above, which is
  * how `web/` expresses it too — they hold permissions beyond the three named here, and folding them
  * into the set would quietly widen what the set means.
+ *
+ * <h3>`archiveCase` is the one permission an admin does not hold</h3>
+ * It is checked <b>before</b> that early return, and deliberately: patientservice gates
+ * `/api/clinical-cases/{id}/archive` on doctor alone and refuses `ROLE_ADMIN` on purpose — retiring
+ * a clinical episode is a clinical judgement, and an admin already holds the harder power there
+ * (`DELETE`). Its `ScopeOfPractice` grants `DIAGNOSIS` writes to doctor only, and a `ClinicalCase`
+ * maps to `DIAGNOSIS`, which is why nurse and the other disciplines are excluded too even though
+ * they may edit the same case. Folding this into the early return would offer an admin a button the
+ * server answers with 403 — and, with the queue in play, hold it for hours first.
+ * See `kojoampia/hc-patient-service#13`.
  */
 export function hasClinicalPermission(authorities: readonly string[] | null | undefined, permission: ClinicalPermission): boolean {
   const held = authorities ?? [];
+  if (permission === 'archiveCase') {
+    return held.includes(AUTHORITY.DOCTOR);
+  }
   if (held.includes(AUTHORITY.ADMIN) || held.includes(AUTHORITY.DOCTOR)) {
     return true;
   }

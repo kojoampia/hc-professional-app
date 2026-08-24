@@ -50,13 +50,15 @@ export type WriteSender = (write: QueuedWrite) => Promise<unknown>;
  * <p>The test is whether doing it twice means it twice. Editing a case twice means one case with
  * the later text; requesting the same leave dates twice means one booking, not two; withdrawing the
  * same absence twice means one withdrawal, and sending the second would 404 and show the clinician
- * a failure that is not one.
+ * a failure that is not one. Archiving the same case twice means one archived case — and the second
+ * send would answer 400 `reasonrequired` or simply re-stamp an `archivedAt` that is already set,
+ * neither of which is worth showing a clinician as a failure.
  *
  * <p><b>Appends and messages are deliberately absent.</b> Two activity entries are two events and
  * merging them loses one; two replies are two messages. That distinction is the whole reason this
  * is a named set rather than a condition that grows a clause each time a kind is added.
  */
-const COLLAPSIBLE_KINDS = new Set<QueuedWriteKind>(['case.patch', 'absence.request', 'absence.withdraw']);
+const COLLAPSIBLE_KINDS = new Set<QueuedWriteKind>(['case.patch', 'case.archive', 'absence.request', 'absence.withdraw']);
 
 @Injectable({ providedIn: 'root' })
 export class WriteQueue {

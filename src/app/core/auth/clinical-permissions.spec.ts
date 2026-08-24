@@ -29,6 +29,28 @@ describe('clinical permissions', () => {
     expect(hasClinicalPermission([authority], 'manageCase')).toBe(false);
   });
 
+  it('lets a doctor archive a case', () => {
+    expect(hasClinicalPermission(['ROLE_DOCTOR'], 'archiveCase')).toBe(true);
+  });
+
+  it('REFUSES an admin the archive, which is the one permission they do not hold', () => {
+    // Not an oversight and not a tightening on our side: patientservice excludes ROLE_ADMIN from
+    // /clinical-cases/{id}/archive deliberately, because retiring a clinical episode is a clinical
+    // judgement and an admin already holds DELETE there. An admin passes every OTHER permission
+    // here by the early return, so this is exactly the case a future refactor would break.
+    expect(hasClinicalPermission(['ROLE_ADMIN'], 'archiveCase')).toBe(false);
+    expect(hasClinicalPermission(['ROLE_ADMIN'], 'manageCase')).toBe(true);
+  });
+
+  it.each(['ROLE_NURSE', 'ROLE_PARAMEDIC', 'ROLE_THERAPIST', 'ROLE_PHARMACIST'])(
+    'REFUSES a %s the archive though they may edit the same case',
+    authority => {
+      // ScopeOfPractice grants DIAGNOSIS to the doctor alone and a ClinicalCase maps to DIAGNOSIS.
+      expect(hasClinicalPermission([authority], 'archiveCase')).toBe(false);
+      expect(hasClinicalPermission([authority], 'manageCase')).toBe(true);
+    },
+  );
+
   it('refuses a bare ROLE_USER, which is what an applicant holds', () => {
     expect(hasClinicalPermission(['ROLE_USER'], 'manageActivity')).toBe(false);
   });

@@ -24,7 +24,7 @@ jest.mock('idb-keyval', () => ({
 
 describe('CasesStore', () => {
   let store: CasesStore;
-  let api: { queue: jest.Mock; detail: jest.Mock; update: jest.Mock };
+  let api: { queue: jest.Mock; detail: jest.Mock; update: jest.Mock; archive: jest.Mock };
   let queue: { submit: jest.Mock; register: jest.Mock; writes: typeof queueWrites };
 
   const row = (id: string, over: Partial<CaseSummaryDto> = {}): CaseSummaryDto => ({
@@ -59,6 +59,7 @@ describe('CasesStore', () => {
       // would let the store carry the wrong patient into the edit path and still look green.
       detail: jest.fn((patientId: string, caseId: string) => of(detail(caseId, { patientId }))),
       update: jest.fn(() => of(row('c1'))),
+      archive: jest.fn(() => of({})),
     };
     queueWrites.set([]);
     let nextId = 0;
@@ -224,5 +225,71 @@ describe('CasesStore', () => {
     await sender({ subjectId: 'c1', payload: { patientId: 'p9', changes: { brief: 'x' } } });
 
     expect(api.update).toHaveBeenCalledWith('p9', 'c1', { brief: 'x' });
+  });
+
+  it('queues an archive instead of calling the API directly', async () => {
+    await store.refresh();
+    await store.openCaseById(row('c1'));
+
+    await store.archive('Episode closed');
+
+    expect(api.archive).not.toHaveBeenCalled();
+    expect(queue.submit).toHaveBeenCalledWith('case.archive', 'c1', { reason: 'Episode closed' });
+  });
+
+  it('KEEPS the row when an archive is queued, and marks it', async () => {
+    // The point of the whole design. Removing the row optimistically shows the clinician an
+    // absence, and an absence cannot be marked "unsent" — so a refusal (every one of them until
+    // hc-patient-service#13 is deployed) would vanish a live case with no trace on this screen.
+    await store.refresh();
+    await store.openCaseById(row('c1'));
+
+    await store.archive('Episode closed');
+
+    expect(store.rows().map(r => r.id)).toContain('c1');
+    expect(store.pendingArchiveIds().has('c1')).toBe(true);
+  });
+
+  it('closes the case detail once the archive is queued', async () => {
+    await store.refresh();
+    await store.openCaseById(row('c1'));
+    expect(store.openCase()).not.toBeNull();
+
+    await store.archive('Episode closed');
+
+    expect(store.openCase()).toBeNull();
+  });
+
+  it('lets the SERVER remove the row, on the next refresh', async () => {
+    await store.refresh();
+    await store.openCaseById(row('c1'));
+    await store.archive('Episode closed');
+
+    // The server excludes archived cases from the queue itself, so a successful archive drops the
+    // row by telling the truth rather than by this screen predicting it.
+    api.queue.mockReturnValueOnce(of(page([row('c2', { status: 'urgent' })])));
+    await store.refresh();
+
+    expect(store.rows().map(r => r.id)).toEqual(['c2']);
+  });
+
+  it('does nothing when no case is open', async () => {
+    await store.refresh();
+
+    await store.archive('Episode closed');
+
+    expect(queue.submit).not.toHaveBeenCalledWith('case.archive', expect.anything(), expect.anything());
+  });
+
+  it('registers the archive op kind too, so a drain after a restart can send it', () => {
+    expect(queue.register).toHaveBeenCalledWith('case.archive', expect.any(Function));
+  });
+
+  it('sends a queued archive through the API with the reason from the payload', async () => {
+    const sender = queue.register.mock.calls.find(([kind]) => kind === 'case.archive')?.[1];
+
+    await sender({ subjectId: 'c1', payload: { reason: 'Episode closed' } });
+
+    expect(api.archive).toHaveBeenCalledWith('c1', 'Episode closed');
   });
 });

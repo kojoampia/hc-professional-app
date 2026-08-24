@@ -17,6 +17,7 @@ export type QueuedWriteKind =
   | 'activity.append'
   | 'report.append'
   | 'case.patch'
+  | 'case.archive'
   | 'message.reply'
   | 'message.start'
   | 'absence.request'
