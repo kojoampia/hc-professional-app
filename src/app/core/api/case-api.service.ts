@@ -74,6 +74,25 @@ export class CaseApiService {
     return this.config.getEndpointFor(`api/patients/${encodeURIComponent(patientId)}/cases`, 'professionalservice');
   }
 
+  /**
+   * The one call in this file that goes to patientservice directly, and the exception is reasoned.
+   *
+   * <p>professionalservice has no archive endpoint — `CaseQueueResource` is a single GET, and
+   * `PatientResource` proxies only the read and the PATCH. The scoping argument above is about
+   * <em>list</em> reads: `/api/clinical-cases` unfiltered hands back every case in the estate. It
+   * does not apply to one case addressed by id, which patientservice scopes itself — its archive
+   * checks `patientScope.isVisible` before it will admit the case exists, answering 404 rather than
+   * 403 so that a caller cannot learn a case exists by trying to retire it.
+   *
+   * <p>Same URL `web/`'s `clinical-case-api.service.ts` already calls, which is the other half of the
+   * decision: two clients archiving through two different paths is a difference with no reason
+   * behind it. Adding a passthrough to professionalservice was the alternative and was rejected as
+   * a hop that would relay the caller's token unchanged and check nothing the sibling does not.
+   */
+  private get clinicalCasesUrl(): string {
+    return this.config.getEndpointFor('api/clinical-cases', 'patientservice');
+  }
+
   /** One page of the caller's open cases, newest first. Archived ones are excluded server-side. */
   queue(page: number, size: number, status?: string): Observable<HttpResponse<CaseSummaryDto[]>> {
     const params: Record<string, string> = { page: String(page), size: String(size) };
@@ -102,5 +121,24 @@ export class CaseApiService {
    */
   update(patientId: string, caseId: string, changes: CaseUpdateDto): Observable<CaseSummaryDto> {
     return this.http.patch<CaseSummaryDto>(`${this.patientCasesUrl(patientId)}/${encodeURIComponent(caseId)}`, changes);
+  }
+
+  /**
+   * Retires a case from the working queue.
+   *
+   * <p>A POST rather than a PATCH over `archivedAt`, which is the server's design and not this
+   * client's preference: it stamps who archived it and when, and both are records rather than
+   * claims a client gets to make.
+   *
+   * <p><b>The reason is required and is not defaulted.</b> The server answers 400 `reasonrequired`
+   * to a blank one and says why — an archive with no reason is the delete that patient data does not
+   * allow. So the screen asks for it rather than sending something like "Archived from mobile".
+   *
+   * <p>Doctor only. `ROLE_ADMIN`, and every other discipline, gets 403 by the server's deliberate
+   * choice — see `hasClinicalPermission`'s `archiveCase` branch, which mirrors it so the button is
+   * not offered rather than queued and then refused.
+   */
+  archive(caseId: string, reason: string): Observable<unknown> {
+    return this.http.post(`${this.clinicalCasesUrl}/${encodeURIComponent(caseId)}/archive`, { reason });
   }
 }

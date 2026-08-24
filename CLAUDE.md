@@ -30,7 +30,7 @@ What is **deliberately absent**, with the decision behind each:
 | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Every admin surface — review queue, review detail, compliance, absence approval, round builder, JHipster health/metrics | Decision 1: this is a clinician app. Admins use the web portal                                                                                                                                                                                                       |
 | Charts and the earnings screen                                                                                          | Decision 7. Charts are ~300 lines plus ~80 strings ×4 for axes and legends, unreadable at 390px, and fed by the unpaginated cross-service fetch Phase 1 existed to remove. Earnings come from `adminservice`, outside this workspace, with no pagination and no ETag |
-| Archiving a case                                                                                                        | Decision 6. No endpoint exists anywhere; `web/`'s button is client-side only and archives nothing. The screen says archiving is a web-portal action rather than shipping a device-local lie                                                                          |
+| ~~Archiving a case~~ — **shipped 2026-08-24**, see below                                                                | Decision 6 is reversed. It rested on "no endpoint exists anywhere", which stopped being true on 2026-08-22                                                                                                                                                           |
 | Self-registration, and the careers `?track/locale/src` handoff                                                          | Decision 8. Registration in an app store invites Apple 5.1.1 scrutiny plus a mandatory in-app account-deletion path, and the careers handoff is a web-campaign mechanism with no mobile analogue. **Password reset only**                                            |
 | The applicant onboarding wizard                                                                                         | This app is for _active_ clinicians; any status other than `ACTIVE`/`ROSTER_CONFIGURED` shows a link to the web portal                                                                                                                                               |
 | A `markAllRead` wrapper                                                                                                 | `/read-all` still exists on the server, but no screen clears every thread at once. A method sitting unused is an invitation to reach for it the next time a badge needs clearing — which is the exact mistake `POST /conversations/{id}/read` replaced               |
@@ -378,11 +378,23 @@ per-conversation mark-read and a role-scoped recipient directory; all shipped on
 with two things the plan did not anticipate — a per-case detail read, and a 422 for a role broadcast
 that matches nobody (it used to store a message with zero recipients and answer 200).
 
-**Two findings belong to the `hc-patient` owners and are not ours to fix.**
-`POST /clinical-cases/{id}/archive` is `@PreAuthorize(ROLE_PROFESSIONAL)`, an authority no token this
-portal issues carries — hc-professional's gateway mints the nine clinical disciplines and never
-`ROLE_PROFESSIONAL`, which hc-patient's own `AuthoritiesConstants` javadoc already records. So
-doctor, nurse and admin all get 403 and archiving from here is impossible.
+**The archive finding was raised, accepted and fixed.** `POST /clinical-cases/{id}/archive` was
+`@PreAuthorize(ROLE_PROFESSIONAL)`, an authority no token this portal issues carries —
+hc-professional's gateway mints the nine clinical disciplines and never `ROLE_PROFESSIONAL`, which
+hc-patient's own `AuthoritiesConstants` javadoc already recorded. Raised as
+**`kojoampia/hc-patient-service#13`** (2026-08-23), fixed by **PR #14** (2026-08-24), which widened
+both `/archive` and `/unarchive` to `hasAnyAuthority(PROFESSIONAL, DOCTOR)`.
+
+**Doctor only, and `ROLE_ADMIN` is excluded on purpose** — their `ScopeOfPractice` grants
+`DIAGNOSIS` writes to the doctor alone and a `ClinicalCase` maps to `DIAGNOSIS`, so a nurse who may
+rewrite a diagnosis on the case screen still may not retire the case. `hasClinicalPermission`'s
+`archiveCase` branch mirrors that, checked **before** the admin/doctor early return, because an
+admin passes every other permission there and would otherwise be offered a button the server
+answers with 403 — held by the queue for hours first.
+
+**Until PR #14 is merged and deployed, every archive from this app is refused.** That is why the
+row is not removed optimistically: the queue marks it and the next refresh is what drops it. See
+`CasesStore#archive`.
 
 **A second finding here was wrong and is retracted (2026-08-23).** It claimed their
 `requireWrite(DIAGNOSIS)` passed for any authenticated non-patient caller, so a carer could edit a
@@ -395,3 +407,13 @@ alike — a 4xx proves nothing about authorisation until you know the request re
 Case writes still route through professionalservice, for the reason that always applied:
 patientservice's generated CRUD is unscoped and unpaged, so a client calling it directly receives
 every case in the estate.
+
+**Archiving is the one exception, and it is reasoned rather than an oversight.** professionalservice
+has no archive endpoint — `CaseQueueResource` is a single GET and `PatientResource` proxies only the
+case read and PATCH — and the scoping argument is about _list_ reads, not about one case addressed
+by id, which patientservice scopes itself (it checks `patientScope.isVisible` before admitting the
+case exists, answering 404 rather than 403 so a caller cannot discover a case by trying to retire
+it). It is also the same URL `web/`'s `clinical-case-api.service.ts` already calls, and two clients
+archiving by two different routes is a difference with no reason behind it. Adding a passthrough to
+professionalservice was the alternative, considered and rejected: it would relay the caller's token
+unchanged and check nothing the sibling does not.

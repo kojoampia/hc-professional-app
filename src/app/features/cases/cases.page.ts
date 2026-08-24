@@ -130,7 +130,11 @@ import { CasesStore } from './cases.store';
                 <h3>{{ row.brief || ('cases.noBrief' | translate) }}</h3>
                 <p>{{ 'cases.opened' | translate }} {{ row.openedAt | date: 'mediumDate' : undefined : locale() }}</p>
               </ion-label>
-              @if (row.status) {
+              @if (store.pendingArchiveIds().has(row.id)) {
+                <!-- The row stays until the server drops it. Marked, so it does not read as a
+                     failed archive that simply did nothing. -->
+                <ion-badge slot="end" color="medium">{{ 'cases.archivePending' | translate }}</ion-badge>
+              } @else if (row.status) {
                 <ion-badge slot="end" [color]="row.status === 'urgent' ? 'danger' : 'gold'">{{ row.status }}</ion-badge>
               }
             </ion-item>
@@ -225,9 +229,44 @@ import { CasesStore } from './cases.store';
                   <p class="px-4 py-2 text-hpd-muted">{{ 'cases.noPermission' | translate }}</p>
                 }
 
-                <!-- Said, not hidden. A button that archives only on this phone would be a lie
-                     about a clinical record; the endpoint sits with the hc-patient owners. -->
-                <p class="px-4 py-2 text-hpd-muted">{{ 'cases.noArchive' | translate }}</p>
+                @if (canArchive()) {
+                  <ion-list [inset]="true">
+                    @if (store.pendingArchiveFor(); as unsent) {
+                      <ion-item lines="none">
+                        <hpd-pending-chip [state]="unsent.state"></hpd-pending-chip>
+                      </ion-item>
+                    }
+                    <ion-item>
+                      <!-- Asked for, never defaulted. The server answers 400 to a blank reason and
+                           says why: an archive with no reason is the delete it exists to replace. -->
+                      <ion-textarea
+                        label="{{ 'cases.archiveReason' | translate }}"
+                        labelPlacement="stacked"
+                        [autoGrow]="true"
+                        [rows]="2"
+                        [(ngModel)]="archiveReason"
+                        data-test="case-archive-reason"
+                      ></ion-textarea>
+                    </ion-item>
+                    <ion-item lines="none">
+                      <button
+                        class="hpd-btn hpd-btn-danger hpd-btn-block hpd-focusable"
+                        [disabled]="!archiveReason.trim()"
+                        (click)="archive()"
+                        data-test="case-archive"
+                      >
+                        {{ 'cases.archive' | translate }}
+                      </button>
+                    </ion-item>
+                    <ion-item lines="none">
+                      <ion-note>{{ 'cases.archiveHint' | translate }}</ion-note>
+                    </ion-item>
+                  </ion-list>
+                } @else {
+                  <!-- Said, not hidden. patientservice gates archiving on doctor alone, and an
+                       admin is excluded there on purpose — see hc-patient-service#13. -->
+                  <p class="px-4 py-2 text-hpd-muted">{{ 'cases.archiveDoctorOnly' | translate }}</p>
+                }
               }
             }
           </ion-content>
@@ -248,6 +287,7 @@ export class CasesPage implements OnInit {
 
   symptoms = '';
   diagnosis = '';
+  archiveReason = '';
 
   /**
    * Whether this clinician may edit a case at all.
@@ -257,6 +297,17 @@ export class CasesPage implements OnInit {
    * is a screen that does not offer an edit the queue would hold for hours before it is rejected.
    */
   readonly canEdit = computed(() => hasClinicalPermission(this.accounts.account()?.authorities, 'manageCase'));
+
+  /**
+   * Whether this clinician may retire a case — a narrower question than {@link canEdit}.
+   *
+   * <p>Doctor only, and an admin is excluded. A nurse who may rewrite the diagnosis on this very
+   * screen still may not archive it, which looks inconsistent until you read patientservice's
+   * `ScopeOfPractice`: `DIAGNOSIS` writes are the doctor's, and a `ClinicalCase` maps to
+   * `DIAGNOSIS`. Mirroring it here is what keeps the queue from holding an archive for hours
+   * before the server refuses it.
+   */
+  readonly canArchive = computed(() => hasClinicalPermission(this.accounts.account()?.authorities, 'archiveCase'));
 
   async ngOnInit(): Promise<void> {
     await this.store.refresh();
@@ -272,6 +323,9 @@ export class CasesPage implements OnInit {
     const opened = this.store.openCase();
     this.symptoms = opened?.symptoms ?? '';
     this.diagnosis = opened?.diagnosis ?? '';
+    // Never carried between cases. A reason typed for one case is not a reason for the next, and
+    // one left in the box is one archive away from being filed against the wrong record.
+    this.archiveReason = '';
   }
 
   close(): void {
@@ -281,6 +335,22 @@ export class CasesPage implements OnInit {
   /** Queues the edit. No spinner and no network check — the queue takes it either way. */
   async save(): Promise<void> {
     await this.store.edit({ symptoms: this.symptoms, diagnosis: this.diagnosis });
+  }
+
+  /**
+   * Queues the archive.
+   *
+   * <p>The blank guard is here as well as on the button's `disabled` because a whitespace-only
+   * reason passes an `ngModel` truthiness check and then fails on the server, 24 hours of retries
+   * later, as `reasonrequired`.
+   */
+  async archive(): Promise<void> {
+    const reason = this.archiveReason.trim();
+    if (!reason) {
+      return;
+    }
+    await this.store.archive(reason);
+    this.archiveReason = '';
   }
 
   async pullToRefresh(event: Event): Promise<void> {

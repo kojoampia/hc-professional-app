@@ -24,6 +24,11 @@ const FIRST_PAGE_KEY = 'cases.firstPage';
  * <p>Edits go through the write queue as `case.patch`, which is where that op kind's collapse rule
  * and its 409 path finally get exercised on something real: two edits to one case collapse to the
  * latest, and a colleague editing the same case stops the op rather than overwriting them.
+ *
+ * <p>Archiving goes through it as `case.archive`, and is the one write here whose optimistic update
+ * is deliberately absent — see {@link CasesStore#archive}. It reaches patientservice directly rather
+ * than professionalservice, which is the single exception to this app's routing rule and is argued
+ * where it is made, in `CaseApiService`.
  */
 @Injectable({ providedIn: 'root' })
 export class CasesStore {
@@ -94,12 +99,32 @@ export class CasesStore {
     this.queue.register('case.patch', (write: QueuedWrite) =>
       firstValueFrom(this.api.update(write.payload['patientId'] as string, write.subjectId, write.payload['changes'] as CaseUpdateDto)),
     );
+    this.queue.register('case.archive', (write: QueuedWrite) =>
+      firstValueFrom(this.api.archive(write.subjectId, write.payload['reason'] as string)),
+    );
   }
 
   /** The unsent edit to the case currently open, if any, so the screen can mark it. */
   readonly pendingEditFor = computed(() => {
     const open = this.openCaseSignal()?.id;
     return open ? this.queue.writes().find(write => write.kind === 'case.patch' && write.subjectId === open) ?? null : null;
+  });
+
+  /** Every case id with an unsent archive, so the queue can mark those rows without a lookup each. */
+  readonly pendingArchiveIds = computed(
+    () =>
+      new Set(
+        this.queue
+          .writes()
+          .filter(write => write.kind === 'case.archive')
+          .map(write => write.subjectId),
+      ),
+  );
+
+  /** The unsent archive of the case currently open, if any. */
+  readonly pendingArchiveFor = computed(() => {
+    const open = this.openCaseSignal()?.id;
+    return open ? this.queue.writes().find(write => write.kind === 'case.archive' && write.subjectId === open) ?? null : null;
   });
 
   async refresh(): Promise<void> {
@@ -203,5 +228,29 @@ export class CasesStore {
     this.rowsSignal.update(rows =>
       rows.map(row => (row.id === open.id ? { ...row, brief: optimistic.brief, status: optimistic.status } : row)),
     );
+  }
+
+  /**
+   * Queues an archive and closes the case.
+   *
+   * <p><b>The row is deliberately not removed.</b> Every other optimistic update here shows the
+   * clinician their own words back; removing a row shows them an absence, and an absence cannot be
+   * marked "unsent". If the server then refuses — and until `hc-patient-service#13` is deployed it
+   * refuses every one of these with a 403 — a live case would have silently vanished from the queue
+   * with the only trace in an outbox the clinician has no reason to open. So the row stays, marked
+   * pending, and the next refresh is what removes it: the server excludes archived cases from the
+   * queue itself, so a successful archive drops the row by telling the truth rather than by this
+   * screen predicting it.
+   *
+   * <p>The detail modal does close, because that is a statement about this screen rather than about
+   * the record.
+   */
+  async archive(reason: string): Promise<void> {
+    const open = this.openCaseSignal();
+    if (!open) {
+      return;
+    }
+    await this.queue.submit('case.archive', open.id, { reason });
+    this.close();
   }
 }
