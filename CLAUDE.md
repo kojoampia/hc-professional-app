@@ -383,7 +383,12 @@ that matches nobody (it used to store a message with zero recipients and answer 
 hc-professional's gateway mints the nine clinical disciplines and never `ROLE_PROFESSIONAL`, which
 hc-patient's own `AuthoritiesConstants` javadoc already recorded. Raised as
 **`kojoampia/hc-patient-service#13`** (2026-08-23), fixed by **PR #14** (2026-08-24), which widened
-both `/archive` and `/unarchive` to `hasAnyAuthority(PROFESSIONAL, DOCTOR)`.
+both `/archive` and `/unarchive` to `hasAnyAuthority(PROFESSIONAL, DOCTOR)`. Hours later
+`hc-patient-service` PR #15 and `hc-patient-gateway` PR #12 **removed `ROLE_PROFESSIONAL` from that
+stack altogether** — it was one blanket authority meaning "clinical staff", and the disciplines
+replaced it — so **the gate is now plain `hasAuthority(DOCTOR)`**. That changed no behaviour: the
+disjunction had been naming an authority nothing issues, and the check was already doctor-only for
+every authority that exists.
 
 **Doctor only, and `ROLE_ADMIN` is excluded on purpose** — their `ScopeOfPractice` grants
 `DIAGNOSIS` writes to the doctor alone and a `ClinicalCase` maps to `DIAGNOSIS`, so a nurse who may
@@ -392,9 +397,11 @@ rewrite a diagnosis on the case screen still may not retire the case. `hasClinic
 admin passes every other permission there and would otherwise be offered a button the server
 answers with 403 — held by the queue for hours first.
 
-**Until PR #14 is merged and deployed, every archive from this app is refused.** That is why the
-row is not removed optimistically: the queue marks it and the next refresh is what drops it. See
-`CasesStore#archive`.
+**PR #14 is merged but not in production, so every archive from this app is still refused there.**
+Verified doctor-only on the quality stack (gateway `d5ce922c`, api `d0d0f6f5`): admin 403, nurse
+403, carer 403, doctor 200. Production still runs api `ba3fec1f`, which predates the fix. That is
+why the row is not removed optimistically: the queue marks it and the next refresh is what drops
+it. See `CasesStore#archive`.
 
 **A second finding here was wrong and is retracted (2026-08-23).** It claimed their
 `requireWrite(DIAGNOSIS)` passed for any authenticated non-patient caller, so a carer could edit a
