@@ -27,7 +27,14 @@ Running against a local backend needs the gateway on :5505 (see the workspace `C
 ```bash
 npm run android          # opens Android Studio
 npm run ios              # opens Xcode (macOS only)
+npm run build:aab        # release AAB — unsigned unless the environment carries a keystore
 ```
+
+`docs/release.md` covers the version scheme (marketing version from `package.json`, build number
+from `github.run_number`) and the **three signing certificates** — debug, upload, and the app
+signing key Play holds. Anything checked at runtime keys off the **app signing** fingerprint, not
+the upload one; getting that backwards works for every developer and fails for every user who
+installed from Play.
 
 `npx cap sync` works on Linux for both platforms (Capacitor 8 uses Swift Package Manager, not CocoaPods). Compiling iOS still requires macOS with Xcode.
 

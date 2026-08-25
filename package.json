@@ -19,6 +19,7 @@
     "prettier:format": "prettier --write \"{,src/**/}*.{md,json,yml,html,js,mjs,cjs,ts,css,scss}\"",
     "prettier:check": "prettier --check \"{,src/**/}*.{md,json,yml,html,js,mjs,cjs,ts,css,scss}\"",
     "sync": "ng build --configuration production && cap sync",
+    "build:aab": "scripts/build-aab.sh",
     "android": "npm run sync && cap open android",
     "ios": "npm run sync && cap open ios"
   },
