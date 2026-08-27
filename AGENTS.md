@@ -6,7 +6,9 @@
 
 `hc-professional-app` — the Abofonsa BridgeCare Professional clinician mobile app (Ionic + Angular 19 + Capacitor), a client of the live `https://professional.abofonsa.com` gateway. No server, no Docker image, not part of `deploy/`.
 
-The authoritative plan is **`mobile-app-plan.md` at the workspace root** (`MOB<N>` work packages and their gates).
+Two plans, both in the workspace `docs/` repo — they moved out of the workspace root on 2026-08-08, because the root is not a git repository. **`../docs/mobile-app-plan.md`** holds the `MOB<N>` work packages and their gates; **`../docs/web-mobile-port.md`** is the web-to-mobile port (Phases 0–10) and is newer where the two disagree. Both are **records, not prompts** — where a plan and the code disagree, the code wins.
+
+Releasing is `docs/release.md` in this repo: the three workflows, the version scheme, and the signing fingerprints.
 
 ## Invariants
 
@@ -21,7 +23,11 @@ The authoritative plan is **`mobile-app-plan.md` at the workspace root** (`MOB<N
 5. **Never use white text on gold** (`#c59437`) — 2.74:1, fails AA. Use `#3a2a08`. `--ion-color-gold-contrast` is how this is enforced inside Ionic components.
 6. **Never use raw hex or stock Tailwind palette classes.** Colours come from `--hpd-*` tokens.
 7. **`--ion-color-*-rgb` must be literal triplets**, never `var()`.
-8. **Do not start Dashboard / Patients / Cases.** They are Phase 2 and blocked on backend work (`MOB-P2-PRE`).
+8. **Do not add an admin surface, a chart, or the earnings screen.** Dashboard, Patients and Cases
+   shipped with the port and this invariant no longer bars them — what it bars now is scope. This
+   is a clinician app; admins use the web portal, charts are unreadable at 390px, and earnings come
+   from `adminservice` outside this workspace. See CLAUDE.md § "What the app has, and what it
+   deliberately does not", which gives the decision behind each omission.
 9. **Record every file copied from `web/` in the drift log** in `CLAUDE.md`, with the source commit.
 10. **Never ship a string in fewer than four languages.** The app publishes in
     English, Spanish, French and German — every release, every screen, and the store
@@ -34,7 +40,9 @@ The authoritative plan is **`mobile-app-plan.md` at the workspace root** (`MOB<N
 
 ## Commands
 
-`npm start` · `npm test` · `npx ng test --test-path-pattern="<regex>"` (single spec) · `npm run lint` · `npm run sync` · `npm run android` · `npm run ios`
+`npm start` · `npm test` · `npx ng test --test-path-pattern="<regex>"` (single spec) · `npm run lint` · `npm run sync` · `npm run android` · `npm run ios` · `npm run build:aab`
+
+**Publishing goes through a `v*` tag and nothing else.** `npm run build:aab` runs the release build locally and produces an **unsigned** bundle unless the environment already carries all four `ANDROID_KEYSTORE_*`/`ANDROID_KEY_*` variables — useful for checking the bundle builds, uploadable nowhere. It deliberately runs no lint and no tests; `ci.yml` and `release-android.yml` gate on those and a tag is not exempt.
 
 Node 22 (`.nvmrc`). Angular pinned to 19.2.25 to match `web/`.
 

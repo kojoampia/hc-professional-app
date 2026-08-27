@@ -135,6 +135,8 @@ npm run build:prod        # production bundle into dist/hc-professional-app/brow
 npm run sync              # build:prod && cap sync   (run after ANY dependency or config change)
 npm run android           # sync && open Android Studio
 npm run ios               # sync && open Xcode (macOS only)
+npm run build:aab         # release AAB — UNSIGNED unless the environment carries a keystore
+npm run build:aab -- --skip-web    # gradle only, reusing whatever is already in android/
 
 # Building an APK directly. No JAVA_HOME needed — android/build.gradle pins a Java 21
 # toolchain, so this works even though the workstation default is a compiler-less JRE.
@@ -143,6 +145,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Node **22** (`.nvmrc`). Angular is pinned to **19.2.25**, byte-identical to `web/`, so services copied from there compile without adjustment.
+
+**Publishing goes through a `v*` tag and nothing else** — `docs/release.md` is the runbook, covering the version scheme, the secrets each workflow needs, and the signing fingerprints. `scripts/build-aab.sh` behind `npm run build:aab` exists so the release path can be exercised without cutting a tag; it signs only if the environment already carries all four `ANDROID_KEYSTORE_*`/`ANDROID_KEY_*` variables, and says loudly when it does not, because an unsigned bundle looks exactly like a signed one until Play rejects it. It runs no lint and no tests on purpose: `ci.yml` and `release-android.yml` both gate on those and a tag is not exempt. Unlike `./gradlew` it **does** need a JDK 21, since it runs Gradle itself rather than only the toolchain — it resolves one and prints which; override with `ANDROID_GRADLE_JAVA_HOME`.
 
 ## Non-obvious things that will cost you a day
 
@@ -347,13 +351,22 @@ Restating the `web/` design rules that apply verbatim: **never raw hex, never st
 
 ```
 src/app/
-  app.routes.ts          # '' → diagnostics for now; MOB5 adds unlock/login, MOB6+ the tabs
+  app.routes.ts          # '' → today; the four tabs are children of shell/tabs.page
+  auth/                  # login page and password reset — the only unauthenticated screens
   core/native/           # the six Capacitor wrappers — the ONLY place plugins are imported
-  shell/diagnostics.page.ts   # MOB1 bootstrap probe; replaced by the Today tab in MOB6
+  core/                  # api, auth, i18n, offline, push, media, theme, interceptor, brand, config
+  features/              # today, messages, documents, me (tabs) + roster, patients, cases, dashboard
+  shared/                # the cross-feature components: stat tile, async banner, pending chip, …
+  shell/tabs.page.ts     # the four-tab shell — the app's shape
+  shell/diagnostics.page.ts   # MOB1 bootstrap probe, still routed at /diagnostics
+  shell/theme-gallery.page.ts # MOB2 design-system gallery at /theme, deliberately ungated
 src/environments/        # absolute API base URLs, per platform
 src/theme/               # variables.css (Ionic mapping), tailwind.css
+scripts/build-aab.sh     # the local release build — see Commands
 capacitor.config.ts      # appId com.abofonsa.bridgecare.professional, androidScheme https
 ```
+
+**`diagnostics.page.ts` was not replaced by the Today tab** — an earlier version of this section said it would be. It stays reachable because it is the first screen `docs/device-smoke-checklist.md` opens and the only place that reports every native wrapper at once; `/theme` is there for the same reason and is ungated because it renders no data.
 
 `androidScheme: 'https'` is explicit in `capacitor.config.ts` though it is the Capacitor default, because two things depend on it: the gateway CORS allowlist must contain `https://localhost` (**not** `http://localhost`) for Android, and a secure context is what makes `crypto.subtle` — the MOB6 cache encryption — and the camera available.
 
