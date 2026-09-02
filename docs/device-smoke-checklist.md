@@ -52,7 +52,7 @@ Needs a real account on `professional.abofonsa.com`.
 
 32. After signing in you land on **Today**, not a diagnostics screen.
 33. The shift card's heading and its body describe the **same** shift — if it says "Next shift", the details underneath must be that shift, not one that finished earlier today.
-34. The window shown matches the roster: MORNING 06:00–14:00, AFTERNOON 14:00–22:00, NIGHT 22:00–06:00, DAY 08:00–17:00. A FLEXIBLE day shows no window at all.
+34. The window shown matches the roster: DAY 07:00–15:00, EVENING 15:00–23:00, NIGHT 23:00–07:00. A FLEXIBLE day shows no window at all. These are `ShiftType`'s four values and its hours — this step listed the pre-DR1 set (MORNING, AFTERNOON, no EVENING, DAY 08–17) until 2026-09-02, the same stale table `duty-roster-api.service.ts` carried until 2026-08-22, so **a tester following it would have failed correct software or passed the bug**.
 35. **During a night shift, after midnight**, the card still reads "On duty" — the NIGHT window wraps, and this is the case a naive same-date check gets wrong. Worth timing a check for.
 36. "Next 7 days" shows only the coming week; nothing further out appears.
 37. An expiring licence appears under "Needs attention" with days remaining; a lapsed one shows a red **lapsed** badge. A certificate expiring does **not** appear — only licences cost you access.
