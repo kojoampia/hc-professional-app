@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
-import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   IonBadge,
@@ -45,7 +45,6 @@ import { TodayStore } from './today.store';
     AsyncBannerComponent,
     TranslateModule,
     DatePipe,
-    TitleCasePipe,
     IonHeader,
     IonToolbar,
     IonTitle,
@@ -167,7 +166,7 @@ import { TodayStore } from './today.store';
                 <p class="text-hpd-muted">{{ assignment.name }} · {{ assignment.duty }}</p>
               </ion-label>
               <ion-note slot="end">
-                {{ assignment.shift | titlecase }}
+                {{ 'shiftType.' + assignment.shift | translate }}
                 @if (windowText(assignment.shift); as window) {
                   <span class="block text-hpd-subtle">{{ window }}</span>
                 }

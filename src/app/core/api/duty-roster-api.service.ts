@@ -5,15 +5,33 @@ import { Observable } from 'rxjs';
 import { ApplicationConfigService } from '../config/application-config.service';
 
 /**
- * The shift types the server actually has.
+ * The shift types the server actually has, as a runtime array.
  *
  * <p><b>MORNING and AFTERNOON were retired in DR1 (2026-08-20)</b> and existing rows migrated by
  * nearest window — MORNING → DAY, AFTERNOON → EVENING, by `ShiftTypeMigration`. This union carried
  * both of them and was missing EVENING entirely, which is what every migrated AFTERNOON became.
  * Do not reintroduce them: the five-value set they belonged to overlapped, since the old DAY
  * (08–17) straddled both.
+ *
+ * <p><b>`OFF` was added on 2026-09-04</b>, when the estate settled on one shift vocabulary across
+ * hc-admin and hc-professional rather than two four-value enums differing by one value at each end.
+ * It is a rostered rest day: planned, not worked, no window, and never carrying visits.
+ *
+ * <p><b>An array rather than a bare union, and that is new here.</b> This was
+ * `'DAY' | 'EVENING' | 'NIGHT' | 'FLEXIBLE'`, which no test can enumerate — so nothing could ask
+ * whether the catalogues named every value, and this app had no shift names at all to ask about:
+ * `roster.page` and `today.page` rendered `{{ round.shift | titlecase }}`, which happens to produce
+ * an acceptable "Off" in English and nothing sensible in the other three. `web/`'s copy has been a
+ * `const` array with the union derived from it for exactly this reason. **Mobile CI clones one
+ * repo**, so nothing in `web/` or `api/` can see this file; the array, the catalogue keys and
+ * `shift-names.spec.ts` beside it are what buy this copy the same gate instead of leaving it the
+ * hand-carried part that goes stale silently. Its own history is the argument — it held the pre-DR1
+ * windows for an unknown period with nothing failing.
  */
-export type DutyRosterShift = 'DAY' | 'EVENING' | 'NIGHT' | 'FLEXIBLE';
+export const DUTY_ROSTER_SHIFTS = ['DAY', 'EVENING', 'NIGHT', 'OFF', 'FLEXIBLE'] as const;
+
+/** The union, derived from the list above rather than written twice. */
+export type DutyRosterShift = (typeof DUTY_ROSTER_SHIFTS)[number];
 
 export interface DutyRosterAssignmentDto {
   id?: string;
@@ -61,9 +79,10 @@ export interface ShiftLabel {
 }
 
 /**
- * Local shift windows (hour of day, 24h): NIGHT wraps past midnight. FLEXIBLE
- * deliberately has no window — it stands for individually agreed 2–4 hour time
- * blocks on the assignment date and is labelled separately.
+ * Local shift windows (hour of day, 24h): NIGHT wraps past midnight. FLEXIBLE and
+ * OFF deliberately have no window — FLEXIBLE stands for individually agreed 2–4
+ * hour time blocks on the assignment date, OFF is a rest day that is not worked at
+ * all, and both are labelled separately.
  *
  * Copied from `web/src/main/webapp/app/health-connect/health-connect.models.ts`, where DR1 moved
  * the table so the union and its hours sit in one place. These windows are a cross-repo invariant
@@ -82,7 +101,7 @@ const SHIFT_WINDOWS: Partial<Record<DutyRosterShift, { start: number; end: numbe
   NIGHT: { start: 23, end: 7 },
 };
 
-/** Sorting anchor for FLEXIBLE, which spans the day and so has no meaningful start. */
+/** Sorting anchor for the windowless values, which have no meaningful start. */
 const DEFAULT_START_HOUR = 7;
 
 const startHour = (shift: DutyRosterShift): number => SHIFT_WINDOWS[shift]?.start ?? DEFAULT_START_HOUR;
@@ -98,7 +117,15 @@ const previousDay = (date: string): string => {
   return isoDate(d);
 };
 
-/** Human window text for a card, e.g. `06:00–14:00`. FLEXIBLE has none. */
+/**
+ * Human window text for a card, e.g. `07:00–15:00`. **FLEXIBLE and OFF both have none**, so this
+ * returns null for either.
+ *
+ * The example was `06:00–14:00`, which no shift has had since DR1, and the sentence named only
+ * FLEXIBLE — five lines below a `SHIFT_WINDOWS` comment rewritten in the same 2026-09-04 commit to
+ * say there are now two windowless values. A caller reading this one is told the `?? default` it is
+ * about to write only has to answer for a negotiated block, when it also answers for a rest day.
+ */
 export function shiftWindowText(shift: DutyRosterShift): string | null {
   const window = SHIFT_WINDOWS[shift];
   return window ? `${pad(window.start)}:00–${pad(window.end)}:00` : null;
@@ -144,7 +171,14 @@ export function selectShift(assignments: readonly DutyRosterAssignmentDto[], now
     return { assignment: flexibleToday, kind: 'flexible' };
   }
 
+  // OFF is dropped before the search, and web's `computeShiftLabel` drops it in the same place — the
+  // two must agree or one clinician sees different answers on their phone and on the web app. The
+  // loop above already skips it for free, having no window; this search does not, because
+  // `startHour` answers the 07:00 default for any windowless value. That default was written when
+  // FLEXIBLE was the only one and means "sorts with the morning"; applied to OFF it puts "Next shift
+  // 07:00" on the Today card for a rostered rest day.
   const upcoming = assignments
+    .filter(a => a.shift !== 'OFF')
     .filter(a => a.date > today || (a.date === today && hour < startHour(a.shift)))
     .sort((a, b) => (a.date === b.date ? startHour(a.shift) - startHour(b.shift) : a.date < b.date ? -1 : 1))[0];
 

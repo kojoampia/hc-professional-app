@@ -175,7 +175,7 @@ import { RosterStore } from './roster.store';
                     <ion-label>
                       <h3>{{ round.name }}</h3>
                       <p>
-                        {{ round.shift | titlecase }}
+                        {{ 'shiftType.' + round.shift | translate }}
                         @if (windowText(round.shift); as window) {
                           · {{ window }}
                         }
