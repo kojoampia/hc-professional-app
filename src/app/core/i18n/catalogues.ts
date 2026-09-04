@@ -282,6 +282,25 @@ export const EN = {
     noPermission: 'Your role cannot file notes.',
     close: 'Close',
   },
+  /**
+   * Shift names, one key per value of `DUTY_ROSTER_SHIFTS` in `core/api/duty-roster-api.service`.
+   *
+   * Both screens that show a shift rendered `{{ round.shift | titlecase }}` until 2026-09-04, which
+   * put the raw `DAY`/`OFF` on the card in title case — acceptable-looking English and nothing
+   * sensible in the other three languages, which is precisely why nobody noticed. `shift-names.spec`
+   * derives the expected keys from that array, so a value added there fails here in all four
+   * languages rather than reaching a screen.
+   *
+   * Bare names, unlike `web/`'s window-bearing ones: both screens already render `windowText(shift)`
+   * beside the name, so a label carrying the hours would print them twice.
+   */
+  shiftType: {
+    DAY: 'Day',
+    EVENING: 'Evening',
+    NIGHT: 'Night',
+    OFF: 'Off',
+    FLEXIBLE: 'Flexible',
+  },
   roster: {
     title: 'Roster',
     open: 'Open my roster',
@@ -646,6 +665,25 @@ export const ES: typeof EN = {
     fileNeedsText: 'Escriba qué ha ocurrido antes de añadirlo.',
     noPermission: 'Su rol no puede registrar notas.',
     close: 'Cerrar',
+  },
+  /**
+   * Shift names, one key per value of `DUTY_ROSTER_SHIFTS` in `core/api/duty-roster-api.service`.
+   *
+   * Both screens that show a shift rendered `{{ round.shift | titlecase }}` until 2026-09-04, which
+   * put the raw `DAY`/`OFF` on the card in title case — acceptable-looking English and nothing
+   * sensible in the other three languages, which is precisely why nobody noticed. `shift-names.spec`
+   * derives the expected keys from that array, so a value added there fails here in all four
+   * languages rather than reaching a screen.
+   *
+   * Bare names, unlike `web/`'s window-bearing ones: both screens already render `windowText(shift)`
+   * beside the name, so a label carrying the hours would print them twice.
+   */
+  shiftType: {
+    DAY: 'Día',
+    EVENING: 'Tarde',
+    NIGHT: 'Noche',
+    OFF: 'Libre',
+    FLEXIBLE: 'Flexible',
   },
   roster: {
     title: 'Turnos',
@@ -1013,6 +1051,25 @@ export const FR: typeof EN = {
     noPermission: 'Votre rôle ne permet pas de saisir des notes.',
     close: 'Fermer',
   },
+  /**
+   * Shift names, one key per value of `DUTY_ROSTER_SHIFTS` in `core/api/duty-roster-api.service`.
+   *
+   * Both screens that show a shift rendered `{{ round.shift | titlecase }}` until 2026-09-04, which
+   * put the raw `DAY`/`OFF` on the card in title case — acceptable-looking English and nothing
+   * sensible in the other three languages, which is precisely why nobody noticed. `shift-names.spec`
+   * derives the expected keys from that array, so a value added there fails here in all four
+   * languages rather than reaching a screen.
+   *
+   * Bare names, unlike `web/`'s window-bearing ones: both screens already render `windowText(shift)`
+   * beside the name, so a label carrying the hours would print them twice.
+   */
+  shiftType: {
+    DAY: 'Journée',
+    EVENING: 'Soirée',
+    NIGHT: 'Nuit',
+    OFF: 'Repos',
+    FLEXIBLE: 'Flexible',
+  },
   roster: {
     title: 'Planning',
     open: 'Voir mon planning',
@@ -1377,6 +1434,25 @@ export const DE: typeof EN = {
     fileNeedsText: 'Beschreiben Sie zuerst, was geschehen ist.',
     noPermission: 'Ihre Rolle darf keine Notizen erfassen.',
     close: 'Schließen',
+  },
+  /**
+   * Shift names, one key per value of `DUTY_ROSTER_SHIFTS` in `core/api/duty-roster-api.service`.
+   *
+   * Both screens that show a shift rendered `{{ round.shift | titlecase }}` until 2026-09-04, which
+   * put the raw `DAY`/`OFF` on the card in title case — acceptable-looking English and nothing
+   * sensible in the other three languages, which is precisely why nobody noticed. `shift-names.spec`
+   * derives the expected keys from that array, so a value added there fails here in all four
+   * languages rather than reaching a screen.
+   *
+   * Bare names, unlike `web/`'s window-bearing ones: both screens already render `windowText(shift)`
+   * beside the name, so a label carrying the hours would print them twice.
+   */
+  shiftType: {
+    DAY: 'Tag',
+    EVENING: 'Abend',
+    NIGHT: 'Nacht',
+    OFF: 'Frei',
+    FLEXIBLE: 'Flexibel',
   },
   roster: {
     title: 'Dienstplan',

@@ -129,6 +129,36 @@ describe('computeShiftLabel', () => {
     });
   });
 
+  /**
+   * `OFF` is the second value with no window, and the first for which "no window" means "not worked"
+   * rather than "all day". Every one of these passed before the exclusion was written, reporting a
+   * rest day as a shift — because `startHour` answers the 07:00 default for any windowless value,
+   * and that default was chosen when FLEXIBLE was the only one and meant "sorts with the morning".
+   */
+  describe('OFF, which is a rostered rest day', () => {
+    it('is never active, however the clock reads', () => {
+      expect(computeShiftLabel([assignment({ shift: 'OFF' })], at('2026-08-05T09:00:00'))).toBeNull();
+      expect(computeShiftLabel([assignment({ shift: 'OFF' })], at('2026-08-05T23:30:00'))).toBeNull();
+    });
+
+    it('is not announced as the next shift when it is in the future', () => {
+      expect(computeShiftLabel([assignment({ shift: 'OFF', date: '2026-08-07' })], at('2026-08-05T09:00:00'))).toBeNull();
+    });
+
+    it('does not displace a real shift that starts later the same week', () => {
+      const label = computeShiftLabel(
+        [assignment({ id: 'rest', date: '2026-08-06', shift: 'OFF' }), assignment({ id: 'work', date: '2026-08-07', shift: 'DAY' })],
+        at('2026-08-05T09:00:00'),
+      );
+
+      expect(label).toEqual({ kind: 'next', date: '2026-08-07', time: '07:00' });
+    });
+
+    it('has no window text', () => {
+      expect(shiftWindowText('OFF')).toBeNull();
+    });
+  });
+
   describe('the next upcoming shift', () => {
     it('reports later today', () => {
       expect(computeShiftLabel([assignment({ shift: 'EVENING' })], at('2026-08-05T09:00:00'))).toEqual({
