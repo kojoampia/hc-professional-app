@@ -117,7 +117,15 @@ const previousDay = (date: string): string => {
   return isoDate(d);
 };
 
-/** Human window text for a card, e.g. `06:00–14:00`. FLEXIBLE has none. */
+/**
+ * Human window text for a card, e.g. `07:00–15:00`. **FLEXIBLE and OFF both have none**, so this
+ * returns null for either.
+ *
+ * The example was `06:00–14:00`, which no shift has had since DR1, and the sentence named only
+ * FLEXIBLE — five lines below a `SHIFT_WINDOWS` comment rewritten in the same 2026-09-04 commit to
+ * say there are now two windowless values. A caller reading this one is told the `?? default` it is
+ * about to write only has to answer for a negotiated block, when it also answers for a rest day.
+ */
 export function shiftWindowText(shift: DutyRosterShift): string | null {
   const window = SHIFT_WINDOWS[shift];
   return window ? `${pad(window.start)}:00–${pad(window.end)}:00` : null;
