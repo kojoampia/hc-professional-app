@@ -91,11 +91,19 @@ export class TodayStore {
    * Only LICENSE documents: `ComplianceService` restricts an ACTIVE application when
    * a licence expires, so that is the one that costs the clinician their access. A
    * certificate expiring is not the same event.
+   *
+   * SUPERSEDED ROWS ARE EXCLUDED, and that filter is not cosmetic (backlog item 20).
+   * `/api/onboarding/documents` returns the whole history deliberately — an archived
+   * licence is evidence of what the clinician held while they were treating patients —
+   * so without this line a clinician who renewed in the app kept being warned about the
+   * lapsed row they had just replaced, with nothing they could do to clear it. That is
+   * item 20's opening complaint, on the one surface where the clinician sees it daily.
+   * The server-side readers exclude these rows; this is the client mirror of that.
    */
   readonly expiringDocuments = computed<ExpiringDocument[]>(() => {
     const now = Date.now();
     return (this.documents.value() ?? [])
-      .filter(doc => doc.type === 'LICENSE' && doc.expiryDate)
+      .filter(doc => doc.type === 'LICENSE' && doc.expiryDate && !doc.supersededAt)
       .map(doc => {
         const daysRemaining = Math.floor((new Date(`${doc.expiryDate as string}T12:00:00`).getTime() - now) / 86_400_000);
         return { document: doc, daysRemaining, lapsed: daysRemaining < 0 };

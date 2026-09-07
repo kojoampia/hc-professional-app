@@ -133,6 +133,31 @@ describe('TodayStore', () => {
       expect(store.expiringDocuments()[0].daysRemaining).toBeGreaterThanOrEqual(9);
     });
 
+    // Backlog item 20. Renewing adds a row and archives the one it replaces; the endpoint returns
+    // both, deliberately, because the archived one is evidence of what the clinician held. Without
+    // the supersede filter the Today strip warned about the lapsed row for ever after a renewal —
+    // item 20's own complaint, on the surface the clinician looks at every shift.
+    it('ignores a lapsed licence that has been replaced', async () => {
+      documents = jest.fn(() =>
+        of([doc({ id: 'old', expiryDate: iso(-3), supersededAt: '2026-09-07T09:00:00Z' }), doc({ id: 'new', expiryDate: iso(400) })]),
+      );
+      await configure();
+      await store.refresh();
+
+      expect(store.expiringDocuments()).toHaveLength(0);
+    });
+
+    // The other half: an UNreplaced lapsed licence must still warn. A filter that dropped both
+    // would look identical on the test above and would hide the thing this strip exists for.
+    it('still flags a lapsed licence that has not been replaced', async () => {
+      documents = jest.fn(() => of([doc({ id: 'old', expiryDate: iso(-3) })]));
+      await configure();
+      await store.refresh();
+
+      expect(store.expiringDocuments()).toHaveLength(1);
+      expect(store.expiringDocuments()[0].lapsed).toBe(true);
+    });
+
     it('marks an already-expired one as lapsed', async () => {
       documents = jest.fn(() => of([doc({ expiryDate: iso(-3) })]));
       await configure();

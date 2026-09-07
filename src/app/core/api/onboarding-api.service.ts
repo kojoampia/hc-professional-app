@@ -63,6 +63,12 @@ export interface PersonalDocumentDto {
   expiryDate?: string | null;
   sizeBytes?: number | null;
   name?: string | null;
+  /**
+   * Set once this document has been replaced by a newer one of the same credential (backlog item 20).
+   * Absent means current — the server stores no field at all on rows that predate the marker, and
+   * `null` is what an unreplaced row reports.
+   */
+  supersededAt?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
