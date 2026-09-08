@@ -67,10 +67,18 @@ describe('PatientsPage — who may file', () => {
     },
   );
 
-  it.each([['ROLE_CARER'], ['ROLE_ANGEL'], ['ROLE_CHEMIST'], ['ROLE_TECHNICIAN']])('withholds filing from %s', role => {
-    // The four read-only roles in v1. The server refuses their writes whatever this says; the point
+  it.each([['ROLE_CARER'], ['ROLE_CHEMIST'], ['ROLE_TECHNICIAN']])('withholds filing from %s', role => {
+    // The three read-only roles in v1. The server refuses their writes whatever this says; the point
     // is to not offer a button the queue would hold for hours before it is rejected.
     expect(pageAs([role]).canFile()).toBe(false);
+  });
+
+  it('withholds filing from a token bearing ROLE_ANGEL, which this app does not know', () => {
+    // Not a read-only role — not a role here at all since 2026-09-08 (../docs/backlog.md item 44).
+    // hc-patient still issues it and the three gateways share one signing key, so it keeps arriving;
+    // an unrecognised authority must offer nothing rather than fall through to a default.
+    expect(pageAs(['ROLE_ANGEL']).canFile()).toBe(false);
+    expect(pageAs(['ROLE_USER', 'ROLE_ANGEL']).canFile()).toBe(false);
   });
 
   it('withholds filing from an applicant holding only ROLE_USER', () => {

@@ -15,11 +15,21 @@
  *
  * <h3>The asymmetry is deliberate and easy to get wrong</h3>
  * Admin and doctor may do everything. Nurse, paramedic, therapist and pharmacist may manage cases,
- * activities and reports — but <b>not</b> patients or the duty roster. Carer, angel, chemist and
- * technician are read-only in v1.
+ * activities and reports — but <b>not</b> patients or the duty roster. Carer, chemist and technician
+ * are read-only in v1.
+ *
+ * <h3>`ROLE_ANGEL` is not one of these and is deliberately absent</h3>
+ * It was a ninth discipline until 2026-09-08 (`../docs/backlog.md` item 44). A care angel supports one
+ * named patient; hc-patient owns the authority — an `ACTIVE CareDelegation` re-read per request — and
+ * the whole surface for it, and this is a clinician app. **A token carrying it still arrives**: the
+ * three gateways share one signing key, hc-patient goes on issuing it, and an account on a long-lived
+ * database may hold a grant made before the removal. The functions below must therefore treat it as
+ * what it is here, an unrecognised string, and both do so by construction — they ask what the held
+ * authorities *contain* rather than resolving them to a role, so an authority nobody named grants
+ * nothing and counts as nothing. `clinical-permissions.spec.ts` pins that by the literal.
  */
 
-/** The nine clinical authorities plus the two the gateway issues to everyone. */
+/** The eight clinical authorities plus the two the gateway issues to everyone. */
 export const AUTHORITY = {
   ADMIN: 'ROLE_ADMIN',
   USER: 'ROLE_USER',
@@ -29,7 +39,6 @@ export const AUTHORITY = {
   PHARMACIST: 'ROLE_PHARMACIST',
   THERAPIST: 'ROLE_THERAPIST',
   CARER: 'ROLE_CARER',
-  ANGEL: 'ROLE_ANGEL',
   CHEMIST: 'ROLE_CHEMIST',
   TECHNICIAN: 'ROLE_TECHNICIAN',
 } as const;

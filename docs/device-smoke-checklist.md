@@ -132,9 +132,11 @@ registers a token the server stores and never sends to.
     wrong delivers one clinician's notifications to another.
 81. Sign out with **airplane mode on**. The app still signs out, and the stale row is pruned the
     first time a send to it fails.
-82. Sign in as a **carer, angel, chemist or technician** — a read-only role — and confirm the device
+82. Sign in as a **carer, chemist or technician** — a read-only role — and confirm the device
     registers and the preference toggles save. Under the `POST|PUT /api/**` rules these would 403
     silently, and the clinician would simply never be notified, with nothing to point at.
+    (An `angel` account was a fourth here until 2026-09-08. `ROLE_ANGEL` is no longer an authority of
+    this subsystem — `../../docs/backlog.md` item 44 — and there is no such login to sign in as.)
 
 ## Phase 4 — roster calendar and own time off
 
