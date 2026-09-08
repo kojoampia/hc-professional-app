@@ -98,7 +98,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
                 </ion-badge>
               }
               <ion-badge slot="end" [color]="statusColour(doc.verificationStatus)">
-                {{ 'documents.verification.' + doc.verificationStatus | translate }}
+                {{ 'documents.verification.' + (doc.verificationStatus ?? 'PENDING') | translate }}
               </ion-badge>
             </ion-item>
           } @empty {

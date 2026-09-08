@@ -182,6 +182,12 @@ export const EN = {
     /**
      * The status badge was `verificationStatus.toLowerCase()` — raw English on every locale, and
      * invisible to untranslated-literals.spec.ts because an interpolation is not a literal.
+     *
+     * <p><b>These strings are web's, verbatim</b>, from `healthConnect.onboarding.verification.*`.
+     * Not a style preference: a clinician reads this badge on the phone while a reviewer reads the
+     * same document's status in the portal, so two wordings for one status is two people describing
+     * one document differently. If a word here looks wrong — es REJECTED is `Rechazada`, feminine
+     * against a masculine "documento" — fix it in `web/` and copy the fix back rather than diverging.
      */
     verification: {
       PENDING: 'Pending review',
@@ -578,7 +584,7 @@ export const ES: typeof EN = {
     verification: {
       PENDING: 'Pendiente de revisión',
       VERIFIED: 'Verificado',
-      REJECTED: 'Rechazado',
+      REJECTED: 'Rechazada',
     },
   },
   tabs: {
@@ -967,7 +973,7 @@ export const FR: typeof EN = {
     expires: 'Expire le',
     superseded: 'Remplacé',
     verification: {
-      PENDING: 'En attente de vérification',
+      PENDING: 'En attente',
       VERIFIED: 'Vérifié',
       REJECTED: 'Rejeté',
     },
@@ -1357,8 +1363,8 @@ export const DE: typeof EN = {
     expires: 'Läuft ab am',
     superseded: 'Ersetzt',
     verification: {
-      PENDING: 'Prüfung ausstehend',
-      VERIFIED: 'Bestätigt',
+      PENDING: 'Ausstehend',
+      VERIFIED: 'Verifiziert',
       REJECTED: 'Abgelehnt',
     },
   },

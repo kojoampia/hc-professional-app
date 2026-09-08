@@ -87,6 +87,38 @@ describe('DocumentsPage — a replaced credential says so', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Replaced');
   });
 
+  /**
+   * The dimming, asserted separately because it is a second signal and nothing else covers it —
+   * deleting `[class.opacity-60]` failed none of the other tests, so the inversion was measuring the
+   * badge alone. `opacity-60` on the host composites the whole `ion-item` including its shadow DOM,
+   * which is why the same idiom works in web's two document lists.
+   */
+  it('dims the replaced row and only that row', async () => {
+    const fixture = await render([
+      licence({ id: 'old', supersededAt: '2026-09-07T10:00:00Z' }),
+      licence({ id: 'new', supersededAt: null, expiryDate: '2027-01-31' }),
+    ]);
+
+    const rows = fixture.debugElement.queryAll(By.css('ion-item'));
+    expect(rows).toHaveLength(2);
+    expect(rows.filter(row => row.classes['opacity-60'])).toHaveLength(1);
+  });
+
+  /**
+   * `verificationStatus` is nullable on the server, and item 20's review recorded that the generated
+   * `PUT /api/personal-documents/{id}` full-save can wipe it. Without the fallback the key itself
+   * renders — `documents.verification.undefined`, mid-screen, nothing thrown and nothing logged,
+   * which is the failure mode this repo's i18n gates exist for. web guards it the same way.
+   */
+  it('falls back to PENDING rather than rendering a key when the status is missing', async () => {
+    const fixture = await render([{ ...licence(), verificationStatus: undefined as never }]);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(rowCount(fixture)).toBe(1);
+    expect(text).toContain('Pending review');
+    expect(text).not.toContain('documents.verification');
+  });
+
   it('labels nothing when no document has been replaced', async () => {
     const fixture = await render([licence({ id: 'only' })]);
 
@@ -111,7 +143,9 @@ describe('DocumentsPage — a replaced credential says so', () => {
     ['en', 'Verified', 'Replaced'],
     ['es', 'Verificado', 'Reemplazado'],
     ['fr', 'Vérifié', 'Remplacé'],
-    ['de', 'Bestätigt', 'Ersetzt'],
+    ['de', 'Verifiziert', 'Ersetzt'],
+    // The expected words are web's, not this app's choice — see the catalogue's own note. This case
+    // is what caught the divergence: it failed the moment de VERIFIED was corrected to match.
   ])('renders the status and the replaced label in %s', async (language, status, replaced) => {
     const fixture = await render([licence({ id: 'old', supersededAt: '2026-09-07T10:00:00Z' })], language);
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';

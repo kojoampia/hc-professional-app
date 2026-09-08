@@ -111,10 +111,17 @@ Practicalities:
   trade is that wording changes ship in a release rather than a deploy.
 - `LanguageService` picks **an explicit choice, then the device locale, then English**.
   Only the primary subtag counts: `fr-CA` and `fr-FR` both select `fr`.
-- **Server enum values are not translated.** Document statuses (`PENDING`/`VERIFIED`/
-  `REJECTED`) appear in the administrator's review queue in exactly that form; translating
-  only the phone's copy would have a clinician and a reviewer describing the same document
-  differently.
+- **Server enum values ARE translated, and in web's words** (changed 2026-09-08, backlog item
+  45). This rule used to say the opposite, reasoning that the administrator's review queue shows
+  `PENDING`/`VERIFIED`/`REJECTED` verbatim, so translating only the phone's copy would have a
+  clinician and a reviewer describing one document differently. **The premise was already
+  false** — web's review queue translates them (`review-detail-page.component.html`) — so what
+  the rule actually protected was raw English on three of the four locales. The conclusion
+  survives it, inverted: the two apps must agree, so `documents.verification.*` carries
+  `healthConnect.onboarding.verification.*` **verbatim**, and a wording that looks wrong is
+  fixed in `web/` and copied back rather than diverged from here. Same for
+  `documents.superseded`. Document *type* names are still raw (`license`, `certificate`) —
+  backlog item 58, not a rule.
 - **The brand name is never translated.** "Abofonsa BridgeCare" reads identically in all
   four, and the parity spec asserts no `brand` key exists to be translated by accident.
 
