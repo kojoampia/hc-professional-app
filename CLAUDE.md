@@ -161,7 +161,11 @@ Node **22** (`.nvmrc`). Angular is pinned to **19.2.25**, byte-identical to `web
 
 There is **no same-origin relative prefix here.** Unlike `web/`, whose `ApplicationConfigService` uses `endpointPrefix = ''`, a Capacitor app has no origin to be relative to — every URL is absolute, from `src/environments/`.
 
-The Android emulator cannot see the host's `localhost`; the host loopback is `10.0.2.2` inside the emulator. The iOS simulator shares the host's network stack, so `localhost` is correct there and in a desktop browser. `environment.development.ts` branches on `Capacitor.getPlatform()` to handle this. If requests hang on Android but work in Chrome, this is why.
+**The development default points at the quality stack, not at a gateway on your machine** — `http://professional.abofonsa.local/`, mirroring `hc-patient/mobile`, whose default does the same. Quality is what acceptance runs against, so it is what you get unless you deliberately change it.
+
+A hostname, and port 80. `professional.abofonsa.local` resolves through LAN DNS to `jacserver` (192.168.1.2) — jacserver's own `/etc/hosts` maps it to 127.0.0.1, but that is a local override and a device on the LAN gets the real address. Port 80 matters just as much: the quality gateway and api publish on **127.0.0.1 only** (15507, 18090), so `http://192.168.1.2:15507/` cannot work from anywhere but jacserver. Port 80 goes through the vhost to the web container, whose nginx proxies `/api`, `/services`, `/management` and `/auth` on to the gateway — the same hop the browser SPA uses.
+
+**The `10.0.2.2` trap is still real, it just no longer applies to the default.** The Android emulator cannot see the host's `localhost`; the host loopback is `10.0.2.2` inside the emulator, while the iOS simulator shares the host's network stack so `localhost` is correct there and in a desktop browser. `environment.development.ts` used to branch on `Capacitor.getPlatform()` for exactly this. It no longer does, because a hostname needs no translation and resolves identically everywhere. You need the rule again the moment you point the app at a gateway you are running yourself: `http://localhost:5505/` in a browser or the iOS simulator, `http://10.0.2.2:5505/` on the Android emulator. If requests hang on Android but work in Chrome, this is why.
 
 ### Access tokens are never persisted
 
@@ -280,7 +284,7 @@ WebView has SubtleCrypto because `androidScheme: 'https'` makes it a secure cont
 
 ### `ng serve` cannot talk to production, by design
 
-The gateway's prod CORS allowlist is `capacitor://localhost`, `https://localhost` and `ionic://localhost`. A browser at `http://localhost:4300` is **not** on it and never will be — adding it would weaken the guarantee that the deployed web app's single-origin posture is untouched. So pointing the dev build at `professional.abofonsa.com` and opening it in Chrome gets a CORS failure, which is correct behaviour, not a bug. For local development run the gateway locally on :5505; for on-device testing the Capacitor origin is allowlisted and works.
+The gateway's prod CORS allowlist is `capacitor://localhost`, `https://localhost` and `ionic://localhost`. A browser at `http://localhost:4300` is **not** on it and never will be — adding it would weaken the guarantee that the deployed web app's single-origin posture is untouched. So pointing the dev build at `professional.abofonsa.com` and opening it in Chrome gets a CORS failure, which is correct behaviour, not a bug. The development default avoids the question by pointing at the quality stack over the LAN; on a device the Capacitor origin is allowlisted and works. **`hc-patient/mobile` solved this differently and both are correct** — it sets `CapacitorHttp: { enabled: true }` in `capacitor.config.ts`, which patches XHR onto the native HTTP client so no preflight is ever sent, because _its_ gateway has CORS disabled outright. This app does not enable it and does not need to: the professional gateway answers a Capacitor preflight with the right `Access-Control-Allow-*` headers. Do not "align" the two without reading both gateways' CORS configuration first.
 
 ### Every Capacitor plugin goes behind a wrapper
 
