@@ -37,7 +37,7 @@ export interface NotificationPreferences {
  *
  * <p>Everything here is under `/api/notifications/**`, which `api/`'s SecurityConfiguration declares
  * `authenticated()` **above** the `POST|PUT /api/**` rules that require `CLINICAL_MUTATION`. That
- * ordering is the whole reason these are not on an entity endpoint: a carer, angel, chemist or
+ * ordering is the whole reason these are not on an entity endpoint: a carer, chemist or
  * technician — every read-only role — would otherwise get a silent 403 registering their phone and
  * simply never receive a notification, with nothing on screen to act on.
  */

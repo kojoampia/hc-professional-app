@@ -23,7 +23,7 @@ describe('clinical permissions', () => {
     expect(hasClinicalPermission([authority], 'manageActivity')).toBe(true);
   });
 
-  it.each(['ROLE_CARER', 'ROLE_ANGEL', 'ROLE_CHEMIST', 'ROLE_TECHNICIAN'])('REFUSES a %s — read-only in v1', authority => {
+  it.each(['ROLE_CARER', 'ROLE_CHEMIST', 'ROLE_TECHNICIAN'])('REFUSES a %s — read-only in v1', authority => {
     expect(hasClinicalPermission([authority], 'manageActivity')).toBe(false);
     expect(hasClinicalPermission([authority], 'manageReport')).toBe(false);
     expect(hasClinicalPermission([authority], 'manageCase')).toBe(false);
@@ -66,5 +66,35 @@ describe('clinical permissions', () => {
     // is NOT a null check. A carer has a role; what they lack is a WRITE permission.
     expect(hasAnyClinicalRole(['ROLE_CARER'])).toBe(true);
     expect(hasAnyClinicalRole(['ROLE_USER'])).toBe(false);
+  });
+});
+
+/**
+ * `../docs/backlog.md` item 44 — an angel supports a patient and has no role in this app.
+ *
+ * `ROLE_ANGEL` was a ninth discipline in `AUTHORITY` until 2026-09-08. Removing it from that map is a
+ * compile-time fact TypeScript already guarantees; **what these cases hold is the runtime one**, which
+ * nothing about the deletion establishes. A token bearing the authority keeps arriving — hc-patient
+ * issues it, all three gateways share one signing key, and an account on a long-lived database may
+ * hold a grant made before the removal — so the question is what this app does with an authority it
+ * does not recognise, and the answer must be *nothing offered*, not *nothing known, so assume yes*.
+ *
+ * Both functions already answer correctly by construction: they test membership of the held
+ * authorities rather than resolving them to a role, so there is no default branch to fall through.
+ * That is easy to lose in a refactor towards a role enum, which is why it is written down.
+ */
+describe('an authority this app does not recognise (item 44: ROLE_ANGEL)', () => {
+  it('offers no clinical permission, alone or beside the base user authority', () => {
+    for (const permission of ['manageActivity', 'manageReport', 'manageCase', 'archiveCase'] as const) {
+      expect(hasClinicalPermission(['ROLE_ANGEL'], permission)).toBe(false);
+      expect(hasClinicalPermission(['ROLE_USER', 'ROLE_ANGEL'], permission)).toBe(false);
+    }
+    // The control: without it this would pass on a function that refuses everybody.
+    expect(hasClinicalPermission(['ROLE_USER', 'ROLE_NURSE'], 'manageActivity')).toBe(true);
+  });
+
+  it('is not a clinical role, so the shell treats the account as an applicant', () => {
+    expect(hasAnyClinicalRole(['ROLE_ANGEL'])).toBe(false);
+    expect(hasAnyClinicalRole(['ROLE_USER', 'ROLE_ANGEL'])).toBe(false);
   });
 });

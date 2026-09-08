@@ -38,7 +38,7 @@ export interface AbsenceDto {
  * may do to their own schedule.
  *
  * <p>`/api/absences/**` is hoisted above the `CLINICAL_MUTATION` rules in the server's
- * SecurityConfiguration precisely so that carer, angel, chemist and technician — read-only in v1 —
+ * SecurityConfiguration precisely so that carer, chemist and technician — read-only in v1 —
  * can still ask for time off. Booking leave is not a clinical mutation.
  */
 @Injectable({ providedIn: 'root' })
