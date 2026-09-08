@@ -177,6 +177,23 @@ export const EN = {
     uploadFailed: 'Upload failed. Check your connection and try again.',
     addOrRenew: 'Add or renew a document',
     expires: 'Expires',
+    /** Backlog item 45. Mirrors web's healthConnect.onboarding.superseded, same word. */
+    superseded: 'Replaced',
+    /**
+     * The status badge was `verificationStatus.toLowerCase()` — raw English on every locale, and
+     * invisible to untranslated-literals.spec.ts because an interpolation is not a literal.
+     *
+     * <p><b>These strings are web's, verbatim</b>, from `healthConnect.onboarding.verification.*`.
+     * Not a style preference: a clinician reads this badge on the phone while a reviewer reads the
+     * same document's status in the portal, so two wordings for one status is two people describing
+     * one document differently. If a word here looks wrong — es REJECTED is `Rechazada`, feminine
+     * against a masculine "documento" — fix it in `web/` and copy the fix back rather than diverging.
+     */
+    verification: {
+      PENDING: 'Pending review',
+      VERIFIED: 'Verified',
+      REJECTED: 'Rejected',
+    },
   },
   tabs: {
     today: 'Today',
@@ -563,6 +580,12 @@ export const ES: typeof EN = {
     uploadFailed: 'Error al subir el archivo. Compruebe su conexión e inténtelo de nuevo.',
     addOrRenew: 'Añadir o renovar un documento',
     expires: 'Caduca',
+    superseded: 'Reemplazado',
+    verification: {
+      PENDING: 'Pendiente de revisión',
+      VERIFIED: 'Verificado',
+      REJECTED: 'Rechazada',
+    },
   },
   tabs: {
     today: 'Hoy',
@@ -948,6 +971,12 @@ export const FR: typeof EN = {
     uploadFailed: "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
     addOrRenew: 'Ajouter ou renouveler un document',
     expires: 'Expire le',
+    superseded: 'Remplacé',
+    verification: {
+      PENDING: 'En attente',
+      VERIFIED: 'Vérifié',
+      REJECTED: 'Rejeté',
+    },
   },
   tabs: {
     today: "Aujourd'hui",
@@ -1332,6 +1361,12 @@ export const DE: typeof EN = {
     uploadFailed: 'Der Upload ist fehlgeschlagen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
     addOrRenew: 'Dokument hinzufügen oder erneuern',
     expires: 'Läuft ab am',
+    superseded: 'Ersetzt',
+    verification: {
+      PENDING: 'Ausstehend',
+      VERIFIED: 'Verifiziert',
+      REJECTED: 'Abgelehnt',
+    },
   },
   tabs: {
     today: 'Heute',

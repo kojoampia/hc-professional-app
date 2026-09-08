@@ -85,15 +85,20 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
             ><ion-label>{{ 'documents.yours' | translate }}</ion-label></ion-list-header
           >
           @for (doc of store.byNewest(); track doc.id) {
-            <ion-item>
+            <ion-item [class.opacity-60]="replaced(doc)">
               <ion-label>
                 {{ label(doc) }}
                 @if (doc.expiryDate) {
                   <p class="text-hpd-muted">{{ 'documents.expires' | translate }} {{ doc.expiryDate }}</p>
                 }
               </ion-label>
+              @if (replaced(doc)) {
+                <ion-badge slot="end" color="medium" data-cy="supersededBadge">
+                  {{ 'documents.superseded' | translate }}
+                </ion-badge>
+              }
               <ion-badge slot="end" [color]="statusColour(doc.verificationStatus)">
-                {{ doc.verificationStatus.toLowerCase() }}
+                {{ 'documents.verification.' + (doc.verificationStatus ?? 'PENDING') | translate }}
               </ion-badge>
             </ion-item>
           } @empty {
@@ -244,6 +249,24 @@ export class DocumentsPage implements OnInit {
 
   label(doc: PersonalDocumentDto): string {
     return doc.otherLabel || doc.type.toLowerCase();
+  }
+
+  /**
+   * Whether this row has been replaced by a newer upload of the same credential — item 20's marker,
+   * read here for item 45.
+   *
+   * <p>An archived row stays in the list on purpose: it is evidence of what a clinician held and when,
+   * and web's review screen keeps it for the same reason. What was missing is that it said so. Before
+   * this, renewing a licence in the app left two licences on screen, the older one still carrying its
+   * lapsed expiry date and its VERIFIED badge, with `byNewest()` ordering as the only hint which was
+   * current — a compliance problem the clinician had already fixed, and a plausible reason to ring
+   * support.
+   *
+   * <p>Absent and null both mean current: the server stores no field at all on rows that predate the
+   * marker, so `!= null` rather than a truthiness test.
+   */
+  replaced(doc: PersonalDocumentDto): boolean {
+    return doc.supersededAt != null;
   }
 
   statusColour(status: string): string {
