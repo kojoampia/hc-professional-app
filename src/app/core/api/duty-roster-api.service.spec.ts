@@ -273,7 +273,7 @@ describe('computeShiftLabel', () => {
  * only an HttpTestingController can.
  *
  * <p>Matched with `endsWith` on the path rather than the full absolute URL, because the base differs
- * per platform — `10.0.2.2` on the Android emulator, `localhost` elsewhere.
+ * per environment — the quality vhost in development, `professional.abofonsa.com` in production.
  */
 describe('DutyRosterApiService — the paths', () => {
   let service: DutyRosterApiService;
