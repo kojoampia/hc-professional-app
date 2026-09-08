@@ -120,7 +120,7 @@ Practicalities:
   survives it, inverted: the two apps must agree, so `documents.verification.*` carries
   `healthConnect.onboarding.verification.*` **verbatim**, and a wording that looks wrong is
   fixed in `web/` and copied back rather than diverged from here. Same for
-  `documents.superseded`. Document *type* names are still raw (`license`, `certificate`) —
+  `documents.superseded`. Document _type_ names are still raw (`license`, `certificate`) —
   backlog item 58, not a rule.
 - **The brand name is never translated.** "Abofonsa BridgeCare" reads identically in all
   four, and the parity spec asserts no `brand` key exists to be translated by accident.
