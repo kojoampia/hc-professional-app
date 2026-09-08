@@ -177,6 +177,17 @@ export const EN = {
     uploadFailed: 'Upload failed. Check your connection and try again.',
     addOrRenew: 'Add or renew a document',
     expires: 'Expires',
+    /** Backlog item 45. Mirrors web's healthConnect.onboarding.superseded, same word. */
+    superseded: 'Replaced',
+    /**
+     * The status badge was `verificationStatus.toLowerCase()` — raw English on every locale, and
+     * invisible to untranslated-literals.spec.ts because an interpolation is not a literal.
+     */
+    verification: {
+      PENDING: 'Pending review',
+      VERIFIED: 'Verified',
+      REJECTED: 'Rejected',
+    },
   },
   tabs: {
     today: 'Today',
@@ -563,6 +574,12 @@ export const ES: typeof EN = {
     uploadFailed: 'Error al subir el archivo. Compruebe su conexión e inténtelo de nuevo.',
     addOrRenew: 'Añadir o renovar un documento',
     expires: 'Caduca',
+    superseded: 'Reemplazado',
+    verification: {
+      PENDING: 'Pendiente de revisión',
+      VERIFIED: 'Verificado',
+      REJECTED: 'Rechazado',
+    },
   },
   tabs: {
     today: 'Hoy',
@@ -948,6 +965,12 @@ export const FR: typeof EN = {
     uploadFailed: "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
     addOrRenew: 'Ajouter ou renouveler un document',
     expires: 'Expire le',
+    superseded: 'Remplacé',
+    verification: {
+      PENDING: 'En attente de vérification',
+      VERIFIED: 'Vérifié',
+      REJECTED: 'Rejeté',
+    },
   },
   tabs: {
     today: "Aujourd'hui",
@@ -1332,6 +1355,12 @@ export const DE: typeof EN = {
     uploadFailed: 'Der Upload ist fehlgeschlagen. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
     addOrRenew: 'Dokument hinzufügen oder erneuern',
     expires: 'Läuft ab am',
+    superseded: 'Ersetzt',
+    verification: {
+      PENDING: 'Prüfung ausstehend',
+      VERIFIED: 'Bestätigt',
+      REJECTED: 'Abgelehnt',
+    },
   },
   tabs: {
     today: 'Heute',
