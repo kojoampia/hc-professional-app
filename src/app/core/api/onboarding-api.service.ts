@@ -33,16 +33,32 @@ export const WORKING_STATUSES: readonly OnboardingStatus[] = ['ROSTER_CONFIGURED
 export const isWorkingClinician = (status: OnboardingStatus | null | undefined): boolean =>
   status !== null && status !== undefined && WORKING_STATUSES.includes(status);
 
-export type DocumentType =
-  | 'CERTIFICATE'
-  | 'LICENSE'
-  | 'PASSPORT'
-  | 'GHANACARD'
-  | 'DRIVERLICENSE'
-  | 'VOTERCARD'
-  | 'PASSPHOTO'
-  | 'NHIS'
-  | 'OTHER';
+/**
+ * Mirrors `api/domain/enumeration/DocumentType`, and carries the same nine values `web/`'s
+ * `healthConnect.onboarding.documentTypes.*` names.
+ *
+ * <p><b>An array rather than a bare union</b>, for the reason `duty-roster-api.service.ts`'s
+ * `DUTY_ROSTER_SHIFTS` gives: a union of string literals cannot be enumerated at runtime, so
+ * nothing could ask whether the four catalogues named every value. That question had never been
+ * asked here — the documents screen rendered `type.toLowerCase()` on both of its surfaces, so
+ * `license` and `nhis` reached a German reader untouched and no gate could see it (backlog item
+ * 58). `document-type-names.spec.ts` beside the catalogues is what asks it now, and it needs this
+ * list to do so.
+ */
+export const DOCUMENT_TYPES = [
+  'CERTIFICATE',
+  'LICENSE',
+  'PASSPORT',
+  'GHANACARD',
+  'DRIVERLICENSE',
+  'VOTERCARD',
+  'PASSPHOTO',
+  'NHIS',
+  'OTHER',
+] as const;
+
+/** The union, derived from the list above rather than written twice. */
+export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 

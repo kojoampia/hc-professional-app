@@ -133,7 +133,7 @@ const RENEWABLE_TYPES: DocumentType[] = ['LICENSE', 'CERTIFICATE', 'NHIS', 'OTHE
               <p class="hpd-label">{{ 'documents.type' | translate }}</p>
               <ion-select [(ngModel)]="type" interface="action-sheet" fill="outline" placeholder="{{ 'documents.choose' | translate }}">
                 @for (option of types; track option) {
-                  <ion-select-option [value]="option">{{ option.toLowerCase() }}</ion-select-option>
+                  <ion-select-option [value]="option">{{ typeName(option) }}</ion-select-option>
                 }
               </ion-select>
             </div>
@@ -227,7 +227,15 @@ export class DocumentsPage implements OnInit {
   readonly store = inject(DocumentsStore);
   readonly network = inject(NetworkService);
   private readonly relativeTime = inject(RelativeTime);
-  /** DatePipe formats through LOCALE_ID, which ngx-translate does not touch — pass it explicitly. */
+  /**
+   * The active language, read by {@link typeName} so the list and the picker re-render when the
+   * clinician changes it.
+   *
+   * <p>`translate.instant` is a plain call and notifies nothing, so under OnPush a language change
+   * would leave the old words on screen — which is what the `| translate` pipe does for the rest of
+   * this template. Reading the signal inside the method puts it in the template's reactive context
+   * and buys the same behaviour. Same idiom as `me.page.ts`'s `signOutButtons`.
+   */
   readonly locale = inject(LanguageService).current;
   private readonly translate = inject(TranslateService);
 
@@ -247,8 +255,60 @@ export class DocumentsPage implements OnInit {
     await this.store.refresh();
   }
 
+  /**
+   * The reader's name for a document type — backlog item 58.
+   *
+   * <p>Both surfaces that show a type call this one method: the row title through {@link label} and
+   * the upload picker's options directly. They used to be two copies of `type.toLowerCase()`, which
+   * is how they came to be wrong in the same way twice; one method is what stops them drifting
+   * apart again, and it is the only thing a spec can reach, since Ionic renders the picker's
+   * `ng-template` into an overlay jsdom never instantiates.
+   *
+   * <h3>Two fallbacks, because there are two different failures</h3>
+   * <b>A type this build does not know</b> — the server's enum gained a value after this release —
+   * renders as the server's own word, `BIOMETRIC`, not as
+   * `documents.documentTypes.BIOMETRIC`. Untranslated, which is the defect this item exists to
+   * remove, but bounded to one credential this build predates and fixed by a release; whereas the
+   * key mid-screen is the failure mode CLAUDE.md's i18n section is written about, and a generic
+   * word would make two unknown credentials read identically on a compliance screen.
+   *
+   * <p><b>No type at all</b> has no word to fall back to, so it takes the neutral
+   * `documents.unknownType`. `PersonalDocument.type` carries no `@NotNull`, and item 20's review
+   * recorded that the generated `PUT /api/personal-documents/{id}` full-save wipes the fields it is
+   * not given — which is exactly how `verificationStatus` came to need its own guard here.
+   *
+   * <p>Neither fallback is `OTHER`'s word. `OTHER` is a real value that arrives with a required
+   * `otherLabel`, so borrowing it would make a broken row indistinguishable from a sound one.
+   */
+  typeName(type: DocumentType | string | null | undefined): string {
+    this.locale();
+    if (!type) {
+      return this.translate.instant('documents.unknownType');
+    }
+    const key = `documents.documentTypes.${type}`;
+    const name = this.translate.instant(key);
+    // ngx-translate answers a key it cannot resolve with the key itself, which is the only signal
+    // there is that the catalogue does not carry this type.
+    return name === key ? type : name;
+  }
+
+  /**
+   * The row title: the type, then the clinician's own label for it when there is one.
+   *
+   * <p>This was `doc.otherLabel || doc.type.toLowerCase()`, so a label **replaced** the type. That
+   * is wrong twice over. `otherLabel` is not confined to `OTHER` — `web/`'s upload form keeps the
+   * control's value when the type changes and sends it whatever the type is, and the server accepts
+   * it (`OnboardingDocumentResource.validate` only *requires* it for `OTHER`) — so a licence
+   * carrying a stray label rendered with no hint that it was a licence at all. And on an `OTHER`
+   * row it dropped the one word saying the document is outside the standard set.
+   *
+   * <p>Appending rather than replacing is also what both of `web/`'s lists do; the separator is
+   * `documents-tab.component.html`'s, that being the clinician's own list rather than the
+   * reviewer's.
+   */
   label(doc: PersonalDocumentDto): string {
-    return doc.otherLabel || doc.type.toLowerCase();
+    const name = this.typeName(doc.type);
+    return doc.otherLabel ? `${name} · ${doc.otherLabel}` : name;
   }
 
   /**
