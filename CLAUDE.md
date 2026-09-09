@@ -120,8 +120,21 @@ Practicalities:
   survives it, inverted: the two apps must agree, so `documents.verification.*` carries
   `healthConnect.onboarding.verification.*` **verbatim**, and a wording that looks wrong is
   fixed in `web/` and copied back rather than diverged from here. Same for
-  `documents.superseded`. Document _type_ names are still raw (`license`, `certificate`) —
-  backlog item 58, not a rule.
+  `documents.superseded`, and — since 2026-09-09, backlog item 58 — for `documents.documentTypes.*`,
+  which carries `healthConnect.onboarding.documentTypes.*`'s nine words the same way. **This line
+  used to end "document _type_ names are still raw (`license`, `certificate`)"; that stopped being
+  true and should not be repeated.**
+- **A server enum needs a runtime list before a catalogue can be held to it.** `DOCUMENT_TYPES`
+  and `DUTY_ROSTER_SHIFTS` are `const` arrays with their unions derived from them, because a union
+  of string literals cannot be enumerated and so cannot be asserted against anything;
+  `document-type-names.spec.ts` and `shift-names.spec.ts` are what that buys. Both are second
+  copies of a `web/` spec rather than shared ones — mobile CI clones one repo.
+- **A translated enum needs an answer for a value the catalogue does not carry**, because
+  ngx-translate renders the key itself. There are two such failures and they take different
+  answers: a value this build predates falls back to the server's own word, which at least names
+  the credential; a value that is _absent_ falls back to `documents.unknownType`, a neutral word.
+  Neither borrows `OTHER`'s, which is a real value carrying a required `otherLabel` — see
+  `documents.page.ts` `typeName`.
 - **The brand name is never translated.** "Abofonsa BridgeCare" reads identically in all
   four, and the parity spec asserts no `brand` key exists to be translated by accident.
 

@@ -194,6 +194,38 @@ export const EN = {
       VERIFIED: 'Verified',
       REJECTED: 'Rejected',
     },
+    /**
+     * What to call a document whose type this build does not know — either because the server sent
+     * a value added after this release, or because the row carries no type at all.
+     *
+     * <p>Deliberately outside `documentTypes` below, which holds the server's enum and only that:
+     * `document-type-names.spec.ts` checks both directions over `DOCUMENT_TYPES`, so a tenth key in
+     * that group would have to be excused by name. It is deliberately vague, too — it must not
+     * claim a type the row does not have, which is why it is not `OTHER`'s word.
+     */
+    unknownType: 'Document',
+    /**
+     * The document type on the row title and in the upload picker, both of which rendered
+     * `type.toLowerCase()` until backlog item 58 — `license`, `certificate`, `nhis`, in English, on
+     * all four locales. Invisible to `untranslated-literals.spec.ts` for the same reason the status
+     * badge was: an interpolation of a model value is neither visible text nor an attribute.
+     *
+     * <p><b>These strings are web's, verbatim</b>, from `healthConnect.onboarding.documentTypes.*`,
+     * under the rule item 45 settled and CLAUDE.md states — a clinician reads this on the phone
+     * while a reviewer reads the same document in the portal, so one credential must have one name.
+     * A wording that looks wrong is fixed in `web/` and copied back, never diverged from here.
+     */
+    documentTypes: {
+      CERTIFICATE: 'Professional certificate',
+      LICENSE: 'License',
+      PASSPORT: 'Passport',
+      GHANACARD: 'Ghana Card',
+      DRIVERLICENSE: "Driver's license",
+      VOTERCARD: 'Voter card',
+      PASSPHOTO: 'Passport photo',
+      NHIS: 'NHIS card',
+      OTHER: 'Other',
+    },
   },
   tabs: {
     today: 'Today',
@@ -586,6 +618,18 @@ export const ES: typeof EN = {
       VERIFIED: 'Verificado',
       REJECTED: 'Rechazada',
     },
+    unknownType: 'Documento',
+    documentTypes: {
+      CERTIFICATE: 'Certificado profesional',
+      LICENSE: 'Licencia',
+      PASSPORT: 'Pasaporte',
+      GHANACARD: 'Ghana Card',
+      DRIVERLICENSE: 'Permiso de conducir',
+      VOTERCARD: 'Tarjeta de votante',
+      PASSPHOTO: 'Foto de pasaporte',
+      NHIS: 'Tarjeta NHIS',
+      OTHER: 'Otro',
+    },
   },
   tabs: {
     today: 'Hoy',
@@ -977,6 +1021,18 @@ export const FR: typeof EN = {
       VERIFIED: 'Vérifié',
       REJECTED: 'Rejeté',
     },
+    unknownType: 'Document',
+    documentTypes: {
+      CERTIFICATE: 'Certificat professionnel',
+      LICENSE: 'Licence',
+      PASSPORT: 'Passeport',
+      GHANACARD: 'Carte Ghana',
+      DRIVERLICENSE: 'Permis de conduire',
+      VOTERCARD: "Carte d'électeur",
+      PASSPHOTO: "Photo d'identité",
+      NHIS: 'Carte NHIS',
+      OTHER: 'Autre',
+    },
   },
   tabs: {
     today: "Aujourd'hui",
@@ -1366,6 +1422,18 @@ export const DE: typeof EN = {
       PENDING: 'Ausstehend',
       VERIFIED: 'Verifiziert',
       REJECTED: 'Abgelehnt',
+    },
+    unknownType: 'Dokument',
+    documentTypes: {
+      CERTIFICATE: 'Berufszertifikat',
+      LICENSE: 'Lizenz',
+      PASSPORT: 'Reisepass',
+      GHANACARD: 'Ghana Card',
+      DRIVERLICENSE: 'Führerschein',
+      VOTERCARD: 'Wählerausweis',
+      PASSPHOTO: 'Passfoto',
+      NHIS: 'NHIS-Karte',
+      OTHER: 'Sonstiges',
     },
   },
   tabs: {
