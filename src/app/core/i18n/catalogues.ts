@@ -283,6 +283,8 @@ export const EN = {
     archiveHint: 'The case stays in the patient record. It leaves your queue once this is sent.',
     archivePending: 'Archiving',
     archiveDoctorOnly: 'Only a doctor can archive a case.',
+    archivedOn: 'Archived',
+    archivedNote: 'This case is retired.',
     close: 'Close',
   },
   patients: {
@@ -685,6 +687,8 @@ export const ES: typeof EN = {
     archiveHint: 'El caso permanece en el historial del paciente. Saldrá de su lista cuando se envíe.',
     archivePending: 'Archivando',
     archiveDoctorOnly: 'Solo un médico puede archivar un caso.',
+    archivedOn: 'Archivado el',
+    archivedNote: 'Este caso ya no está activo.',
     close: 'Cerrar',
   },
   patients: {
@@ -1088,6 +1092,8 @@ export const FR: typeof EN = {
     archiveHint: "Le dossier reste dans le dossier du patient. Il quitte votre liste une fois l'envoi effectué.",
     archivePending: 'Archivage',
     archiveDoctorOnly: 'Seul un médecin peut archiver un dossier.',
+    archivedOn: 'Archivé le',
+    archivedNote: "Ce dossier n'est plus actif.",
     close: 'Fermer',
   },
   patients: {
@@ -1490,6 +1496,8 @@ export const DE: typeof EN = {
     archiveHint: 'Der Fall bleibt in der Patientenakte. Er verschwindet aus Ihrer Liste, sobald gesendet wurde.',
     archivePending: 'Wird archiviert',
     archiveDoctorOnly: 'Nur eine Ärztin oder ein Arzt kann einen Fall archivieren.',
+    archivedOn: 'Archiviert am',
+    archivedNote: 'Dieser Fall ist nicht mehr aktiv.',
     close: 'Schließen',
   },
   patients: {
