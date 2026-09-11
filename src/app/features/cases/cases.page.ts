@@ -50,11 +50,19 @@ import { CasesStore } from './cases.store';
  * making it because a request failed is worse than admitting the number is not known — the same
  * position `DashboardResource` takes by omitting fields it cannot answer.
  *
- * <h3>There is no archive button, and that is a decision</h3>
- * `web/` has one; it is client-side only — its own comment says *no archive endpoint specced* — so
- * the case reappears on the next load and on every other client. Shipping a button that quietly
- * lies about a clinical record is worse than not shipping it, so this says plainly that archiving
- * is a web-portal action. The endpoint question sits with the `hc-patient` owners.
+ * <h3>There is an archive button, and the reason it is doctor-only is not the obvious one</h3>
+ * This section said the opposite until `../docs/backlog.md` item 106 — *"there is no archive button,
+ * and that is a decision"*, arguing archiving was a web-portal action while the button sat thirty
+ * lines below it. It had been true: `web/`'s was client-side only, its own comment saying *no archive
+ * endpoint specced*, so a case reappeared on the next load. That stopped being true on 2026-08-24 when
+ * the real endpoint shipped and this screen got the action; the paragraph outlived its subject by two
+ * and a half weeks with nothing failing, because prose does not compile.
+ *
+ * <p>The part worth keeping is the part a reader will not guess: the action is **doctor-only, and
+ * `ROLE_ADMIN` is excluded on purpose**, which inverts the usual rule in this estate where admin is a
+ * superset. patientservice excludes it from `/archive` because retiring a case is a clinical judgement
+ * — "this episode of care is finished" — rather than a records action, and `ScopeOfPractice` grants the
+ * `DIAGNOSIS` write to doctor alone. See `web-mobile-port.md` § "Decision 6, reversed".
  *
  * <h3>An archived case says so, and is treated no differently otherwise</h3>
  * This detail read is the only endpoint in the stack that serves a retired case — the queue and the
