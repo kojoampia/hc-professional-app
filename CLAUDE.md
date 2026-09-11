@@ -147,7 +147,7 @@ side and a poor first impression on both.
 
 ```bash
 npm start                 # ng serve on :4300 — NOT 4200, which web/ already uses
-npm test                  # Jest, whole suite
+npm test                  # Jest, whole suite — proves BEHAVIOUR, not types (see below)
 npx ng test --test-path-pattern="<regex>"   # ONE spec — the only form that works, same as web/
 npm run lint              # eslint (flat config)
 npm run prettier:format
@@ -163,6 +163,26 @@ npm run build:aab -- --skip-web    # gradle only, reusing whatever is already in
 cd android && ./gradlew assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+**`npm test` type-checks nothing, and `npx ng build` is the only type gate** (`../docs/backlog.md`
+item 105). Jest runs through `ts-jest`, which **transpiles rather than checks** — so a change that
+breaks only types passes the entire suite.
+
+This is not theoretical and it has already cost something. Writing item 104's tests, a spec set
+`{ archivedAt: … }` on a `Partial<CaseDetailDto>` **while `archivedAt` was still absent from the
+interface**, and it compiled green. An excess property on a `Partial<T>` is a type error TypeScript
+would reject; Jest never asked. The consequence was precise: **one of that item's two red-first tests
+was not red when it should have been**, and only a developer deliberately watching for red caught it.
+
+**CI runs `ng build`, so nothing type-broken reaches `main`** — this is a false belief about what the
+fast command proves, not a hole in the pipeline. The remedy considered and not taken was a
+`tsc --noEmit` step inside `npm test`: it would buy the guarantee once rather than per-file, and it
+would cost every run the whole program's type-check. That is a judgement about how the inner loop
+should feel rather than about correctness, and the owner chose to document it here instead.
+
+**So: a red-first test that will not go red is a signal, not a puzzle.** Check whether the thing you
+broke was a type before you conclude the test is wrong.
+
 
 Node **22** (`.nvmrc`). Angular is pinned to **19.2.25**, byte-identical to `web/`, so services copied from there compile without adjustment.
 

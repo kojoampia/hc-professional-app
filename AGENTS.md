@@ -40,7 +40,7 @@ Releasing is `docs/release.md` in this repo: the three workflows, the version sc
 
 ## Commands
 
-`npm start` · `npm test` · `npx ng test --test-path-pattern="<regex>"` (single spec) · `npm run lint` · `npm run sync` · `npm run android` · `npm run ios` · `npm run build:aab`
+`npm start` · `npm test` (**behaviour, not types** — `ts-jest` transpiles; `npx ng build` is the type gate, see `CLAUDE.md` § Commands) · `npx ng test --test-path-pattern="<regex>"` (single spec) · `npm run lint` · `npm run sync` · `npm run android` · `npm run ios` · `npm run build:aab`
 
 **Publishing goes through a `v*` tag and nothing else.** `npm run build:aab` runs the release build locally and produces an **unsigned** bundle unless the environment already carries all four `ANDROID_KEYSTORE_*`/`ANDROID_KEY_*` variables — useful for checking the bundle builds, uploadable nowhere. It deliberately runs no lint and no tests; `ci.yml` and `release-android.yml` gate on those and a tag is not exempt.
 
