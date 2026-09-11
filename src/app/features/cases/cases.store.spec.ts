@@ -42,6 +42,8 @@ describe('CasesStore', () => {
     closedAt: null,
     symptoms: over.symptoms ?? 'Cough',
     diagnosis: over.diagnosis ?? 'Bronchitis',
+    // Live by default: the archived case is the exception a test asks for explicitly.
+    archivedAt: null,
     ...over,
   });
 
@@ -169,6 +171,25 @@ describe('CasesStore', () => {
 
     expect(api.detail).toHaveBeenCalledWith('p9', 'c1');
     expect(store.openCase()?.diagnosis).toBe('Bronchitis');
+  });
+
+  it('carries archivedAt through to the open case', async () => {
+    // The whole of ../docs/backlog.md item 104: `api/` sends it (item 82) and this app rendered
+    // nothing for it, so a retired diagnosis read as current clinical prose. A field dropped from
+    // the DTO is invisible — the JSON still arrives and the screen simply never mentions it.
+    api.detail.mockReturnValue(of(detail('c1', { archivedAt: '2026-08-21T14:05:00Z' })));
+
+    await store.openCaseById(row('c1'));
+
+    expect(store.openCase()?.archivedAt).toBe('2026-08-21T14:05:00Z');
+  });
+
+  it('reports a live case as null rather than as absent', async () => {
+    // The service sends `archivedAt: null` on a live case rather than omitting the key (Jackson's
+    // default inclusion, and no override in `api/`), so the screen's test is falsiness either way.
+    await store.openCaseById(row('c1'));
+
+    expect(store.openCase()?.archivedAt).toBeNull();
   });
 
   it('reports a failed open rather than showing an empty case', async () => {

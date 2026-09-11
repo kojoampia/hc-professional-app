@@ -33,6 +33,7 @@ import { EmptyRowComponent } from '../../shared/empty-row.component';
 import { PendingChipComponent } from '../../shared/pending-chip.component';
 import { StatTileComponent } from '../../shared/stat-tile.component';
 import { CaseSummaryDto } from '../../core/api/case-api.service';
+import { ArchivedBannerComponent } from './archived-banner.component';
 import { CasesStore } from './cases.store';
 
 /**
@@ -55,6 +56,13 @@ import { CasesStore } from './cases.store';
  * lies about a clinical record is worse than not shipping it, so this says plainly that archiving
  * is a web-portal action. The endpoint question sits with the `hc-patient` owners.
  *
+ * <h3>An archived case says so, and is treated no differently otherwise</h3>
+ * This detail read is the only endpoint in the stack that serves a retired case — the queue and the
+ * patient's case list exclude them — so it is the only screen that can say a case is retired, and it
+ * said nothing until `../docs/backlog.md` item 104. A banner, not a badge on the queue row and not a
+ * dimmed page: the row is stale by design and marking it is a different change, while a page that
+ * cannot be acted on re-creates the 404 item 82 had just removed.
+ *
  * <h3>Detail is never cached</h3>
  * Unlike a patient record. A case body is the most sensitive thing this app reads, several people
  * edit it at once, and a stale diagnosis rendered as current is a worse failure than a screen that
@@ -67,6 +75,7 @@ import { CasesStore } from './cases.store';
     DatePipe,
     FormsModule,
     TranslateModule,
+    ArchivedBannerComponent,
     AsyncBannerComponent,
     EmptyRowComponent,
     PendingChipComponent,
@@ -168,6 +177,11 @@ import { CasesStore } from './cases.store';
               </p>
             } @else {
               @if (store.openCase(); as clinicalCase) {
+                <!-- First thing on the page, because a retired diagnosis read as current is the
+                     defect this exists for. It says and does not gate: the edit and archive
+                     controls below are untouched. -->
+                <hpd-archived-banner [archivedAt]="clinicalCase.archivedAt"></hpd-archived-banner>
+
                 @if (store.pendingEditFor(); as unsent) {
                   <div class="mb-3"><hpd-pending-chip [state]="unsent.state"></hpd-pending-chip></div>
                 }

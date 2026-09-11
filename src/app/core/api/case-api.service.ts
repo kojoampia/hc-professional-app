@@ -36,6 +36,21 @@ export interface CaseDetailDto extends CaseSummaryDto {
   closedAt: string | null;
   symptoms: string | null;
   diagnosis: string | null;
+
+  /**
+   * When the case was retired, or `null` while it is live.
+   *
+   * <p><b>This is the one field on this DTO a client may not ignore</b> (`../docs/backlog.md` items
+   * 82 and 104). The queue and the patient's case list exclude archived cases, so this endpoint is
+   * the only one that serves one — and a retired diagnosis rendered as current clinical prose is,
+   * in `PatientDtos`' own words, "a worse answer than the 404 that used to be given". The screen
+   * says so with `hpd-archived-banner`.
+   *
+   * <p>The service sends `null` rather than omitting the key, so falsiness is the test either way.
+   * Both spellings matter in practice: a build of this app talking to a service that predates item
+   * 82 receives no key at all, and must then say nothing rather than guess.
+   */
+  archivedAt: string | null;
 }
 
 /** The clinical fields a clinician may edit. Everything else on a case belongs to somebody else. */
