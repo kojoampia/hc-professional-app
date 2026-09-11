@@ -183,7 +183,6 @@ should feel rather than about correctness, and the owner chose to document it he
 **So: a red-first test that will not go red is a signal, not a puzzle.** Check whether the thing you
 broke was a type before you conclude the test is wrong.
 
-
 Node **22** (`.nvmrc`). Angular is pinned to **19.2.25**, byte-identical to `web/`, so services copied from there compile without adjustment.
 
 **Publishing goes through a `v*` tag and nothing else** — `docs/release.md` is the runbook, covering the version scheme, the secrets each workflow needs, and the signing fingerprints. `scripts/build-aab.sh` behind `npm run build:aab` exists so the release path can be exercised without cutting a tag; it signs only if the environment already carries all four `ANDROID_KEYSTORE_*`/`ANDROID_KEY_*` variables, and says loudly when it does not, because an unsigned bundle looks exactly like a signed one until Play rejects it. It runs no lint and no tests on purpose: `ci.yml` and `release-android.yml` both gate on those and a tag is not exempt. Unlike `./gradlew` it **does** need a JDK 21, since it runs Gradle itself rather than only the toolchain — it resolves one and prints which; override with `ANDROID_GRADLE_JAVA_HOME`.
