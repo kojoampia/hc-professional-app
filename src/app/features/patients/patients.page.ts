@@ -51,6 +51,22 @@ import { PatientsStore } from './patients.store';
  * absence, the record says plainly that notes cannot be filed here yet — a clinician who expects to
  * and finds no button will assume the app is broken.
  *
+ * <h3>A refused part is said, and the two are said differently</h3>
+ * `GET /api/patients` degrades rather than failing for a discipline with no scope over one of the
+ * reads it composes, and names what it dropped in `X-Restricted-Parts` (`../docs/backlog.md` items
+ * 107, 111 and 114). The two tokens get two treatments because they are two different losses.
+ *
+ * <p>`lastActivity` blanks a <b>field</b>, so it is answered where the false sentence was printed:
+ * the row's recency line, which said "No activity recorded" — a quiet caseload — when it meant "not
+ * yours to see". A banner alone would have left that line on every row.
+ *
+ * <p>`caseAssignments` removes <b>people</b>, and no row can describe a patient who is not in the
+ * list, so it is answered once above the list. That is the same reasoning that killed a per-row
+ * field in the wire contract.
+ *
+ * <p>An absent header renders nothing at all — five of the eight disciplines never see one — and an
+ * unrecognised token is dropped rather than shown.
+ *
  * <h3>Two template traps worth knowing</h3>
  * The record branch is a nested `if` inside an `else` rather than an `else if` with an `as` alias:
  * the alias only binds on the leading `if`, so written the other way every reference to it fails to
@@ -130,13 +146,21 @@ import { PatientsStore } from './patients.store';
           <ion-segment-button value="children">{{ 'patients.filterChildren' | translate }}</ion-segment-button>
         </ion-segment>
 
+        @if (store.rowsRestricted()) {
+          <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status" data-test="rows-restricted">
+            {{ 'patients.rowsRestricted' | translate }}
+          </p>
+        }
+
         <ion-list [inset]="true">
           @for (patient of store.rows(); track patient.id) {
             <ion-item button (click)="open(patient.id)" [attr.data-test]="'patient-' + patient.id">
               <ion-label>
                 <h3>{{ patient.patientName }}</h3>
-                <p>
-                  @if (patient.lastActivityAt) {
+                <p [class.text-hpd-muted]="store.recencyRestricted()">
+                  @if (store.recencyRestricted()) {
+                    {{ 'patients.recencyRestricted' | translate }}
+                  } @else if (patient.lastActivityAt) {
                     {{ 'patients.lastSeen' | translate }}
                     {{ patient.lastActivityAt | date: 'mediumDate' : undefined : locale() }}
                   } @else {
