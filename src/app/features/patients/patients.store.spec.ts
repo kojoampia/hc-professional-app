@@ -171,6 +171,112 @@ describe('PatientsStore', () => {
     expect(store.status()).toBe('error');
   });
 
+  /**
+   * `../docs/backlog.md` item 114. A refused part is a fact about the read, so it lives on the store
+   * rather than on a row — item 111's Decision A rejected a per-row field because a technician loses
+   * rows, and no field can describe a patient who is not in the list.
+   */
+  describe('X-Restricted-Parts', () => {
+    /** A page response carrying whatever the server said it could not read. */
+    const restrictedPage = (header: string | null, rows: PatientListItemDto[] = [row('p1')]) =>
+      of(
+        new HttpResponse({
+          body: rows,
+          headers: new HttpHeaders(
+            header === null
+              ? { 'X-Total-Count': String(rows.length) }
+              : { 'X-Total-Count': String(rows.length), 'X-Restricted-Parts': header },
+          ),
+        }),
+      );
+
+    it('says nothing when the header is absent — the whole read was permitted', async () => {
+      api.query.mockReturnValue(restrictedPage(null));
+
+      await store.refresh();
+
+      expect(store.restricted()).toEqual([]);
+      expect(store.recencyRestricted()).toBe(false);
+      expect(store.rowsRestricted()).toBe(false);
+    });
+
+    it('marks the recency column alone for a pharmacist', async () => {
+      api.query.mockReturnValue(restrictedPage('lastActivity'));
+
+      await store.refresh();
+
+      expect(store.recencyRestricted()).toBe(true);
+      // Not the missing-rows treatment: this directory is complete, one column of it is not.
+      expect(store.rowsRestricted()).toBe(false);
+    });
+
+    it('marks both, DISTINCTLY, for a technician', async () => {
+      api.query.mockReturnValue(restrictedPage('caseAssignments,lastActivity'));
+
+      await store.refresh();
+
+      expect(store.recencyRestricted()).toBe(true);
+      expect(store.rowsRestricted()).toBe(true);
+    });
+
+    it('IGNORES a token it does not know while honouring the one it does', async () => {
+      api.query.mockReturnValue(restrictedPage('vitals,lastActivity'));
+
+      await store.refresh();
+
+      expect(store.restricted()).toEqual(['lastActivity']);
+      expect(store.rowsRestricted()).toBe(false);
+    });
+
+    it('KEEPS the marker when a later page fails — a restriction belongs to the role, not the request', async () => {
+      api.query.mockReturnValueOnce(restrictedPage('lastActivity'));
+      await store.refresh();
+      api.query.mockReturnValue(throwError(() => new Error('offline')));
+
+      await store.loadMore();
+
+      expect(store.recencyRestricted()).toBe(true);
+    });
+
+    it('caches what was withheld beside the page it was withheld from', async () => {
+      api.query.mockReturnValue(restrictedPage('lastActivity'));
+
+      await store.refresh();
+
+      expect(disk.get('hpd:patients.restrictedParts')).toMatchObject({ value: ['lastActivity'] });
+    });
+
+    it('does NOT lie on a cold start with no signal', async () => {
+      // The cached rows have a null recency for a reason, and without the cached marker this is
+      // exactly where "not yours to see" becomes "no activity recorded" again.
+      disk.set('hpd:patients.restrictedParts', { value: ['lastActivity'], fetchedAt: Date.now() });
+      api.query.mockReturnValue(throwError(() => new Error('offline')));
+
+      await store.refresh();
+
+      expect(store.recencyRestricted()).toBe(true);
+    });
+
+    it('survives a cached entry of the wrong shape rather than taking the screen down', async () => {
+      // `refresh()` is awaited by ngOnInit and nothing catches around it.
+      disk.set('hpd:patients.restrictedParts', { value: 'lastActivity', fetchedAt: Date.now() });
+      api.query.mockReturnValue(restrictedPage(null));
+
+      await expect(store.refresh()).resolves.toBeUndefined();
+      expect(store.restricted()).toEqual([]);
+    });
+
+    it('corrects a cached marker once the server says the read was complete', async () => {
+      disk.set('hpd:patients.restrictedParts', { value: ['lastActivity'], fetchedAt: Date.now() });
+      api.query.mockReturnValue(restrictedPage(null));
+
+      await store.refresh();
+
+      expect(store.recencyRestricted()).toBe(false);
+      expect(disk.get('hpd:patients.restrictedParts')).toMatchObject({ value: [] });
+    });
+  });
+
   describe('filters go to the server, not the browser', () => {
     it('sends the search text', async () => {
       await store.applyFilters({ query: 'mensah' });

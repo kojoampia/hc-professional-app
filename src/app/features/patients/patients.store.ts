@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { PatientApiService, PatientListItemDto, PatientRecordDto } from '../../core/api/patient-api.service';
+import { RESTRICTED_PARTS_HEADER, RestrictedPart, parseRestrictedParts } from '../../core/api/restricted-parts';
 import { CacheStore } from '../../core/offline/cache-store.service';
 import { QueuedWrite } from '../../core/offline/queued-write.model';
 import { WriteQueue } from '../../core/offline/write-queue.service';
@@ -9,6 +10,16 @@ import { ResourceStatus } from '../../core/offline/cached-resource';
 
 /** Where the offline copy of page zero lives. */
 const FIRST_PAGE_KEY = 'patients.firstPage';
+
+/**
+ * Where the parts withheld from the cached page live.
+ *
+ * <p>Cached beside the rows rather than inside them, and <b>not</b> sealed: this names a capability
+ * of the signed-in role, not a patient. Without it a pharmacist's cached directory renders every
+ * row as "no activity recorded" on a cold start with no signal — the exact conflation item 114
+ * exists to remove, surviving in the one state this app is built around.
+ */
+const RESTRICTED_PARTS_KEY = 'patients.restrictedParts';
 
 /** Rows per request. Twenty fills a phone screen twice over and costs little on mobile data. */
 export const PAGE_SIZE = 20;
@@ -89,6 +100,28 @@ export class PatientsStore {
   private readonly failedSignal = signal(false);
   readonly failed = this.failedSignal.asReadonly();
 
+  /**
+   * What the server could not read on this clinician's behalf.
+   *
+   * <p>A fact about the <b>read</b>, not about any row — which is why it is a signal here and not a
+   * field on `PatientListItemDto`. Item 111's Decision A rejected a per-row field on exactly this
+   * ground: a technician is refused the case collection outright, so what they lose is not a column
+   * but patients, and no per-row field can describe a row that is not in the list.
+   */
+  private readonly restrictedSignal = signal<readonly RestrictedPart[]>([]);
+  readonly restricted = this.restrictedSignal.asReadonly();
+
+  /**
+   * The recency column could not be read, so every row's `lastActivityAt` is null for a reason.
+   *
+   * <p>Distinct from {@link rowsRestricted} on purpose. This blanks a field; that removes people.
+   * Rendering one sentence for both would repeat item 107's defect one layer out.
+   */
+  readonly recencyRestricted = computed(() => this.restrictedSignal().includes('lastActivity'));
+
+  /** Case assignments were refused, so the directory is short of patients — not merely of detail. */
+  readonly rowsRestricted = computed(() => this.restrictedSignal().includes('caseAssignments'));
+
   private nextPage = 0;
 
   /** Whether another page exists. Drives the infinite scroll's own disabled state. */
@@ -166,6 +199,17 @@ export class PatientsStore {
     this.totalSignal.set(0);
 
     if (this.isUnfiltered()) {
+      // Read before the rows and independently of them: a blank recency column served from disk
+      // means what it meant on the wire, and a cold start with no signal must say so rather than
+      // fall back to "no activity recorded". Re-parsed rather than trusted, so a token written by
+      // another release is dropped here exactly as it would be on the wire.
+      const cachedRestriction = await this.cache.get<string[]>(RESTRICTED_PARTS_KEY);
+      // Shape checked beside the value, not assumed from it: `refresh()` is awaited by `ngOnInit`
+      // and nothing catches here, so a cached entry of an unexpected shape would take the screen
+      // down rather than lose a marker.
+      const cachedTokens = Array.isArray(cachedRestriction?.value) ? cachedRestriction.value : [];
+      this.restrictedSignal.set(parseRestrictedParts(cachedTokens.join(',')));
+
       const cached = await this.cache.get<PatientListItemDto[]>(FIRST_PAGE_KEY);
       if (cached) {
         this.rowsSignal.set(cached.value);
@@ -212,6 +256,14 @@ export class PatientsStore {
       const rows = response.body ?? [];
       const header = response.headers.get('X-Total-Count');
       const existing = replace ? [] : this.rowsSignal();
+
+      // Set from every page that arrives, including the ones that name nothing: the header is
+      // emitted only when something was withheld, so an absent header on a 200 is the server
+      // saying the read was complete. A failed request leaves the last answer standing instead —
+      // a restriction is a property of the role, which does not change between two requests.
+      const restricted = parseRestrictedParts(response.headers.get(RESTRICTED_PARTS_HEADER));
+      this.restrictedSignal.set(restricted);
+
       // A missing header means "this is everything", not zero: zero would empty a list the server
       // had just filled.
       this.totalSignal.set(header === null ? existing.length + rows.length : Number(header));
@@ -222,6 +274,9 @@ export class PatientsStore {
       // treating should not sit readable in an app sandbox.
       if (this.nextPage === 0 && this.isUnfiltered()) {
         await this.cache.setSensitive(FIRST_PAGE_KEY, rows);
+        // In the clear, and written even when empty so that a role which stops being restricted
+        // corrects the cached copy rather than inheriting yesterday's marker.
+        await this.cache.set(RESTRICTED_PARTS_KEY, [...restricted]);
         this.cachedAtSignal.set(Date.now());
       }
       this.nextPage += 1;
