@@ -128,9 +128,21 @@ export class PatientApiService {
     return this.http.get<PatientListItemDto[]>(this.resourceUrl, { params, observe: 'response' });
   }
 
-  /** One patient's full record. 404 for a patient outside the caller's caseload, same as absent. */
-  find(id: string): Observable<PatientRecordDto> {
-    return this.http.get<PatientRecordDto>(`${this.resourceUrl}/${encodeURIComponent(id)}`);
+  /**
+   * One patient's full record. 404 for a patient outside the caller's caseload, same as absent.
+   *
+   * <p>Read with `observe: 'response'` for `X-Restricted-Parts`, the same header the directory
+   * carries. Since item 112 this endpoint degrades rather than refusing for a discipline with no
+   * scope over the activity log: a pharmacist is served the record **without the activity panel**,
+   * and a client that ignores the header renders that as a patient nobody has touched
+   * (`../docs/backlog.md` item 126).
+   *
+   * <p><b>Exactly one token reaches here, not the directory's two.</b> `caseAssignments` cannot: a
+   * record whose case read was refused is not served at all, because that collection is what
+   * entitlement is decided from.
+   */
+  find(id: string): Observable<HttpResponse<PatientRecordDto>> {
+    return this.http.get<PatientRecordDto>(`${this.resourceUrl}/${encodeURIComponent(id)}`, { observe: 'response' });
   }
 
   /**

@@ -67,6 +67,21 @@ import { PatientsStore } from './patients.store';
  * <p>An absent header renders nothing at all — five of the eight disciplines never see one — and an
  * unrecognised token is dropped rather than shown.
  *
+ * <h3>The record answers the same token with its own sentence</h3>
+ * `GET /api/patients/{id}` emits the header too since item 112, and it names `lastActivity` — the
+ * directory's own token, costing something entirely different. Here the panel is withheld
+ * <b>whole</b>, so the empty-state note `patients.noActivity` ("No activity recorded.") is a quiet
+ * patient written where "not yours to see" belongs, and it is a clinical reading rather than a
+ * cosmetic one.
+ *
+ * <p>So the refusal <b>replaces the list and its empty state</b> rather than sitting beside them,
+ * and it uses `patients.activityRestricted`, not the row's `patients.recencyRestricted`. Item 129
+ * records why: telling a pharmacist that recent-activity sorting is unavailable, when the whole
+ * history is missing, is a new false sentence committed while fixing one.
+ *
+ * <p>`caseAssignments` gets no record treatment and must not grow one — it never arrives here,
+ * because a record whose case read was refused is not served at all.
+ *
  * <h3>Two template traps worth knowing</h3>
  * The record branch is a nested `if` inside an `else` rather than an `else if` with an `as` alias:
  * the alias only binds on the leading `if`, so written the other way every reference to it fails to
@@ -255,20 +270,32 @@ import { PatientsStore } from './patients.store';
 
                 <ion-list [inset]="true">
                   <ion-list-header>{{ 'patients.activity' | translate }}</ion-list-header>
-                  @for (item of record.activities; track item.id) {
-                    <ion-item>
-                      <ion-label class="ion-text-wrap">
-                        <h3>{{ item.label }}</h3>
-                        <p>{{ item.occurredAt | date: 'medium' : undefined : locale() }}</p>
-                        @if (item.description) {
-                          <p class="text-hpd-muted">{{ item.description }}</p>
-                        }
-                      </ion-label>
+                  @if (store.recordActivityRestricted()) {
+                    <ion-item lines="none">
+                      <p
+                        class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning"
+                        role="status"
+                        data-test="record-activity-restricted"
+                      >
+                        {{ 'patients.activityRestricted' | translate }}
+                      </p>
                     </ion-item>
-                  } @empty {
-                    <ion-item lines="none"
-                      ><ion-note>{{ 'patients.noActivity' | translate }}</ion-note></ion-item
-                    >
+                  } @else {
+                    @for (item of record.activities; track item.id) {
+                      <ion-item>
+                        <ion-label class="ion-text-wrap">
+                          <h3>{{ item.label }}</h3>
+                          <p>{{ item.occurredAt | date: 'medium' : undefined : locale() }}</p>
+                          @if (item.description) {
+                            <p class="text-hpd-muted">{{ item.description }}</p>
+                          }
+                        </ion-label>
+                      </ion-item>
+                    } @empty {
+                      <ion-item lines="none"
+                        ><ion-note>{{ 'patients.noActivity' | translate }}</ion-note></ion-item
+                      >
+                    }
                   }
                 </ion-list>
 

@@ -59,11 +59,24 @@ describe('X-Restricted-Parts', () => {
   });
 
   describe('every token has something to say, in four languages', () => {
-    /** The sentence each token becomes. Two tokens, two sentences, because they are two losses. */
-    const SENTENCE_FOR: Record<RestrictedPart, string> = {
-      caseAssignments: 'patients.rowsRestricted',
-      lastActivity: 'patients.recencyRestricted',
+    /**
+     * The sentences each token becomes, per surface.
+     *
+     * <p><b>Two surfaces, because one token costs two different things</b> — `../docs/backlog.md`
+     * item 129. On the directory `lastActivity` blanks a *column*; on a record it withholds **every
+     * activity entry**. Telling a pharmacist that recent-activity sorting is unavailable, when the
+     * patient's whole history is missing, is a new false sentence written while removing one.
+     *
+     * <p>`caseAssignments` has no record sentence and must not grow one: it never reaches
+     * `GET /api/patients/{id}`, because a record whose case read was refused is not served at all
+     * (item 112). A sentence for it here would be copy for a state the server cannot produce.
+     */
+    const SENTENCES_FOR: Record<RestrictedPart, { directory: string; record: string | null }> = {
+      caseAssignments: { directory: 'patients.rowsRestricted', record: null },
+      lastActivity: { directory: 'patients.recencyRestricted', record: 'patients.activityRestricted' },
     };
+
+    const KEYS = Object.values(SENTENCES_FOR).flatMap(surfaces => [surfaces.directory, surfaces.record].filter(key => key !== null));
 
     const resolve = (catalogue: unknown, key: string): unknown =>
       key
@@ -71,24 +84,38 @@ describe('X-Restricted-Parts', () => {
         .reduce<unknown>((node, part) => (typeof node === 'object' && node !== null ? (node as never)[part] : undefined), catalogue);
 
     it('covers every token the parser will hand to a screen', () => {
-      expect(Object.keys(SENTENCE_FOR).sort()).toEqual([...RESTRICTED_PARTS].sort());
+      expect(Object.keys(SENTENCES_FOR).sort()).toEqual([...RESTRICTED_PARTS].sort());
     });
 
     it.each(Object.keys(CATALOGUES))('%s carries a sentence for each token', language => {
-      const missing = Object.values(SENTENCE_FOR).filter(
-        key => typeof resolve(CATALOGUES[language as keyof typeof CATALOGUES], key) !== 'string',
-      );
+      const missing = KEYS.filter(key => typeof resolve(CATALOGUES[language as keyof typeof CATALOGUES], key) !== 'string');
 
       // Named, not counted: a failure should say which sentence to write and in which language.
       expect(missing).toEqual([]);
     });
 
-    it.each(Object.keys(CATALOGUES))('%s says something DIFFERENT for a lost column and lost rows', language => {
-      const sentences = Object.values(SENTENCE_FOR).map(key => resolve(CATALOGUES[language as keyof typeof CATALOGUES], key));
+    it.each(Object.keys(CATALOGUES))('%s says something DIFFERENT for every loss it names', language => {
+      const sentences = KEYS.map(key => resolve(CATALOGUES[language as keyof typeof CATALOGUES], key));
 
-      // A blank field and a missing patient are not the same news. One translation covering both
-      // would repeat item 107's own conflation inside the fix for it.
+      // A blank field, a missing patient and a withheld history are three different pieces of news.
+      // One translation covering two would repeat item 107's own conflation inside the fix for it,
+      // which is exactly the trap item 129 records against the record screen.
       expect(new Set(sentences).size).toBe(sentences.length);
     });
+
+    it.each(Object.keys(CATALOGUES).filter(language => language !== 'en'))(
+      '%s says it in its own language rather than repeating the English',
+      language => {
+        // `../docs/backlog.md` item 123: all three i18n gates in this repo compare KEY sets, so
+        // English pasted into es/fr/de leaves every one of them green and looks perfect in the only
+        // locale anyone here reads. These are whole sentences with no proper noun in them, so no
+        // allowlist is needed — and none should be added without an argument.
+        const untranslated = KEYS.filter(
+          key => resolve(CATALOGUES[language as keyof typeof CATALOGUES], key) === resolve(CATALOGUES.en, key),
+        );
+
+        expect(untranslated).toEqual([]);
+      },
+    );
   });
 });
