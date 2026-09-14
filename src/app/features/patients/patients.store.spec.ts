@@ -39,6 +39,16 @@ describe('PatientsStore', () => {
   const page = (rows: PatientListItemDto[], total = rows.length): HttpResponse<PatientListItemDto[]> =>
     new HttpResponse({ body: rows, headers: new HttpHeaders({ 'X-Total-Count': String(total) }) });
 
+  /**
+   * A record response.
+   *
+   * <p>`find()` is read with `observe: 'response'` since `../docs/backlog.md` item 126 — the record
+   * carries `X-Restricted-Parts` too, and a body alone cannot say what was withheld. What that
+   * header does to this screen is `patients.record-restricted.spec.ts`; this file only needs the
+   * envelope.
+   */
+  const served = (body: unknown): HttpResponse<any> => new HttpResponse({ body });
+
   beforeEach(async () => {
     disk.clear();
     const preferences = new Map<string, string>();
@@ -46,7 +56,7 @@ describe('PatientsStore', () => {
 
     api = {
       query: jest.fn(() => of(page([row('p1'), row('p2')]))),
-      find: jest.fn(() => of({ id: 'p1', patientName: 'Ama' })),
+      find: jest.fn(() => of(served({ id: 'p1', patientName: 'Ama' }))),
       appendActivity: jest.fn(() => of({ id: 'a1' })),
       appendReport: jest.fn(() => of({ id: 'r1' })),
     };
@@ -335,7 +345,7 @@ describe('PatientsStore', () => {
     });
 
     it('SEALS a record — no clinical text is readable on disk', async () => {
-      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama Mensah', diagnosisNote: 'suspected sepsis' }));
+      api.find.mockReturnValue(of(served({ id: 'p1', patientName: 'Ama Mensah', diagnosisNote: 'suspected sepsis' })));
 
       await store.openRecord('p1');
 
@@ -344,7 +354,7 @@ describe('PatientsStore', () => {
 
     it('BOUNDS the cached records, so a long career cannot fill the sandbox', async () => {
       for (let i = 0; i <= RECORD_CACHE_LIMIT; i++) {
-        api.find.mockReturnValue(of({ id: `p${i}`, patientName: `Patient ${i}` }));
+        api.find.mockReturnValue(of(served({ id: `p${i}`, patientName: `Patient ${i}` })));
         await store.openRecord(`p${i}`);
       }
 
@@ -386,7 +396,7 @@ describe('PatientsStore', () => {
     });
 
     it('shows the entry immediately, MARKED rather than merged', async () => {
-      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] }));
+      api.find.mockReturnValue(of(served({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] })));
       await store.openRecord('p1');
 
       await store.fileActivity('p1', { title: 'Wound dressed', description: 'd' });
@@ -396,7 +406,7 @@ describe('PatientsStore', () => {
     });
 
     it('does not show another patient s unsent entries', async () => {
-      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] }));
+      api.find.mockReturnValue(of(served({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] })));
       await store.openRecord('p1');
 
       await store.fileActivity('p2', { title: 'Someone else', description: 'd' });
@@ -406,7 +416,7 @@ describe('PatientsStore', () => {
 
     it('DROPS the optimistic entry once the op leaves the queue', async () => {
       // It has landed; the next read shows the server's own copy. Leaving it would double the row.
-      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] }));
+      api.find.mockReturnValue(of(served({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] })));
       await store.openRecord('p1');
       await store.fileActivity('p1', { title: 'Wound dressed', description: 'd' });
 
@@ -416,7 +426,7 @@ describe('PatientsStore', () => {
     });
 
     it('reflects the queued op s state, so a conflict is visible on the record', async () => {
-      api.find.mockReturnValue(of({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] }));
+      api.find.mockReturnValue(of(served({ id: 'p1', patientName: 'Ama', activities: [], reports: [], cases: [] })));
       await store.openRecord('p1');
       await store.fileActivity('p1', { title: 'Wound dressed', description: 'd' });
 

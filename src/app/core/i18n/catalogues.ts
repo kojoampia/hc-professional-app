@@ -318,6 +318,19 @@ export const EN = {
     noCases: 'No open cases.',
     activity: 'Activity',
     noActivity: 'No activity recorded.',
+    /**
+     * The record's own refusal — deliberately NOT `recencyRestricted`, which is the directory's.
+     *
+     * <p>One wire token, `lastActivity`, costs two different things (`../docs/backlog.md` item 129).
+     * On the list it blanks a column, so the row says recent visits cannot be seen. Here the whole
+     * panel is withheld, so saying the same thing would tell a pharmacist that sorting by recency is
+     * unavailable while the patient's entire history is missing.
+     *
+     * <p>Two sentences on purpose, in the shape `dashboard.casesUnavailable` uses: the first names
+     * the refusal, the second says what the blank does <b>not</b> mean. It must not claim entries
+     * exist — nothing here has read them — only that this is not evidence that none do.
+     */
+    activityRestricted: "Your role cannot read this patient's activity history. Entries may exist that are not shown here.",
     medications: 'Medications',
     noMedications: 'No medications recorded.',
     reports: 'Reports',
@@ -724,6 +737,8 @@ export const ES: typeof EN = {
     noCases: 'No hay casos abiertos.',
     activity: 'Actividad',
     noActivity: 'Sin actividad registrada.',
+    activityRestricted:
+      'Su rol no puede consultar el historial de actividad de este paciente. Puede haber entradas que no se muestran aquí.',
     medications: 'Medicación',
     noMedications: 'Sin medicación registrada.',
     reports: 'Informes',
@@ -1131,6 +1146,8 @@ export const FR: typeof EN = {
     noCases: 'Aucun dossier ouvert.',
     activity: 'Activité',
     noActivity: 'Aucune activité enregistrée.',
+    activityRestricted:
+      "Votre rôle ne permet pas de consulter l'historique d'activité de ce patient. Des entrées peuvent exister sans être affichées ici.",
     medications: 'Médicaments',
     noMedications: 'Aucun médicament enregistré.',
     reports: 'Rapports',
@@ -1537,6 +1554,8 @@ export const DE: typeof EN = {
     noCases: 'Keine offenen Fälle.',
     activity: 'Aktivität',
     noActivity: 'Keine Aktivität erfasst.',
+    activityRestricted:
+      'Ihre Rolle darf den Aktivitätsverlauf dieser Patientin bzw. dieses Patienten nicht lesen. Es können Einträge vorhanden sein, die hier nicht angezeigt werden.',
     medications: 'Medikamente',
     noMedications: 'Keine Medikamente erfasst.',
     reports: 'Berichte',

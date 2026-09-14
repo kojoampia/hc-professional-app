@@ -21,6 +21,20 @@ const FIRST_PAGE_KEY = 'patients.firstPage';
  */
 const RESTRICTED_PARTS_KEY = 'patients.restrictedParts';
 
+/**
+ * Where the parts withheld from the <b>record</b> read live.
+ *
+ * <p>Kept apart from {@link RESTRICTED_PARTS_KEY} because they answer two different reads: the
+ * directory composes three collections and the record composes five, and the server may withhold on
+ * one and not the other. Sharing a key would let a directory answer speak for a record it never
+ * described.
+ *
+ * <p><b>Not under the `patients.record.` prefix</b>, deliberately. {@link RECORD_CACHE_LIMIT}'s
+ * eviction counts every key with that prefix as a cached record, so a marker stored there would be
+ * counted toward the bound and eventually evicted as though it were a patient.
+ */
+const RECORD_RESTRICTED_PARTS_KEY = 'patients.recordRestrictedParts';
+
 /** Rows per request. Twenty fills a phone screen twice over and costs little on mobile data. */
 export const PAGE_SIZE = 20;
 
@@ -151,6 +165,30 @@ export class PatientsStore {
 
   private readonly recordFailedSignal = signal(false);
   readonly recordFailed = this.recordFailedSignal.asReadonly();
+
+  /**
+   * What the server could not read while composing the record currently open.
+   *
+   * <p>Private, and exposed only through {@link recordActivityRestricted}: the screen asks per
+   * <b>known</b> part rather than looping the wire tokens, so a part named by a later release of
+   * `api/` reaches neither a template nor a missing translation key.
+   */
+  private readonly recordRestrictedSignal = signal<readonly RestrictedPart[]>([]);
+
+  /**
+   * The activity log could not be read, so this record's `activities` is empty for a reason.
+   *
+   * <p><b>Not the same news as {@link recencyRestricted}, and it must not share its sentence</b>
+   * (`../docs/backlog.md` item 129). On the directory `lastActivity` blanks a field; here it
+   * withholds every entry the patient has. Reusing the list's wording would tell a pharmacist that
+   * recent-activity sorting is unavailable when the patient's whole history is missing — a new false
+   * sentence, written while removing one.
+   *
+   * <p>There is deliberately no record-side sibling for `caseAssignments`. It never reaches
+   * `GET /api/patients/{id}`: a record whose case read was refused is not served at all, because
+   * that collection is what entitlement is decided from (item 112).
+   */
+  readonly recordActivityRestricted = computed(() => this.recordRestrictedSignal().includes('lastActivity'));
 
   /** Ids of cached records, oldest first, so the bound can be enforced. */
   private recentRecordIds: string[] = [];
@@ -296,20 +334,51 @@ export class PatientsStore {
    * <p>Shows the cached copy immediately so the screen is never blank, then replaces it. On failure
    * the cached copy stays — a record a clinician opened this morning is still worth reading in a
    * basement, marked as what it is.
+   *
+   * <p><b>And marked as <i>partial</i> where it is partial.</b> `X-Restricted-Parts` is read here
+   * for the same reason `loadMore` reads it: a record served without its activity panel is
+   * indistinguishable from a patient nobody has touched, and on a record that is a clinical reading
+   * rather than a cosmetic one (item 126).
    */
   async openRecord(patientId: string): Promise<void> {
     this.recordFailedSignal.set(false);
     const key = `patients.record.${patientId}`;
+
+    // Read before the record and independently of it, exactly as `refresh()` reads the directory's:
+    // a cached record shown on a cold start must carry the mark it had on the wire, or the app
+    // re-tells the lie with no signal and no way for a clinician to know. Re-parsed rather than
+    // trusted, so a token written by another release is dropped here as it would be on the wire.
+    const cachedRestriction = await this.cache.get<string[]>(RECORD_RESTRICTED_PARTS_KEY);
+    // Shape checked beside the value: nothing catches around this read, so a cached entry of an
+    // unexpected shape would take the record down rather than lose a marker.
+    const cachedTokens = Array.isArray(cachedRestriction?.value) ? cachedRestriction.value : [];
+    this.recordRestrictedSignal.set(parseRestrictedParts(cachedTokens.join(',')));
 
     const cached = await this.cache.get<PatientRecordDto>(key);
     this.recordSignal.set(cached?.value ?? null);
     this.recordLoadingSignal.set(cached === null);
 
     try {
-      const fresh = await firstValueFrom(this.api.find(patientId));
+      const response = await firstValueFrom(this.api.find(patientId));
+
+      // Set from every answer that arrives, including the ones that name nothing: the header is
+      // emitted only when something was withheld, so its absence on a 200 is the server saying the
+      // record was composed whole. A failed read leaves the last answer standing instead — a
+      // restriction is a property of the role, which does not change between two requests.
+      const restricted = parseRestrictedParts(response.headers.get(RESTRICTED_PARTS_HEADER));
+      this.recordRestrictedSignal.set(restricted);
+
+      const fresh = response.body;
       this.recordSignal.set(fresh);
-      await this.cache.setSensitive(key, fresh);
-      await this.remember(patientId);
+      if (fresh) {
+        await this.cache.setSensitive(key, fresh);
+        await this.remember(patientId);
+      }
+      // In the clear, unlike the record itself, and written even when empty so that a role which
+      // stops being restricted corrects the cached copy rather than inheriting yesterday's marker.
+      // It names a capability of the signed-in role, not anything about a patient — which is also
+      // why one key serves every record rather than one key per patient.
+      await this.cache.set(RECORD_RESTRICTED_PARTS_KEY, [...restricted]);
     } catch {
       this.recordFailedSignal.set(cached === null);
     } finally {
