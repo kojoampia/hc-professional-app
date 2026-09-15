@@ -25,6 +25,21 @@ import { ArchivedBannerComponent } from './archived-banner.component';
  * service can produce — `null` from any build since item 82, and an absent key from one that predates it.
  */
 describe('hpd-archived-banner', () => {
+  /**
+   * The instant the banner is asked to render — **midday local**, not a `Z` literal.
+   *
+   * <p>This was `'2026-08-21T14:05:00Z'` while every expectation below names 21 August. `DatePipe`
+   * formats in the machine's zone, so east of Greenwich that instant is already the 22nd and five of
+   * these tests failed — found while proving `../docs/backlog.md` item 121, which is the same
+   * two-clock defect in `roster.store.spec.ts`. CI runs on UTC runners, the one place neither can
+   * happen.
+   *
+   * <p>Built from local components rather than parsed from UTC, so its local calendar date is the
+   * 21st in every zone and the hardcoded per-locale strings below stay honest. Those strings are the
+   * point of the test — deriving them from a formatter would only prove `DatePipe` equals itself.
+   */
+  const ARCHIVED_AT = new Date(2026, 7, 21, 12, 5).toISOString();
+
   const render = (archivedAt: string | null | undefined, language = 'en'): ComponentFixture<ArchivedBannerComponent> => {
     // Through LanguageService, because that is what moves BOTH the catalogue and the locale the
     // date pipe is given. Driving `translate.use` alone would leave the date in English and the
@@ -51,7 +66,7 @@ describe('hpd-archived-banner', () => {
   });
 
   it('says the case is retired, and when', () => {
-    const text = render('2026-08-21T14:05:00Z').nativeElement.textContent;
+    const text = render(ARCHIVED_AT).nativeElement.textContent;
 
     expect(text).toContain('Archived');
     expect(text).toContain('Aug 21, 2026');
@@ -79,7 +94,7 @@ describe('hpd-archived-banner', () => {
     // Two failures in one assertion because they are the two this app actually ships: ngx-translate
     // renders a missing key verbatim, and `DatePipe` formats through LOCALE_ID rather than through
     // ngx-translate, so a hardcoded locale leaves an English date beside translated copy.
-    const text = render('2026-08-21T14:05:00Z', language).nativeElement.textContent;
+    const text = render(ARCHIVED_AT, language).nativeElement.textContent;
 
     expect(text).toContain(label);
     expect(text).toContain(date);
