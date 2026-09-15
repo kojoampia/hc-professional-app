@@ -82,6 +82,7 @@ coverage/
 # line is what the three above missed.
 /android/capacitor-cordova-android-plugins/build/
 /android/local.properties
+/android/keystore.properties
 /android/captures/
 *.apk
 *.aab
