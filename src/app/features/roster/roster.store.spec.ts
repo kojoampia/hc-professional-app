@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
 import { AbsenceApiService } from '../../core/api/absence-api.service';
-import { DutyRosterApiService } from '../../core/api/duty-roster-api.service';
+import { DutyRosterApiService, isoDate } from '../../core/api/duty-roster-api.service';
 import { CacheStore } from '../../core/offline/cache-store.service';
 import { PreferencesService } from '../../core/native/preferences.service';
 import { SecureTokenStore } from '../../core/native/secure-token-store.service';
@@ -125,7 +125,17 @@ describe('RosterStore', () => {
   });
 
   it('lists only leave that has not finished, soonest first', async () => {
-    const today = new Date().toISOString().slice(0, 10);
+    // Through `isoDate`, the SAME function the store uses (`../docs/backlog.md` item 121). This read
+    // `new Date().toISOString().slice(0, 10)` — UTC — while `upcomingAbsences` computes today with
+    // `isoDate(new Date())` — local. East of Greenwich the two disagree after local midnight, the
+    // `soon` row dates to yesterday by the store's reckoning and is filtered out, and this
+    // assertion fails for about two hours a day. CI runs on UTC runners, which is the one place the
+    // disagreement cannot happen, so the gate could never see it.
+    //
+    // Local is the right clock for a roster a clinician reads locally, so the spec is what changes.
+    // A test that builds its expectation in a different clock from the code under test is not
+    // testing the code; it is testing the two clocks agreeing.
+    const today = isoDate(new Date());
     absenceApi.mine.mockReturnValue(
       of([
         { id: 'past', fromDate: '2020-01-01', toDate: '2020-01-02', type: 'HOLIDAY', status: 'APPROVED' },

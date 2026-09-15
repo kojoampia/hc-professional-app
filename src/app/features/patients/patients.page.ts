@@ -82,6 +82,17 @@ import { PatientsStore } from './patients.store';
  * <p>`caseAssignments` gets no record treatment and must not grow one — it never arrives here,
  * because a record whose case read was refused is not served at all.
  *
+ * <h3>An unsent note is marked on the record, never merged into it</h3>
+ * A note filed with no signal is held by the write queue, sometimes for hours. It appears at the top
+ * of its list straight away, with `hpd-pending-chip` and a warning left border, and it is the queued
+ * op's own state that the chip reads — so a rejection or a conflict is visible where the note is
+ * rather than only under Me. It is never drawn as a filed entry: the whole value of the record is
+ * that it says what happened.
+ *
+ * <p>The chip was imported here and rendered nowhere, and `PatientsStore.pendingForOpenRecord` was
+ * computed and read by nothing, from Phase 6 until item 122 — the same shape of defect as the
+ * unreachable filing button, one layer up. `ng build` warned about the unused import on every build.
+ *
  * <h3>Two template traps worth knowing</h3>
  * The record branch is a nested `if` inside an `else` rather than an `else if` with an `as` alias:
  * the alias only binds on the leading `if`, so written the other way every reference to it fails to
@@ -270,6 +281,20 @@ import { PatientsStore } from './patients.store';
 
                 <ion-list [inset]="true">
                   <ion-list-header>{{ 'patients.activity' | translate }}</ion-list-header>
+                  <!-- Unsent notes first, marked, and OUTSIDE the restriction branch below: they
+                       are this clinician's own writing held by the queue, not anything the server
+                       composed, so a withheld history says nothing about them. Above the filed
+                       ones because the newest thing a clinician did is what they are looking for.
+                       (../docs/backlog.md item 122.) -->
+                  @for (unsent of pendingActivities(); track unsent.write.id) {
+                    <ion-item class="border-l-4 border-hpd-warning-accent" data-test="pending-activity">
+                      <ion-label class="ion-text-wrap">
+                        <h3>{{ unsent.label }}</h3>
+                        <p>{{ unsent.write.createdAt | date: 'medium' : undefined : locale() }}</p>
+                        <hpd-pending-chip [state]="unsent.state"></hpd-pending-chip>
+                      </ion-label>
+                    </ion-item>
+                  }
                   @if (store.recordActivityRestricted()) {
                     <ion-item lines="none">
                       <p
@@ -292,15 +317,32 @@ import { PatientsStore } from './patients.store';
                         </ion-label>
                       </ion-item>
                     } @empty {
-                      <ion-item lines="none"
-                        ><ion-note>{{ 'patients.noActivity' | translate }}</ion-note></ion-item
-                      >
+                      <!-- Not said while an unsent note is on screen above it: "No activity
+                           recorded" beside a note the clinician has just written reads as though
+                           the app lost it. -->
+                      @if (pendingActivities().length === 0) {
+                        <ion-item lines="none"
+                          ><ion-note>{{ 'patients.noActivity' | translate }}</ion-note></ion-item
+                        >
+                      }
                     }
                   }
                 </ion-list>
 
                 <ion-list [inset]="true">
                   <ion-list-header>{{ 'patients.reports' | translate }}</ion-list-header>
+                  <!-- Same treatment for the other kind the queue carries. Nothing on this screen
+                       files a report yet, but the store queues them and the record is where an
+                       unsent one belongs — the alternative is a second place for it to be invisible. -->
+                  @for (unsent of pendingReports(); track unsent.write.id) {
+                    <ion-item class="border-l-4 border-hpd-warning-accent" data-test="pending-report">
+                      <ion-label class="ion-text-wrap">
+                        <h3>{{ unsent.label }}</h3>
+                        <p>{{ unsent.write.createdAt | date: 'mediumDate' : undefined : locale() }}</p>
+                        <hpd-pending-chip [state]="unsent.state"></hpd-pending-chip>
+                      </ion-label>
+                    </ion-item>
+                  }
                   @for (item of record.reports; track item.id) {
                     <ion-item>
                       <ion-label>
@@ -309,9 +351,11 @@ import { PatientsStore } from './patients.store';
                       </ion-label>
                     </ion-item>
                   } @empty {
-                    <ion-item lines="none"
-                      ><ion-note>{{ 'patients.noReports' | translate }}</ion-note></ion-item
-                    >
+                    @if (pendingReports().length === 0) {
+                      <ion-item lines="none"
+                        ><ion-note>{{ 'patients.noReports' | translate }}</ion-note></ion-item
+                      >
+                    }
                   }
                 </ion-list>
 
@@ -415,6 +459,24 @@ export class PatientsPage implements OnInit {
    * held for hours before rejection and one never accepted.
    */
   readonly canFile = computed(() => hasClinicalPermission(this.accounts.account()?.authorities, 'manageActivity'));
+
+  /**
+   * The unsent entries for the record on screen, split by where each one belongs.
+   *
+   * <p>Split here rather than in the store: the store answers "what has this clinician written that
+   * has not landed", which is one question, and the record draws it in two lists. Doing it in the
+   * template would mean two filters re-run on every change detection instead of one memoized signal
+   * each.
+   *
+   * <p>`PatientsStore.pendingForOpenRecord` existed, was proved by `patients.store.spec.ts`, and
+   * reached no screen at all until this — the chip was even imported by this component and never
+   * rendered, which `ng build` reported as a warning nobody read (`../docs/backlog.md` item 122).
+   * A clinician who filed a note in a basement saw it vanish into the record as though nothing had
+   * happened.
+   */
+  readonly pendingActivities = computed(() => this.store.pendingForOpenRecord().filter(entry => entry.kind === 'activity'));
+
+  readonly pendingReports = computed(() => this.store.pendingForOpenRecord().filter(entry => entry.kind === 'report'));
 
   readonly hasFilters = computed(() => {
     const { query, sex, childrenOnly } = this.store.filters();

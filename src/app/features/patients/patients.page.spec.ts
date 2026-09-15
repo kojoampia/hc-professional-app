@@ -15,6 +15,7 @@ jest.mock('idb-keyval', () => ({
 }));
 
 import { AccountService } from '../../core/auth/account.service';
+import { PatientsStore } from './patients.store';
 import { PatientsPage } from './patients.page';
 
 /**
@@ -102,5 +103,103 @@ describe('PatientsPage — who may file', () => {
 
   afterEach(() => {
     httpMock.match(() => true).forEach(request => request.flush([]));
+  });
+});
+
+/**
+ * That an unsent entry reaches the record, in the list it belongs to.
+ *
+ * <h3>Why this is asserted on the component and not in the DOM</h3>
+ * The record is an `ion-modal`, whose `ng-template` Ionic renders into an overlay jsdom never
+ * instantiates — the same constraint the filing button hit. So the split is asserted here, the
+ * template's naming of it by `reachable-members.spec.ts`, and the chip's own rendering by
+ * `shared-components.spec.ts`. The store's half is `patients.store.spec.ts`, which is precisely
+ * where this stopped before: green at store level, on no screen (`../docs/backlog.md` item 122).
+ */
+describe('PatientsPage — unsent entries on the record', () => {
+  const pending = signal<{ write: { id: string }; patientId: string; kind: 'activity' | 'report'; label: string; state: string }[]>([]);
+
+  const entry = (kind: 'activity' | 'report', label: string, id = label): { write: { id: string } } & Record<string, unknown> => ({
+    write: { id },
+    patientId: 'p1',
+    kind,
+    label,
+    state: 'pending',
+  });
+
+  function page(): PatientsPage {
+    const fixture = TestBed.createComponent(PatientsPage);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  beforeEach(() => {
+    pending.set([]);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PatientsPage, TranslateModule.forRoot()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AccountService, useValue: { account: signal({ login: 'nurse', authorities: ['ROLE_NURSE'] }) } },
+        // A stub, because what is under test is how the page reads the store, not the store.
+        {
+          provide: PatientsStore,
+          useValue: {
+            refresh: async () => undefined,
+            filters: signal({ query: '', sex: null, childrenOnly: false }),
+            rows: signal([]),
+            total: signal(0),
+            hasMore: signal(false),
+            status: signal('fresh'),
+            fetchedAt: signal(null),
+            recencyRestricted: signal(false),
+            rowsRestricted: signal(false),
+            record: signal(null),
+            recordLoading: signal(false),
+            recordFailed: signal(false),
+            recordActivityRestricted: signal(false),
+            pendingForOpenRecord: pending,
+          },
+        },
+      ],
+    });
+  });
+
+  it('shows NO chip on a record with nothing pending', () => {
+    // The positive control. A chip that renders unconditionally would say every note is unsent,
+    // which is worse than the defect it replaces.
+    const subject = page();
+
+    expect(subject.pendingActivities()).toEqual([]);
+    expect(subject.pendingReports()).toEqual([]);
+  });
+
+  it('carries an unsent activity note to the activity list', () => {
+    pending.set([entry('activity', 'Wound dressed')] as never);
+
+    expect(
+      page()
+        .pendingActivities()
+        .map(e => e.label),
+    ).toEqual(['Wound dressed']);
+  });
+
+  it('puts an unsent report under reports, not under activity', () => {
+    // Two lists, two kinds. A report drawn among the activity entries is a different note than the
+    // one the clinician wrote.
+    pending.set([entry('activity', 'Wound dressed'), entry('report', 'Bloods')] as never);
+
+    const subject = page();
+
+    expect(subject.pendingActivities().map(e => e.label)).toEqual(['Wound dressed']);
+    expect(subject.pendingReports().map(e => e.label)).toEqual(['Bloods']);
+  });
+
+  it('follows the queued op s state, so a rejection is visible where the note is', () => {
+    pending.set([{ ...entry('activity', 'Wound dressed'), state: 'rejected' }] as never);
+
+    expect(page().pendingActivities()[0].state).toBe('rejected');
   });
 });
