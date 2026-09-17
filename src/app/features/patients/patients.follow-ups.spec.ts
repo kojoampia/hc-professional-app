@@ -165,11 +165,28 @@ describe('PatientsPage — a row that will not open says so before it is tapped'
       expect(httpMock.match(candidate => candidate.url.endsWith('api/patients/p1'))).toEqual([]);
     });
 
-    it('drops the row s button affordance, so nothing offers a door that is not there', async () => {
-      const dom = await directory('record');
+    /**
+     * `ion-item`'s own `button` property, read off the element.
+     *
+     * <p><b>Not `ng-reflect-button`</b>, which the first version of these two tests used. That
+     * attribute bites today and would have gone on biting, but it is written by `ngDevMode` and is
+     * no part of Angular's contract — an assertion that silently stops meaning anything if the build
+     * mode changes, and stops by passing. The property is Ionic's public API for this element, is
+     * what the component actually reads, and was measured to carry `true`/`false` here rather than
+     * being swallowed by the Angular wrapper.
+     */
+    const affordance = (dom: HTMLElement): unknown =>
+      (dom.querySelector('[data-test="patient-p1"]') as unknown as Record<string, unknown> | null)?.['button'];
 
+    it('drops the row s button affordance, so nothing offers a door that is not there', async () => {
       // Ionic draws the ripple, the pressed state and (in ios mode) the chevron off `button`.
-      expect(dom.querySelector('[data-test="patient-p1"]')?.getAttribute('ng-reflect-button')).toBe('false');
+      expect(affordance(await directory('record'))).toBe(false);
+    });
+
+    it('keeps the affordance on a row that does open', async () => {
+      // The positive control for the assertion above: without it, `toBe(false)` would also pass
+      // against a row that was never a button in any state.
+      expect(affordance(await directory(null))).toBe(true);
     });
   });
 
@@ -339,14 +356,17 @@ describe('PatientsStore — the refused follow-up survives a cold start, and is 
     expect(store.rowsUnopenable()).toBe(true);
   });
 
-  it('says nothing while the page is empty, however the marker arrived', async () => {
-    // The empty-page rule again, held one layer below the template so a second reader of this signal
-    // cannot reintroduce the banner-over-nothing.
+  it('says nothing while the page is empty, though the marker did arrive', async () => {
+    // The empty-page rule again, held one layer below the template. That the marker WAS read and
+    // kept is proved through the cache, and that is the only proof available on purpose: the raw
+    // token list is private, so `rowsUnopenable` is the one way to ask and nothing can key a chip or
+    // a header badge on the tokens alone. The two answers genuinely differ on this page, which is
+    // exactly why only one of them is offered.
     api.query.mockReturnValue(of(served('record', [])));
 
     await store.refresh();
 
-    expect(store.restrictedFollowUps()).toEqual(['record']);
+    expect(disk.get('hpd:patients.restrictedFollowUps')).toMatchObject({ value: ['record'] });
     expect(store.rowsUnopenable()).toBe(false);
   });
 });

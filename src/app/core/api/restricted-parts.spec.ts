@@ -140,6 +140,17 @@ describe('X-Restricted-Parts', () => {
       record: 'patients.recordsRestricted',
     };
 
+    /**
+     * Every sentence this app says about a <b>refusal</b>, and nothing else.
+     *
+     * <p><b>Its scope is narrower than `web/`'s sibling guard and that is deliberate</b>, so the two
+     * should not be quoted as one check. `web/`'s covers its whole `dashboard.restricted` block;
+     * this one covers the four keys derived from the two wire vocabularies above and omits
+     * `dashboard.casesUnavailable`, which is an <i>outage</i> message — *the figures are unavailable
+     * right now* — rather than a statement about what this role may read. Converging those two would
+     * be a wording preference; converging any two of these four would be a false sentence, which is
+     * why only these are held.
+     */
     const KEYS = [
       ...Object.values(SENTENCES_FOR).flatMap(surfaces => [surfaces.directory, surfaces.record].filter(key => key !== null)),
       ...Object.values(FOLLOW_UP_SENTENCES_FOR),

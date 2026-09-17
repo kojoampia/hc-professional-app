@@ -318,9 +318,26 @@ export const EN = {
      * first names the rule and its consequence, the second pre-empts the wrong reading. Here the
      * wrong reading is *the phone is stuck* — a tap that does nothing on a touch device invites a
      * retry, which is exactly what the 503's own "may clear on retry" wording invites (item 113).
+     *
+     * <p>The noun for the record itself comes from `record` below, which is the anchor term — see
+     * the comment there for why that is written down rather than left to taste.
      */
     recordsRestricted: 'Your role cannot open patient records, so these rows do not open. Retrying will not change it.',
     loadingMore: 'Loading more',
+    /**
+     * <b>The anchor term for a patient's clinical record in this app.</b> A new sentence about a
+     * record takes its noun from here in each locale — `Historial`, `Dossier`, `Akte` — rather than
+     * reaching for a synonym.
+     *
+     * <p>Worth stating because it is what went wrong <i>across</i> the two clients on
+     * `../docs/backlog.md` item 132: `web/` wrote `Datensätze`, a database word, where this app
+     * already said `Patientenakten`, the clinical German. Neither reads as an error alone, and
+     * <b>no gate in the estate can see across two repositories</b> — the only person who ever
+     * notices is the clinician who reads the portal and the phone in the same language, and who has
+     * no reason to think the two words name one thing. The review settled it on this app's wording.
+     * The point of this comment is that the next person adding a record sentence should not have to
+     * settle it again.
+     */
     record: 'Record',
     recordFailed: 'Could not load this record.',
     recordOffline: 'Showing the copy saved on this phone.',

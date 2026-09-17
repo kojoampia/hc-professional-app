@@ -163,9 +163,16 @@ export class PatientsStore {
    * `GET /api/patients/{id}`, which reads strictly where the directory degrades. The directory is
    * the only surface that can say it before the clinician finds out by tapping, which is the whole
    * of `../docs/backlog.md` item 132.
+   *
+   * <p><b>Private, unlike {@link restricted} beside it, and the asymmetry is the point.</b> The
+   * empty-page rule lives on {@link rowsUnopenable} below, and that claim holds only while
+   * `rowsUnopenable` is the one way in: a header chip or a badge keyed on the raw tokens would put
+   * the sentence over an empty list, which is precisely what item 128 handed the clients the rule to
+   * prevent. The two signals genuinely disagree on a zero-row page — a marker that arrived, and no
+   * sentence to draw — so exposing both would offer a right answer and a wrong one side by side.
+   * Nothing needs the raw list, and anything that ever does needs the rule with it.
    */
   private readonly followUpsSignal = signal<readonly RestrictedFollowUp[]>([]);
-  readonly restrictedFollowUps = this.followUpsSignal.asReadonly();
 
   /**
    * Every row on screen leads to a record this clinician may not open.
@@ -174,8 +181,9 @@ export class PatientsStore {
    * the marker on a zero-row page deliberately — suppressing it there would make the wire value
    * depend on caseload, and this store caches it beside page zero, so it would appear and vanish as
    * shifts were assigned. The rule handed to the clients is to key the sentence on having rows to
-   * describe, and it is held here rather than in the template so a second reader of this signal
-   * cannot reintroduce a banner over an empty list.
+   * describe, and it is held here rather than in the template so a second reader cannot reintroduce
+   * a banner over an empty list — which is enforced rather than asserted, because the signal it
+   * derives from is private and this is the only way to ask.
    *
    * <p>An empty-and-restricted page is not silent: it still carries `X-Restricted-Parts`' own
    * sentences, which are about the answer rather than about a tap.
