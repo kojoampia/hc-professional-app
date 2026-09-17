@@ -305,7 +305,39 @@ export const EN = {
     neverSeen: 'No activity recorded',
     recencyRestricted: 'Your role cannot see recent visits',
     rowsRestricted: 'Some patients are not listed: your role cannot read case assignments.',
+    /**
+     * The directory's third refusal, and the only one about what a <b>tap</b> will do.
+     *
+     * <p>`X-Restricted-Follow-Ups: record` says the record behind every row here will refuse
+     * (`../docs/backlog.md` items 128 and 132). That is a different piece of news from either
+     * sentence above — one blanks a column, the other says people are missing — and item 129's trap
+     * has now caught three items in a row, so `restricted-parts.spec.ts` fails if any two of the
+     * four converge in any locale.
+     *
+     * <p>Two sentences, in the shape `dashboard.casesUnavailable` and `activityRestricted` use: the
+     * first names the rule and its consequence, the second pre-empts the wrong reading. Here the
+     * wrong reading is *the phone is stuck* — a tap that does nothing on a touch device invites a
+     * retry, which is exactly what the 503's own "may clear on retry" wording invites (item 113).
+     *
+     * <p>The noun for the record itself comes from `record` below, which is the anchor term — see
+     * the comment there for why that is written down rather than left to taste.
+     */
+    recordsRestricted: 'Your role cannot open patient records, so these rows do not open. Retrying will not change it.',
     loadingMore: 'Loading more',
+    /**
+     * <b>The anchor term for a patient's clinical record in this app.</b> A new sentence about a
+     * record takes its noun from here in each locale — `Historial`, `Dossier`, `Akte` — rather than
+     * reaching for a synonym.
+     *
+     * <p>Worth stating because it is what went wrong <i>across</i> the two clients on
+     * `../docs/backlog.md` item 132: `web/` wrote `Datensätze`, a database word, where this app
+     * already said `Patientenakten`, the clinical German. Neither reads as an error alone, and
+     * <b>no gate in the estate can see across two repositories</b> — the only person who ever
+     * notices is the clinician who reads the portal and the phone in the same language, and who has
+     * no reason to think the two words name one thing. The review settled it on this app's wording.
+     * The point of this comment is that the next person adding a record sentence should not have to
+     * settle it again.
+     */
     record: 'Record',
     recordFailed: 'Could not load this record.',
     recordOffline: 'Showing the copy saved on this phone.',
@@ -724,6 +756,7 @@ export const ES: typeof EN = {
     neverSeen: 'Sin actividad registrada',
     recencyRestricted: 'Su rol no puede ver la actividad reciente',
     rowsRestricted: 'Algunos pacientes no aparecen: su rol no puede consultar las asignaciones de casos.',
+    recordsRestricted: 'Su rol no puede abrir historiales de pacientes, por lo que estas filas no se abren. Reintentar no lo cambiará.',
     loadingMore: 'Cargando más',
     record: 'Historial',
     recordFailed: 'No se pudo cargar este historial.',
@@ -1133,6 +1166,8 @@ export const FR: typeof EN = {
     neverSeen: 'Aucune activité enregistrée',
     recencyRestricted: 'Votre rôle ne permet pas de voir les passages récents',
     rowsRestricted: 'Certains patients ne sont pas affichés : votre rôle ne permet pas de consulter les affectations de dossiers.',
+    recordsRestricted:
+      "Votre rôle ne permet pas d'ouvrir les dossiers patients ; ces lignes ne s'ouvrent donc pas. Réessayer n'y changera rien.",
     loadingMore: 'Chargement',
     record: 'Dossier',
     recordFailed: 'Impossible de charger ce dossier.',
@@ -1541,6 +1576,8 @@ export const DE: typeof EN = {
     neverSeen: 'Keine Aktivität erfasst',
     recencyRestricted: 'Ihre Rolle darf die letzte Aktivität nicht sehen',
     rowsRestricted: 'Einige Patienten werden nicht angezeigt: Ihre Rolle darf Fallzuweisungen nicht lesen.',
+    recordsRestricted:
+      'Ihre Rolle darf keine Patientenakten öffnen, daher lassen sich diese Zeilen nicht öffnen. Ein erneuter Versuch ändert daran nichts.',
     loadingMore: 'Weitere werden geladen',
     record: 'Akte',
     recordFailed: 'Diese Akte konnte nicht geladen werden.',

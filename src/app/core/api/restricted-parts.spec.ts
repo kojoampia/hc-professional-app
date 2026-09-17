@@ -1,5 +1,12 @@
 import { CATALOGUES } from '../i18n/catalogues';
-import { RESTRICTED_PARTS, RestrictedPart, parseRestrictedParts } from './restricted-parts';
+import {
+  RESTRICTED_FOLLOW_UPS,
+  RESTRICTED_PARTS,
+  RestrictedFollowUp,
+  RestrictedPart,
+  parseRestrictedFollowUps,
+  parseRestrictedParts,
+} from './restricted-parts';
 
 /**
  * The wire half of `../docs/backlog.md` item 114.
@@ -58,6 +65,48 @@ describe('X-Restricted-Parts', () => {
     });
   });
 
+  /**
+   * `X-Restricted-Follow-Ups` — the directory saying the records behind its rows will not open.
+   *
+   * <h3>Why it is parsed here rather than treated as a boolean</h3>
+   * One token exists today, so `header !== null` would answer every question this app currently
+   * asks. It is a vocabulary for the reason the one above is: `api/`'s `RestrictedPart` switch has
+   * no `default` precisely so a third part must be decided on rather than defaulted, and the day one
+   * arrives its follow-up cost arrives with it. A release that predates that token must drop it —
+   * and a boolean cannot, because it would read *some* follow-up is refused and mark every row.
+   */
+  describe('parsing the follow-up header', () => {
+    it('reads nothing from an absent header — seven of the eight disciplines never see one', () => {
+      expect(parseRestrictedFollowUps(null)).toEqual([]);
+      expect(parseRestrictedFollowUps(undefined)).toEqual([]);
+      expect(parseRestrictedFollowUps('')).toEqual([]);
+    });
+
+    it('reads the one token a technician gets', () => {
+      expect(parseRestrictedFollowUps('record')).toEqual(['record']);
+    });
+
+    it('IGNORES a token this release does not know', () => {
+      expect(parseRestrictedFollowUps('dossier')).toEqual([]);
+      expect(parseRestrictedFollowUps('dossier,record')).toEqual(['record']);
+    });
+
+    it('tolerates the spacing a header may pick up in transit', () => {
+      expect(parseRestrictedFollowUps(' record ')).toEqual(['record']);
+    });
+
+    it('matches the token exactly — a near-miss spelling is an unknown token', () => {
+      expect(parseRestrictedFollowUps('records')).toEqual([]);
+    });
+
+    it('does not confuse the two vocabularies, which travel in two different headers', () => {
+      // They share a parser and nothing else. A part read as a follow-up would mark every row for a
+      // pharmacist, whose records open perfectly well.
+      expect(parseRestrictedFollowUps('lastActivity,caseAssignments')).toEqual([]);
+      expect(parseRestrictedParts('record')).toEqual([]);
+    });
+  });
+
   describe('every token has something to say, in four languages', () => {
     /**
      * The sentences each token becomes, per surface.
@@ -76,7 +125,36 @@ describe('X-Restricted-Parts', () => {
       lastActivity: { directory: 'patients.recencyRestricted', record: 'patients.activityRestricted' },
     };
 
-    const KEYS = Object.values(SENTENCES_FOR).flatMap(surfaces => [surfaces.directory, surfaces.record].filter(key => key !== null));
+    /**
+     * The sentence each <b>follow-up</b> token becomes.
+     *
+     * <p>One surface, the directory, because the directory is the only read that can say it before
+     * the clinician finds out by tapping — which is the whole of `../docs/backlog.md` item 132.
+     *
+     * <p>Folded into the same `KEYS` list below on purpose. Item 129's copy trap has now caught
+     * three items in a row, and the sentence this one adds is the easiest of the four to write as a
+     * near-copy of another: *"your role cannot read case assignments"* and *"your role cannot open
+     * patient records"* are one word apart in English and were one word apart in the first draft.
+     */
+    const FOLLOW_UP_SENTENCES_FOR: Record<RestrictedFollowUp, string> = {
+      record: 'patients.recordsRestricted',
+    };
+
+    /**
+     * Every sentence this app says about a <b>refusal</b>, and nothing else.
+     *
+     * <p><b>Its scope is narrower than `web/`'s sibling guard and that is deliberate</b>, so the two
+     * should not be quoted as one check. `web/`'s covers its whole `dashboard.restricted` block;
+     * this one covers the four keys derived from the two wire vocabularies above and omits
+     * `dashboard.casesUnavailable`, which is an <i>outage</i> message — *the figures are unavailable
+     * right now* — rather than a statement about what this role may read. Converging those two would
+     * be a wording preference; converging any two of these four would be a false sentence, which is
+     * why only these are held.
+     */
+    const KEYS = [
+      ...Object.values(SENTENCES_FOR).flatMap(surfaces => [surfaces.directory, surfaces.record].filter(key => key !== null)),
+      ...Object.values(FOLLOW_UP_SENTENCES_FOR),
+    ];
 
     const resolve = (catalogue: unknown, key: string): unknown =>
       key
@@ -85,6 +163,10 @@ describe('X-Restricted-Parts', () => {
 
     it('covers every token the parser will hand to a screen', () => {
       expect(Object.keys(SENTENCES_FOR).sort()).toEqual([...RESTRICTED_PARTS].sort());
+    });
+
+    it('covers every follow-up token too, so a second one cannot reach a screen unsaid', () => {
+      expect(Object.keys(FOLLOW_UP_SENTENCES_FOR).sort()).toEqual([...RESTRICTED_FOLLOW_UPS].sort());
     });
 
     it.each(Object.keys(CATALOGUES))('%s carries a sentence for each token', language => {
@@ -97,9 +179,10 @@ describe('X-Restricted-Parts', () => {
     it.each(Object.keys(CATALOGUES))('%s says something DIFFERENT for every loss it names', language => {
       const sentences = KEYS.map(key => resolve(CATALOGUES[language as keyof typeof CATALOGUES], key));
 
-      // A blank field, a missing patient and a withheld history are three different pieces of news.
-      // One translation covering two would repeat item 107's own conflation inside the fix for it,
-      // which is exactly the trap item 129 records against the record screen.
+      // A blank field, a missing patient, a withheld history and a row that will not open are four
+      // different pieces of news. One translation covering two would repeat item 107's own
+      // conflation inside the fix for it, which is exactly the trap item 129 records — and which
+      // items 126 and 132 have each had to be warned off in turn.
       expect(new Set(sentences).size).toBe(sentences.length);
     });
 

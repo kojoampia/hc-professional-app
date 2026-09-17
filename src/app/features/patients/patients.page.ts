@@ -67,6 +67,28 @@ import { PatientsStore } from './patients.store';
  * <p>An absent header renders nothing at all — five of the eight disciplines never see one — and an
  * unrecognised token is dropped rather than shown.
  *
+ * <h3>A row that will not open says so, and stops being a door</h3>
+ * A second header, `X-Restricted-Follow-Ups: record`, is the directory saying that a part it had to
+ * withhold is one `GET /api/patients/{id}` reads <b>strictly</b> — so every row here answers 503
+ * when opened (`../docs/backlog.md` items 128 and 132). A technician gets it; nobody else does.
+ *
+ * <p>It is answered <b>once, above the list</b>, for `caseAssignments`' reason turned around: this
+ * is not a property of any row, it is the same fact about all of them, and a hundred copies of one
+ * sentence would push the patient's name off the line it is printed beside. It sits below
+ * `rowsRestricted` and so nearest the list, because it is the only notice about the rows that are
+ * actually here.
+ *
+ * <p><b>And the rows stop being tappable.</b> On a phone the tap is the whole interaction, so a live
+ * target is itself a claim — and item 128 states that where this marker is present it is never
+ * wrong. Leaving the tap would spend a clinician's mobile data to be told what the list already
+ * said, and answer with `patients.recordFailed`, which reads as transient. `[button]` removes the
+ * ripple and the chevron; `open()` refuses as well, because `button` is only an affordance.
+ *
+ * <p><b>Keyed on having rows, not on the header alone.</b> A technician with no tasks gets the
+ * marker on an empty page — item 128 asserted that rather than suppressing it, because suppressing
+ * makes the wire value depend on caseload and this app caches the marker beside page zero, so it
+ * would appear and vanish as shifts were assigned. `PatientsStore.rowsUnopenable` holds that rule.
+ *
  * <h3>The record answers the same token with its own sentence</h3>
  * `GET /api/patients/{id}` emits the header too since item 112, and it names `lastActivity` — the
  * directory's own token, costing something entirely different. Here the panel is withheld
@@ -178,9 +200,17 @@ import { PatientsStore } from './patients.store';
           </p>
         }
 
+        <!-- Last of the notices and so closest to the list, because it is the only one about the
+             rows that ARE here. The one above describes rows that are not. -->
+        @if (store.rowsUnopenable()) {
+          <p class="rounded-hpd-sm bg-hpd-warning-tint px-3 py-2 text-hpd-warning" role="status" data-test="records-restricted">
+            {{ 'patients.recordsRestricted' | translate }}
+          </p>
+        }
+
         <ion-list [inset]="true">
           @for (patient of store.rows(); track patient.id) {
-            <ion-item button (click)="open(patient.id)" [attr.data-test]="'patient-' + patient.id">
+            <ion-item [button]="!store.rowsUnopenable()" (click)="open(patient.id)" [attr.data-test]="'patient-' + patient.id">
               <ion-label>
                 <h3>{{ patient.patientName }}</h3>
                 <p [class.text-hpd-muted]="store.recencyRestricted()">
@@ -499,7 +529,19 @@ export class PatientsPage implements OnInit {
     });
   }
 
+  /**
+   * Opens a record — unless the directory has already been told that this one refuses.
+   *
+   * <p>The guard is here rather than only on `[button]`, because `button` is an affordance and not a
+   * gate: Ionic still delivers the click to a plain `ion-item`. Without it the row would spend a
+   * clinician's mobile data on a read the server has already said will 503, and answer with
+   * `patients.recordFailed` — *"Could not load this record"* — which reads as transient and invites
+   * the retry item 113 is open about.
+   */
   async open(patientId: string): Promise<void> {
+    if (this.store.rowsUnopenable()) {
+      return;
+    }
     await this.store.openRecord(patientId);
   }
 

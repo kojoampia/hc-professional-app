@@ -156,6 +156,7 @@ describe('PatientsPage — unsent entries on the record', () => {
             fetchedAt: signal(null),
             recencyRestricted: signal(false),
             rowsRestricted: signal(false),
+            rowsUnopenable: signal(false),
             record: signal(null),
             recordLoading: signal(false),
             recordFailed: signal(false),
