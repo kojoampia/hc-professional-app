@@ -2,7 +2,14 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { PatientApiService, PatientListItemDto, PatientRecordDto } from '../../core/api/patient-api.service';
-import { RESTRICTED_PARTS_HEADER, RestrictedPart, parseRestrictedParts } from '../../core/api/restricted-parts';
+import {
+  RESTRICTED_FOLLOW_UPS_HEADER,
+  RESTRICTED_PARTS_HEADER,
+  RestrictedFollowUp,
+  RestrictedPart,
+  parseRestrictedFollowUps,
+  parseRestrictedParts,
+} from '../../core/api/restricted-parts';
 import { CacheStore } from '../../core/offline/cache-store.service';
 import { QueuedWrite } from '../../core/offline/queued-write.model';
 import { WriteQueue } from '../../core/offline/write-queue.service';
@@ -34,6 +41,18 @@ const RESTRICTED_PARTS_KEY = 'patients.restrictedParts';
  * counted toward the bound and eventually evicted as though it were a patient.
  */
 const RECORD_RESTRICTED_PARTS_KEY = 'patients.recordRestrictedParts';
+
+/**
+ * Where the directory's refused <b>follow-ups</b> live.
+ *
+ * <p>A third key rather than a field on either of the two above, because it answers a third
+ * question: not <i>what is missing from this answer</i> but <i>what will happen if you act on it</i>.
+ * Cached for the same reason as the others and in the clear for the same reason — it names a
+ * capability of the signed-in role, not anything about a patient — and cached at all because this
+ * app is built around cold starts: without it, a technician opening the saved directory in a
+ * basement is offered a hundred rows again with nothing to say they are closed.
+ */
+const RESTRICTED_FOLLOW_UPS_KEY = 'patients.restrictedFollowUps';
 
 /** Rows per request. Twenty fills a phone screen twice over and costs little on mobile data. */
 export const PAGE_SIZE = 20;
@@ -135,6 +154,37 @@ export class PatientsStore {
 
   /** Case assignments were refused, so the directory is short of patients — not merely of detail. */
   readonly rowsRestricted = computed(() => this.restrictedSignal().includes('caseAssignments'));
+
+  /**
+   * What the server says this read cannot be followed up on.
+   *
+   * <p>Distinct from {@link restricted} and not derivable from it. That names parts missing from
+   * <b>this</b> answer; this names a read that is <b>not</b> this answer and will refuse —
+   * `GET /api/patients/{id}`, which reads strictly where the directory degrades. The directory is
+   * the only surface that can say it before the clinician finds out by tapping, which is the whole
+   * of `../docs/backlog.md` item 132.
+   */
+  private readonly followUpsSignal = signal<readonly RestrictedFollowUp[]>([]);
+  readonly restrictedFollowUps = this.followUpsSignal.asReadonly();
+
+  /**
+   * Every row on screen leads to a record this clinician may not open.
+   *
+   * <p><b>The row count is part of the question, not a detail of the template.</b> Item 128 emits
+   * the marker on a zero-row page deliberately — suppressing it there would make the wire value
+   * depend on caseload, and this store caches it beside page zero, so it would appear and vanish as
+   * shifts were assigned. The rule handed to the clients is to key the sentence on having rows to
+   * describe, and it is held here rather than in the template so a second reader of this signal
+   * cannot reintroduce a banner over an empty list.
+   *
+   * <p>An empty-and-restricted page is not silent: it still carries `X-Restricted-Parts`' own
+   * sentences, which are about the answer rather than about a tap.
+   *
+   * <p>Sufficient rather than complete, by item 128's own account: present, the marker is never
+   * wrong; absent, a record could still refuse over a collection the directory never reads. So this
+   * suppresses a tap it knows will fail and never claims a record <i>will</i> open.
+   */
+  readonly rowsUnopenable = computed(() => this.followUpsSignal().includes('record') && this.rowsSignal().length > 0);
 
   private nextPage = 0;
 
@@ -248,6 +298,14 @@ export class PatientsStore {
       const cachedTokens = Array.isArray(cachedRestriction?.value) ? cachedRestriction.value : [];
       this.restrictedSignal.set(parseRestrictedParts(cachedTokens.join(',')));
 
+      // Read on the same terms and for the same reason: a saved directory shown with no signal must
+      // carry the mark it had on the wire, or the app offers a hundred rows that will not open and
+      // says nothing about it — the state item 132 exists to end, surviving in the one place this
+      // app is built for.
+      const cachedFollowUps = await this.cache.get<string[]>(RESTRICTED_FOLLOW_UPS_KEY);
+      const cachedFollowUpTokens = Array.isArray(cachedFollowUps?.value) ? cachedFollowUps.value : [];
+      this.followUpsSignal.set(parseRestrictedFollowUps(cachedFollowUpTokens.join(',')));
+
       const cached = await this.cache.get<PatientListItemDto[]>(FIRST_PAGE_KEY);
       if (cached) {
         this.rowsSignal.set(cached.value);
@@ -302,6 +360,13 @@ export class PatientsStore {
       const restricted = parseRestrictedParts(response.headers.get(RESTRICTED_PARTS_HEADER));
       this.restrictedSignal.set(restricted);
 
+      // The second header, read on the same terms. It is emitted only when a withheld part is one
+      // the record path reads strictly, so its absence on a 200 is the server saying these rows can
+      // be opened — as far as this read can tell (item 128 states the marker is sufficient, not
+      // complete, so absence is not a promise and nothing here makes one).
+      const followUps = parseRestrictedFollowUps(response.headers.get(RESTRICTED_FOLLOW_UPS_HEADER));
+      this.followUpsSignal.set(followUps);
+
       // A missing header means "this is everything", not zero: zero would empty a list the server
       // had just filled.
       this.totalSignal.set(header === null ? existing.length + rows.length : Number(header));
@@ -315,6 +380,10 @@ export class PatientsStore {
         // In the clear, and written even when empty so that a role which stops being restricted
         // corrects the cached copy rather than inheriting yesterday's marker.
         await this.cache.set(RESTRICTED_PARTS_KEY, [...restricted]);
+        // Likewise in the clear and likewise written when empty, so a discipline whose scope is
+        // widened stops being told its own records are closed rather than inheriting yesterday's
+        // answer until the cache expires.
+        await this.cache.set(RESTRICTED_FOLLOW_UPS_KEY, [...followUps]);
         this.cachedAtSignal.set(Date.now());
       }
       this.nextPage += 1;
