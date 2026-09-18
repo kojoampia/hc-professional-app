@@ -91,7 +91,7 @@ export function needsAttention(write: QueuedWrite): boolean {
  *
  * | status | outcome | why |
  * | --- | --- | --- |
- * | 401 | retry | Not the op's fault. `authRefreshInterceptor` refreshes and the replay carries the new token. |
+ * | 401 | retry | Not the op's fault — but since item 161 not always a refresh either. `authRefreshInterceptor` refreshes and replays only when the answer could be about our own token; a 401 from a sibling service (`case.archive` is this queue's only one) propagates unrefreshed, because the sibling refused the call, not the credential. `retry` is right for both — but do not assume a refresh already happened when editing `outcomeFor`. |
  * | 0, 408, 5xx | retry | Transport. The write is still good. |
  * | 409, 412 | conflict | Somebody else changed it. **Never auto-merge clinical text.** |
  * | 4xx otherwise | rejected | A 403 means this role may not write. Retrying forever hides a permissions problem behind a spinner. |
