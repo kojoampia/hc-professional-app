@@ -75,6 +75,25 @@ describe('brand name', () => {
     });
   });
 
+  describe('the lockup subtitle is the brand word (backlog item 185)', () => {
+    // `auth.subtitle` renders directly beneath the hardcoded <h1>Abofonsa BridgeCare</h1> on the
+    // sign-in screen (login.page.ts) — the same brand lockup `web/` renders from
+    // `healthConnect.brand.product` in its sidebar and auth shell. The two repos name this one
+    // surface with different keys, and that is KNOWN and tracked, not an error to fix from here:
+    // a sweep by key name is exactly how this string was missed when row 185 was filed.
+    //
+    // The architect decided "Professional" here is a BRAND word, not a descriptive one. The
+    // evidence is the store listing name — "Abofonsa BridgeCare Pro", identical and untranslated
+    // in all four locales — and this repo already agreed everywhere else: `auth.unlockReason`
+    // says "Abofonsa BridgeCare Professional" untranslated in all four. Only the lockup subtitle
+    // had drifted ("Profesional", "Professionnel", "Fachkraft"). Descriptive surfaces stay
+    // translated — `web/`'s `global.title` ("Panel profesional", "Tableau de bord
+    // professionnel") is deliberately outside this rule.
+    it.each(Object.keys(CATALOGUES))('reads "Professional" untranslated in %s', language => {
+      expect(CATALOGUES[language as keyof typeof CATALOGUES].auth.subtitle).toBe('Professional');
+    });
+  });
+
   it('keeps the bundle id, which is IMMUTABLE on both stores', () => {
     // Renaming the app is a text change; renaming this is a new store listing and a new install
     // base. It carries the full brand already, so it never needs to follow a label change.
