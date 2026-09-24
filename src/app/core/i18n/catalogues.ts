@@ -342,8 +342,17 @@ export const EN = {
      * </ul>
      *
      * <p>For German the record is `Patientenakte`/`Akte`, the clinical word — never `Datensatz`, a
-     * database word, which is what `web/` wrote and item 132 removed. French is `dossier`
-     * everywhere and is not in question.
+     * database word, which is what `web/` wrote and item 132 removed.
+     *
+     * <p>For French the record is <b>`dossier`</b> and the <i>clinical case</i> is <b>`cas`</b> —
+     * never `dossier`, which is <b>reserved for the record</b> (`../docs/backlog.md` item 175,
+     * matching what `web/`'s dashboard and case-queue fr already said). This catalogue used one
+     * noun for both senses, and the collision was visible in a single sentence:
+     * `cases.archiveHint` read <i>"Le dossier reste dans le dossier du patient"</i> — the same
+     * word twice for two different things — until the case sense moved to `cas`. An earlier
+     * version of this paragraph said French was `dossier` everywhere and not in question; that was
+     * true of the record noun and false of the pair, which is how the collision survived item
+     * 147's own review.
      *
      * <p>Worth stating because it is what went wrong <i>across</i> the two clients on item 132,
      * and then <i>within</i> this catalogue on item 147: this key itself said `Historial` in
@@ -1122,20 +1131,20 @@ export const FR: typeof EN = {
     children: 'Enfants',
     female: 'Femmes',
     male: 'Hommes',
-    cases: 'Dossiers',
+    cases: 'Cas',
     openCases: 'Ouverts',
     urgentCases: 'Urgents',
     closedCases: 'Clos',
-    casesUnavailable: 'Les chiffres des dossiers ne sont pas disponibles pour le moment. Un tiret signifie inconnu, pas zéro.',
+    casesUnavailable: 'Les chiffres des cas ne sont pas disponibles pour le moment. Un tiret signifie inconnu, pas zéro.',
     noCharts: 'Les graphiques et les revenus sont sur le portail web.',
   },
   cases: {
-    title: 'Dossiers',
-    open: 'Mes dossiers',
-    savedData: 'Affichage des dossiers enregistrés',
-    savedDataOffline: 'Hors ligne — affichage des dossiers enregistrés',
-    empty: 'Aucun dossier dans votre file.',
-    loadFailed: 'Impossible de charger vos dossiers.',
+    title: 'Cas',
+    open: 'Mes cas',
+    savedData: 'Affichage des cas enregistrés',
+    savedDataOffline: 'Hors ligne — affichage des cas enregistrés',
+    empty: 'Aucun cas dans votre file.',
+    loadFailed: 'Impossible de charger vos cas.',
     filterAll: 'Tous',
     filterOpen: 'Ouverts',
     filterUrgent: 'Urgents',
@@ -1143,25 +1152,25 @@ export const FR: typeof EN = {
     countOpen: 'Ouverts',
     countUrgent: 'Urgents',
     countClosed: 'Clos',
-    noBrief: 'Dossier sans titre',
+    noBrief: 'Cas sans titre',
     loadingMore: 'Chargement',
-    detailFailed: "Impossible d'ouvrir ce dossier.",
+    detailFailed: "Impossible d'ouvrir ce cas.",
     symptoms: 'Symptômes',
     diagnosis: 'Diagnostic',
     opened: 'Ouvert le',
-    detail: 'Dossier',
+    detail: 'Cas',
     brief: 'Résumé',
     status: 'Statut',
     save: 'Enregistrer',
     saveQueued: 'Enregistré sur ce téléphone. Il sera envoyé dès que vous aurez du réseau.',
-    noPermission: 'Votre rôle ne permet pas de modifier les dossiers.',
-    archive: 'Archiver ce dossier',
-    archiveReason: 'Pourquoi archivez-vous ce dossier ?',
-    archiveHint: "Le dossier reste dans le dossier du patient. Il quitte votre liste une fois l'envoi effectué.",
+    noPermission: 'Votre rôle ne permet pas de modifier les cas.',
+    archive: 'Archiver ce cas',
+    archiveReason: 'Pourquoi archivez-vous ce cas ?',
+    archiveHint: "Le cas reste dans le dossier du patient. Il quitte votre liste une fois l'envoi effectué.",
     archivePending: 'Archivage',
-    archiveDoctorOnly: 'Seul un médecin peut archiver un dossier.',
+    archiveDoctorOnly: 'Seul un médecin peut archiver un cas.',
     archivedOn: 'Archivé le',
-    archivedNote: "Ce dossier n'est plus actif.",
+    archivedNote: "Ce cas n'est plus actif.",
     close: 'Fermer',
   },
   patients: {
@@ -1181,7 +1190,7 @@ export const FR: typeof EN = {
     lastSeen: 'Dernier passage',
     neverSeen: 'Aucune activité enregistrée',
     recencyRestricted: 'Votre rôle ne permet pas de voir les passages récents',
-    rowsRestricted: 'Certains patients ne sont pas affichés : votre rôle ne permet pas de consulter les affectations de dossiers.',
+    rowsRestricted: 'Certains patients ne sont pas affichés : votre rôle ne permet pas de consulter les affectations de cas.',
     recordsRestricted:
       "Votre rôle ne permet pas d'ouvrir les dossiers patients ; ces lignes ne s'ouvrent donc pas. Réessayer n'y changera rien.",
     loadingMore: 'Chargement',
@@ -1193,8 +1202,8 @@ export const FR: typeof EN = {
     phone: 'Téléphone',
     email: 'E-mail',
     emergencyContact: "Contact d'urgence",
-    cases: 'Dossiers cliniques',
-    noCases: 'Aucun dossier ouvert.',
+    cases: 'Cas',
+    noCases: 'Aucun cas ouvert.',
     activity: 'Activité',
     noActivity: 'Aucune activité enregistrée.',
     activityRestricted:
