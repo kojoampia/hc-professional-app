@@ -1,1 +1,1 @@
-planning,garde,soignant,infirmier,domicile,tournee,licence,soins,sante
+planning,garde,soignant,infirmier,domicile,tournee,autorisation,soins,sante
