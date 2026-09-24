@@ -26,7 +26,10 @@
  * database may hold a grant made before the removal. The functions below must therefore treat it as
  * what it is here, an unrecognised string, and both do so by construction — they ask what the held
  * authorities *contain* rather than resolving them to a role, so an authority nobody named grants
- * nothing and counts as nothing. `clinical-permissions.spec.ts` pins that by the literal.
+ * nothing and counts as nothing. `clinical-permissions.spec.ts` pins that by the literal. Retiring a
+ * role from this enum trips no store-copy check by itself: add its four locale store nouns as literals
+ * to `RETIRED_ROLE_WORDS` in `store-listings.spec.ts` in the same change, or the listings go on
+ * advertising the role the way they advertised care angels for sixteen days (items 174 and 178).
  */
 
 /** The eight clinical authorities plus the two the gateway issues to everyone. */
