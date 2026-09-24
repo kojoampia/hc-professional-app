@@ -18,4 +18,4 @@ La información de los pacientes permanece en los servidores que la custodian y 
 
 PARA QUIÉN ES
 
-Médicos, enfermeras, paramédicos, farmacéuticos, terapeutas, cuidadores, care angels, químicos y técnicos que trabajan con Abofonsa. Se requiere una cuenta. Si es paciente o familiar, esta no es la aplicación que busca.
+Médicos, enfermeras, paramédicos, farmacéuticos, terapeutas, cuidadores, químicos y técnicos que trabajan con Abofonsa. Se requiere una cuenta. Si es paciente o familiar, esta no es la aplicación que busca.
