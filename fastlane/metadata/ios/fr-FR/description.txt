@@ -8,7 +8,7 @@ Absences — demandez des congés et voyez s'ils ont été approuvés. Les deman
 
 Messages — messagerie sécurisée avec votre équipe soignante, avec compteur de non-lus et notifications désactivables.
 
-Documents — photographiez ou envoyez votre licence professionnelle, vos certificats et vos pièces d'identité au moment de leur renouvellement, et suivez leur statut de vérification.
+Documents — photographiez ou envoyez votre autorisation d'exercice, vos certificats et vos pièces d'identité au moment de leur renouvellement, et suivez leur statut de vérification.
 
 Votre profil — tenez vos coordonnées à jour, en français, anglais, espagnol ou allemand.
 
