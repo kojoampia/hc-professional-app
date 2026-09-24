@@ -94,6 +94,25 @@ describe('brand name', () => {
     });
   });
 
+  describe('the Ghana Card keeps its official name (backlog item 186)', () => {
+    // "Ghana Card" is the official name of Ghana's national identity card — a proper noun, not a
+    // description. fr said "Carte Ghana" until item 186, and that was wrong twice over: the name
+    // is not translatable, and *carte du Ghana* — the idiomatic French the translation was
+    // reaching for — names a map of the country, not the document.
+    //
+    // The contrasting case is two lines away in the same block and is what settles it: `NHIS`
+    // keeps its acronym while the common noun "card" IS translated ("Tarjeta NHIS", "NHIS-Karte",
+    // "Carte NHIS") — es and de split the splittable name and declined to split "Ghana Card".
+    // The workspace training manual's own English agrees, capitalising "Ghana Card" mid-sentence
+    // while lower-casing every other document in the same list (docs/training/src/10-front.html).
+    // Every other type in the block is a common noun and stays translated. `web/` pins the same
+    // term over its `healthConnect.onboarding.documentTypes.GHANACARD`; this is a second copy
+    // because mobile CI clones one repo.
+    it.each(Object.keys(CATALOGUES))('reads "Ghana Card" untranslated in %s', language => {
+      expect(CATALOGUES[language as keyof typeof CATALOGUES].documents.documentTypes.GHANACARD).toBe('Ghana Card');
+    });
+  });
+
   it('keeps the bundle id, which is IMMUTABLE on both stores', () => {
     // Renaming the app is a text change; renaming this is a new store listing and a new install
     // base. It carries the full brand already, so it never needs to follow a label change.
