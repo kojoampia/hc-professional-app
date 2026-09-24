@@ -326,17 +326,33 @@ export const EN = {
     loadingMore: 'Loading more',
     /**
      * <b>The anchor term for a patient's clinical record in this app.</b> A new sentence about a
-     * record takes its noun from here in each locale — `Historial`, `Dossier`, `Akte` — rather than
-     * reaching for a synonym.
+     * record takes its noun from here in each locale — `Expediente`, `Dossier`, `Akte` — rather
+     * than reaching for a synonym. Naming the record's noun is not enough, though, because Spanish
+     * has three nouns in this neighbourhood and each is <b>reserved</b> (`../docs/backlog.md`
+     * item 147):
      *
-     * <p>Worth stating because it is what went wrong <i>across</i> the two clients on
-     * `../docs/backlog.md` item 132: `web/` wrote `Datensätze`, a database word, where this app
-     * already said `Patientenakten`, the clinical German. Neither reads as an error alone, and
-     * <b>no gate in the estate can see across two repositories</b> — the only person who ever
-     * notices is the clinician who reads the portal and the phone in the same language, and who has
-     * no reason to think the two words name one thing. The review settled it on this app's wording.
-     * The point of this comment is that the next person adding a record sentence should not have to
-     * settle it again.
+     * <ul>
+     *   <li><b>`expediente`</b> — the clinical record, and nothing else.
+     *   <li><b>`historial`</b> — the <i>activity log</i> only (`historial de actividad`, as in
+     *       `activityRestricted` below), never the record. The two refusals render side by side in
+     *       the same restriction block, so one noun doing both jobs left a clinician told "su rol
+     *       no puede ver el historial" unable to tell whether they had lost the record or the log.
+     *   <li><b>`expediente de acreditación`</b> — a clinician's own credentialing dossier
+     *       (`web/`'s onboarding copy), a third sense kept distinct by its qualifier.
+     * </ul>
+     *
+     * <p>For German the record is `Patientenakte`/`Akte`, the clinical word — never `Datensatz`, a
+     * database word, which is what `web/` wrote and item 132 removed. French is `dossier`
+     * everywhere and is not in question.
+     *
+     * <p>Worth stating because it is what went wrong <i>across</i> the two clients on item 132,
+     * and then <i>within</i> this catalogue on item 147: this key itself said `Historial` in
+     * Spanish while `cannotFile`, in the same block, already said `expediente`. Neither reads as
+     * an error alone, and <b>no gate in the estate can see either</b> — a synonym is not a missing
+     * key, and no check compares nouns across repositories. The only person who ever notices is
+     * the clinician who reads the portal and the phone in the same language, and who has no reason
+     * to think the two words name one thing. The point of this comment is that the next person
+     * adding a record sentence — or a log sentence — should not have to settle the nouns again.
      */
     record: 'Record',
     recordFailed: 'Could not load this record.',
@@ -731,7 +747,7 @@ export const ES: typeof EN = {
     noPermission: 'Su rol no puede editar casos.',
     archive: 'Archivar este caso',
     archiveReason: '¿Por qué lo archiva?',
-    archiveHint: 'El caso permanece en el historial del paciente. Saldrá de su lista cuando se envíe.',
+    archiveHint: 'El caso permanece en el expediente del paciente. Saldrá de su lista cuando se envíe.',
     archivePending: 'Archivando',
     archiveDoctorOnly: 'Solo un médico puede archivar un caso.',
     archivedOn: 'Archivado el',
@@ -756,10 +772,10 @@ export const ES: typeof EN = {
     neverSeen: 'Sin actividad registrada',
     recencyRestricted: 'Su rol no puede ver la actividad reciente',
     rowsRestricted: 'Algunos pacientes no aparecen: su rol no puede consultar las asignaciones de casos.',
-    recordsRestricted: 'Su rol no puede abrir historiales de pacientes, por lo que estas filas no se abren. Reintentar no lo cambiará.',
+    recordsRestricted: 'Su rol no puede abrir expedientes de pacientes, por lo que estas filas no se abren. Reintentar no lo cambiará.',
     loadingMore: 'Cargando más',
-    record: 'Historial',
-    recordFailed: 'No se pudo cargar este historial.',
+    record: 'Expediente',
+    recordFailed: 'No se pudo cargar este expediente.',
     recordOffline: 'Mostrando la copia guardada en este teléfono.',
     contact: 'Contacto',
     dateOfBirth: 'Fecha de nacimiento',
