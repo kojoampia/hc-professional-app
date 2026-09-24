@@ -369,11 +369,11 @@ export const EN = {
      * <b>`Ghana Card`</b>, the official name of Ghana's national identity card (item 186). Each is
      * asserted as an exact string in every locale, so those two stay <i>untranslated</i> — where
      * the nouns above are a choice <i>between</i> translations. (That file guards a third key,
-     * `boot.unlockTitle`, by containment rather than exact match, for the brand-name rule its
-     * header states.) That is the difference to keep in mind when adding a string: the nouns
-     * settled here bind nothing but this comment, because <b>no gate can see a synonym</b>,
-     * whereas the two pins are gate-enforced and breaking one fails a test whose name carries its
-     * item number.
+     * `boot.unlockTitle`, by containment and prohibition rather than exact match, for the
+     * brand-name rule its header states.) That is the difference to keep in mind when adding a
+     * string: the nouns settled here bind nothing but this comment, because <b>no gate can see a
+     * synonym</b>, whereas the two pins are gate-enforced and breaking one fails a test whose name
+     * carries its item number.
      */
     record: 'Record',
     recordFailed: 'Could not load this record.',
