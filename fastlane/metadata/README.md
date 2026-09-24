@@ -71,11 +71,34 @@ catalogue's nouns without reopening that decision.
 ## What the copy deliberately says
 
 The description opens by stating this is **a work tool for verified professionals, not a consumer
-health app**, and closes by telling patients and family members that this is not the app they want.
+health app**, and closes by telling patients — and the family members and friends supporting them —
+that this is not the app they want. The closing sentence names the supporters as well as the patient
+in all four locales, and item 179 widened it in three of them to do so: `a family member or friend
+supporting one`, `familiar o allegado`, `proche`, `Angehöriger oder eine nahestehende Person`.
 That is aimed squarely at Apple's health-app scrutiny (1.4.1 / 5.1.1(ix)) and at the reviewer who
 will otherwise install it, find a login wall, and reject it. It pairs with the two things
 `mobile-app-plan.md` calls out as the top rejection causes: a **reviewer demo account** seeded with
 a roster and a message thread, and an institutional affiliation letter from Abofonsa.
+
+**Each locale's App Store keywords carry a credential word its own description uses** — `credentials`
+beside "credentialed by Abofonsa", `credenciales` beside the promotional text's "sus credenciales",
+`autorisation` beside "autorisation d'exercice", `zulassung` beside "Berufszulassung". fr's was
+`licence` until item 183: item 179 had changed the description's noun because _licence_ in French
+names a bac+3 degree rather than a permission to practise, and the keyword was left behind still
+advertising the dropped sense — on the search surface, which is where a wrong noun costs the most.
+**Nothing checks this relation.** `store-listings.spec.ts` checks structure (locale set, retired-role
+denylist, iOS/Android byte identity, the derived English discipline nouns) and refuses a maintained
+four-locale noun table for reasons it records; so the rule lives here, and a description edit that
+changes a noun means re-reading `keywords.txt` in the same change.
+
+**A keyword merely absent from its description is not a defect**, and nine of the thirty-five are absent
+for three good reasons: search synonyms the copy deliberately does not use (`rota`, `guardia`,
+`ambulant`, `homecare`); unaccented forms of accented words (`tournee` for "tournée", `sante` for
+"santé"), because App Store search folds accents and searchers do not type them; and stems of words
+the copy inflects or compounds (`cuidados` beside "cuidadores", `betreuung` beside "Betreuer",
+`fachkraft` beside "Gesundheitsfachkräfte"). The defect is narrower than absence: a keyword naming a
+sense the copy has _rejected_, which is what `licence` had become. On that reading, item 183 swept
+all four lists and `licence` was the only one.
 
 The data paragraph is written to match what the app actually does — roster-scoped patient data,
 nothing cached unencrypted, wiped on sign-out, no sale of data, no advertising — because it has to
