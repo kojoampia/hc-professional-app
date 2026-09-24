@@ -18,4 +18,4 @@ Patient information stays on the servers that own it and is shown only for the c
 
 WHO IT IS FOR
 
-Doctors, nurses, paramedics, pharmacists, therapists, carers, care angels, chemists and technicians working with Abofonsa. An account is required. If you are a patient or a family member, this is not the app you want.
+Doctors, nurses, paramedics, pharmacists, therapists, carers, chemists and technicians working with Abofonsa. An account is required. If you are a patient or a family member, this is not the app you want.
