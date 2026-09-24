@@ -362,6 +362,16 @@ export const EN = {
      * the clinician who reads the portal and the phone in the same language, and who has no reason
      * to think the two words name one thing. The point of this comment is that the next person
      * adding a record sentence — or a log sentence — should not have to settle the nouns again.
+     *
+     * <p><b>Two terms in this catalogue are pinned rather than chosen, and they are written down
+     * elsewhere:</b> `../brand/brand-name.spec.ts` holds the brand word <b>`Professional`</b> on
+     * the sign-in lockup (`../docs/backlog.md` item 185) and <b>`Ghana Card`</b>, the official name
+     * of Ghana's national identity card (item 186). Each is asserted as an exact string in every
+     * one of the four locales, so those two stay <i>untranslated</i> — where the nouns above are a
+     * choice <i>between</i> translations. That is the difference to keep in mind when adding a
+     * string: the nouns settled here bind nothing but this comment, because <b>no gate can see a
+     * synonym</b>, whereas the two pins are gate-enforced and breaking one fails a test whose name
+     * carries its item number.
      */
     record: 'Record',
     recordFailed: 'Could not load this record.',
