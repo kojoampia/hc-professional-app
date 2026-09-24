@@ -1107,7 +1107,7 @@ export const FR: typeof EN = {
       CERTIFICATE: 'Certificat professionnel',
       LICENSE: 'Licence',
       PASSPORT: 'Passeport',
-      GHANACARD: 'Carte Ghana',
+      GHANACARD: 'Ghana Card',
       DRIVERLICENSE: 'Permis de conduire',
       VOTERCARD: "Carte d'électeur",
       PASSPHOTO: "Photo d'identité",

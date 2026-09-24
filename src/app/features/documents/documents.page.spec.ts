@@ -270,7 +270,9 @@ describe('DocumentsPage — a document type reads in the reader’s language', (
       CERTIFICATE: 'Certificat professionnel',
       LICENSE: 'Licence',
       PASSPORT: 'Passeport',
-      GHANACARD: 'Carte Ghana',
+      // "Ghana Card" is the official name of the document and a proper noun — untranslated in
+      // every locale since item 186; web/'s fr moved from "Carte Ghana" in the same change.
+      GHANACARD: 'Ghana Card',
       DRIVERLICENSE: 'Permis de conduire',
       VOTERCARD: "Carte d'électeur",
       PASSPHOTO: "Photo d'identité",
