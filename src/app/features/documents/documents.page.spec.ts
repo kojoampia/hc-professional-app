@@ -268,7 +268,10 @@ describe('DocumentsPage — a document type reads in the reader’s language', (
     },
     fr: {
       CERTIFICATE: 'Certificat professionnel',
-      LICENSE: 'Licence',
+      // `licence` in French is a bac+3 DEGREE, not a permission to practise — item 179 removed that
+      // sense from the store copy and item 211 from both catalogues. web/'s fr moved in the same
+      // merge; this transcription follows it, as it did for `Ghana Card` under item 186.
+      LICENSE: "Autorisation d'exercice",
       PASSPORT: 'Passeport',
       // "Ghana Card" is the official name of the document and a proper noun — untranslated in
       // every locale since item 186; web/'s fr moved from "Carte Ghana" in the same change.
