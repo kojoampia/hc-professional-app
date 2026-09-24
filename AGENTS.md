@@ -36,7 +36,10 @@ Releasing is `docs/release.md` in this repo: the three workflows, the version sc
     is indistinguishable from a bug on three locales. ngx-translate renders a missing
     key as the key itself — nothing throws, nothing logs, and the English build looks
     perfect — so `catalogues.spec.ts` is the gate rather than review. See CLAUDE.md
-    § The app ships in four languages.
+    § The app ships in four languages. **Wording is decided too**: the anchor comment
+    beside `patients.record` in `src/app/core/i18n/catalogues.ts` carries the per-locale
+    record/log/case noun decisions (backlog items 147, 175) — read it before writing a
+    sentence about any of the three; no gate catches a synonym.
 
 ## Commands
 

@@ -109,6 +109,17 @@ Practicalities:
   offline-first, and a fetched catalogue means the first paint after a cold start with no
   signal is either untranslated or waiting on a request that will never complete. The
   trade is that wording changes ship in a release rather than a deploy.
+- **Terminology is decided, not re-derived — read the anchor comment beside
+  `patients.record` in `catalogues.ts` before writing a sentence about a record, a log or
+  a case.** It carries the per-locale noun decisions no gate can enforce (backlog items
+  147 and 175): es `expediente` for the clinical record, `historial` reserved for the
+  activity log, `expediente de acreditación` a third qualified sense; de
+  `Patientenakte`/`Akte`, never `Datensatz`; fr `dossier` for the record and `cas` for
+  the clinical case — with `cases.archiveHint` cited there as the collision the French
+  split removed. Proper nouns are pinned separately, in
+  `src/app/core/brand/brand-name.spec.ts`: the brand word `Professional` in the sign-in
+  lockup (item 185) and `Ghana Card` (item 186). `web/`'s copy of the same decisions is
+  `professional-web.md` §2 in that repo.
 - `LanguageService` picks **an explicit choice, then the device locale, then English**.
   Only the primary subtag counts: `fr-CA` and `fr-FR` both select `fr`.
 - **Server enum values ARE translated, and in web's words** (changed 2026-09-08, backlog item

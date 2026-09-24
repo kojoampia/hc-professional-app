@@ -12,11 +12,11 @@ if a `Fastfile` ever lands.
 
 ## What is published automatically, and what is not
 
-| | Published on a `v*` tag | By what |
-| --- | --- | --- |
-| Android **release notes** | **yes** | `release-android.yml` → `whatsNewDirectory` |
-| Android title / short / full description | no | `fastlane supply`, or paste once |
-| iOS everything | no | `fastlane deliver`, or paste once |
+|                                          | Published on a `v*` tag | By what                                     |
+| ---------------------------------------- | ----------------------- | ------------------------------------------- |
+| Android **release notes**                | **yes**                 | `release-android.yml` → `whatsNewDirectory` |
+| Android title / short / full description | no                      | `fastlane supply`, or paste once            |
+| iOS everything                           | no                      | `fastlane deliver`, or paste once           |
 
 **Release notes are the only thing a tag republishes, deliberately.** A listing changes rarely and
 is reviewed by a human at the store; republishing it on every build is how a reviewed listing gets
@@ -32,13 +32,13 @@ actually ships today.
 
 Every file here is within the limit for its field. The tight ones, all counted in characters:
 
-| Field | Limit | Note |
-| --- | --- | --- |
-| Play title | 30 | `Abofonsa BridgeCare Pro` = 23 |
-| Play short description | 80 | the binding one — en is 77 |
-| App Store name | 30 | same string as the Play title |
-| App Store subtitle | 30 | **the binding one.** "Roster and records for clinicians" was written first and is 33; it had to be cut |
-| App Store keywords | 100 | comma-separated, no spaces after commas — a space costs a character |
+| Field                  | Limit | Note                                                                                                   |
+| ---------------------- | ----- | ------------------------------------------------------------------------------------------------------ |
+| Play title             | 30    | `Abofonsa BridgeCare Pro` = 23                                                                         |
+| Play short description | 80    | the binding one — en is 77                                                                             |
+| App Store name         | 30    | same string as the Play title                                                                          |
+| App Store subtitle     | 30    | **the binding one.** "Roster and records for clinicians" was written first and is 33; it had to be cut |
+| App Store keywords     | 100   | comma-separated, no spaces after commas — a space costs a character                                    |
 
 There is no linter for this. Re-count after any edit; the stores reject on submission, which is the
 slowest possible moment to find out.
@@ -48,6 +48,25 @@ slowest possible moment to find out.
 "Abofonsa BridgeCare" is the same string in all four listings, per `CLAUDE.md § The brand name`.
 Where a field is too tight for the full name, the correct shortening is **"Abofonsa"**, never
 "BridgeCare" alone.
+
+## The iOS subtitles are per-locale copy, not translations of one sentence
+
+The four `ios/*/subtitle.txt` deliberately do not say the same thing: en ("Shifts, rounds and
+documents") names three subjects, de ("Dienstplan für Fachkräfte") names one and no documents at
+all, and es ("Turnos y registros clínicos") and fr ("Planning et dossiers soignants") each pick
+two subjects of their own. Each line was written to read well inside the 30-character subtitle limit — the
+binding field in the table above, and fr sits at exactly 30 — rather than translated from a
+master. **The Android short descriptions are the opposite**: one sentence, translated in parallel
+four times. This directory holds both kinds of store copy, and the difference is intentional.
+
+Because the subtitles are per-locale store copy and not catalogue strings, **they are not
+governed by the catalogue's record-noun decisions** (`backlog.md` items 147 and 175; the anchor
+comment beside `patients.record` in `src/app/core/i18n/catalogues.ts`). es says `registros
+clínicos` here although the app says `expediente`, and fr says `dossiers soignants`: the
+catalogue's noun never renders beside a store subtitle, so there is no collision to remove, and
+rewording a 30-character line to satisfy a rule written for side-by-side refusals would trade
+working store copy for nothing. Recorded by `backlog.md` item 176 — do not "fix" these into the
+catalogue's nouns without reopening that decision.
 
 ## What the copy deliberately says
 
