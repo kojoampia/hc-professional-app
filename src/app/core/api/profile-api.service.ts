@@ -75,10 +75,30 @@ export interface OnboardingProgressDto {
 /**
  * Reads and writes the signed-in clinician's profile.
  *
- * <p>Goes through `/api/onboarding/profile`, which is `.authenticated()` rather than role-gated —
- * an applicant holding only `ROLE_USER` must be able to fill in their own details before any
- * clinical authority is granted. The server force-sets `accountId` to the caller on write, so a
- * client cannot edit somebody else's profile by supplying an id.
+ * <p>Goes through `/api/profile`, which is `.authenticated()` rather than role-gated — an applicant
+ * holding only `ROLE_USER` must be able to fill in their own details before any clinical authority
+ * is granted. The server force-sets `accountId` to the caller on write, so a client cannot edit
+ * somebody else's profile by supplying an id.
+ *
+ * <h2>⚠ It was `/api/onboarding/profile` until F8, and this app is why the order mattered</h2>
+ *
+ * <p>`profile.md` § Other Elements: *"`api/onboarding/profile` should migrate to `api/profile`"*. The
+ * house rule is **add before removing, and remove the consumer before the producer**, and `mobile/`
+ * is the consumer that the profile migration kept stranding: it appears in no task in
+ * `profile-addendum.md`, it both reads and writes this path, and the Me tab's next-of-kin card is
+ * behind it. A clean server-side break would have answered **404 on the save with nothing in any
+ * backlog that would fix it** — and before that, when the field was renamed, it would have answered
+ * 200 with the next of kin silently not stored, which is the failure this estate keeps relearning.
+ * Re-pointed in the same unit as the server change, ahead of the retirement.
+ *
+ * <p>⭐ **The semantics improved and no call site had to change.** The old `PUT` was a thirteen-field
+ * whole-document replace with no null guards, so `save()` was only safe because `me.page.ts` spreads
+ * the loaded profile back. `PUT /api/profile` applies only the fields the body names, so a partial
+ * save is now correct rather than merely conventional — the spread is kept because it is harmless,
+ * not because it is the guard.
+ *
+ * <p>⛔ **`progress()` below is deliberately NOT re-pointed.** `/api/onboarding/progress` is T5's
+ * subject and is still served; moving it here would pre-empt that task and break this app.
  */
 @Injectable({ providedIn: 'root' })
 export class ProfileApiService {
@@ -86,7 +106,7 @@ export class ProfileApiService {
   private readonly config = inject(ApplicationConfigService);
 
   private get resourceUrl(): string {
-    return this.config.getEndpointFor('api/onboarding/profile', 'professionalservice');
+    return this.config.getEndpointFor('api/profile', 'professionalservice');
   }
 
   mine(): Observable<ClinicianProfileDto> {

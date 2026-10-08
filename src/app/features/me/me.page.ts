@@ -387,9 +387,29 @@ export class MePage implements OnInit {
   kinRelationship = '';
   kinPhone = '';
 
-  /** Server enums. Never translated — see the note in the template. */
-  readonly SEXES = ['FEMALE', 'MALE', 'UNSPECIFIED'];
-  readonly CARD_TYPES = ['PASSPORT', 'NATIONAL_ID', 'DRIVERS_LICENSE'];
+  /**
+   * Server enums. Never translated — see the note in the template.
+   *
+   * <h2>⛔ Three of these six values did not exist on the server, and now they would be REFUSED</h2>
+   *
+   * <p>`Profile.sex` and `Profile.cardType` were free-text `String` on the server, so this list was
+   * never checked against anything and had drifted: `UNSPECIFIED`, `NATIONAL_ID` and
+   * `DRIVERS_LICENSE` are in no enumeration `api/` has ever had. They stored and answered 200 —
+   * which is the only reason nobody noticed.
+   *
+   * <p>F9 types both fields (`Sex` = `{FEMALE, MALE}`; `cardType` by `DocumentType`), so **an
+   * invalid value is now a 400 on save** rather than a wrong value in the database. Corrected here
+   * in the same unit as the server change: this app is store-gated and not yet published, so three
+   * dropdown options that cannot be saved are fixable now and would not be later.
+   *
+   * <p>⚠ `CARD_TYPES` is the four government-identity types, which is exactly what `web/`'s
+   * `IDENTITY_TYPES` offers on the same field — one dropdown, two apps, one list. It is **not** all
+   * nine `DocumentType` members: a certificate is not a card somebody carries a number on.
+   * ⛔ The link across to `api/`'s enums is made by hand, as it is for the shift vocabulary: mobile
+   * CI clones one repo, so nothing here can read `net.jojoaddison.domain.enumeration.Sex`.
+   */
+  readonly SEXES = ['FEMALE', 'MALE'];
+  readonly CARD_TYPES = ['PASSPORT', 'GHANACARD', 'DRIVERLICENSE', 'VOTERCARD'];
 
   readonly progress = signal<OnboardingProgressDto | null>(null);
 
