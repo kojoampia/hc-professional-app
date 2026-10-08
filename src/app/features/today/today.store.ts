@@ -93,7 +93,7 @@ export class TodayStore {
    * certificate expiring is not the same event.
    *
    * SUPERSEDED ROWS ARE EXCLUDED, and that filter is not cosmetic (backlog item 20).
-   * `/api/onboarding/documents` returns the whole history deliberately — an archived
+   * `/api/personal-document` returns the whole history deliberately — an archived
    * licence is evidence of what the clinician held while they were treating patients —
    * so without this line a clinician who renewed in the app kept being warned about the
    * lapsed row they had just replaced, with nothing they could do to clear it. That is
