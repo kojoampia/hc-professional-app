@@ -18,7 +18,12 @@ describe('MePage', () => {
   let auth: { logout: jest.Mock };
   let nav: { navigateRoot: jest.Mock };
 
-  const PROFILE_URL = 'services/professionalservice/api/onboarding/profile';
+  // `api/profile`, not under `api/onboarding` — the server mappings moved in F8 and this app was
+  // re-pointed in the same unit. ⚠ Hardcoded rather than derived, and that cuts both ways: it is
+  // what notices a silent revert, and it is also why `mobile/`'s roster bug stayed green for weeks
+  // (`api/duty-rosters/my`, which 404s, is hardcoded two lines down). PROGRESS_URL below is
+  // deliberately still on `api/onboarding` — that path is T5's and is still served.
+  const PROFILE_URL = 'services/professionalservice/api/profile';
   const PROGRESS_URL = 'services/professionalservice/api/onboarding/progress';
   const CHANGE_PASSWORD_URL = 'api/account/change-password';
   const PREFERENCES_URL = 'services/professionalservice/api/notifications/preferences';

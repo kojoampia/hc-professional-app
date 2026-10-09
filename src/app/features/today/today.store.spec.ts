@@ -56,7 +56,7 @@ describe('TodayStore', () => {
     roster = jest.fn(() => of([]));
     unread = jest.fn(() => of(0));
     documents = jest.fn(() => of([]));
-    application = jest.fn(() => of({ id: 'app1', accountId: 'nurse', requestedRole: 'ROLE_NURSE', status: 'ACTIVE' }));
+    application = jest.fn(() => of({ id: 'app1', accountId: 'nurse', authority: 'ROLE_NURSE', status: 'ACTIVE' }));
     await configure();
   });
 

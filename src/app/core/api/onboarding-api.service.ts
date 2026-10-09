@@ -1,7 +1,7 @@
 import { HttpClient, HttpEvent, HttpEventType } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, from } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 
 import { ApplicationConfigService } from '../config/application-config.service';
 
@@ -65,8 +65,20 @@ export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 export interface OnboardingApplicationDto {
   id: string;
   accountId: string;
-  requestedRole: string;
+  /**
+   * The clinical role being applied for — `requestedRole` until T3.
+   *
+   * `profile.md` § Gap Update: *"Refactor the `String requestedRole` to `authority`"*, and
+   * *"`Authority` is a class defined in the gateway. The `api` service holds only the role
+   * string."* So this is a `string`, deliberately, even though its values are the eight
+   * professional authorities.
+   */
+  authority: string;
   status: OnboardingStatus;
+  /** Whether consent was ticked (`profile.md` step 4). */
+  agreed?: boolean | null;
+  /** When consent was given — a **server stamp**. */
+  agreedDate?: string | null;
   source?: string | null;
   submittedAt?: string | null;
 }
@@ -96,27 +108,78 @@ export class OnboardingApiService {
     return this.config.getEndpointFor('api/onboarding', 'professionalservice');
   }
 
-  /** The caller's own application. 404 when they have never applied. */
+  /**
+   * The applicant's own documents are no longer under `api/onboarding` (profile.md step 3, T2).
+   *
+   * A second base rather than a second service: this file is also the home of `DOCUMENT_TYPES`,
+   * which `core/i18n/document-type-names.spec.ts` reads, and of the working-status helpers the Today
+   * tab uses. Splitting it would move three unrelated things to move two calls.
+   *
+   * ⚠ What must not happen is these calls staying on `api/onboarding/documents` — the server
+   * mappings are gone, so that would be a consumer reading where nobody writes.
+   */
+  private get documentUrl(): string {
+    return this.config.getEndpointFor('api/personal-document', 'professionalservice');
+  }
+
+  /**
+   * The professional application, which is no longer under `api/onboarding` (profile.md step 4, T3).
+   *
+   * A third base rather than a third service, for the reason `documentUrl` above gives: this file is
+   * also the home of `DOCUMENT_TYPES`, which `core/i18n/document-type-names.spec.ts` reads, and of
+   * the working-status helpers the Today tab uses.
+   *
+   * ⚠ **This app reads the application and never writes it.** Step 4 is the portal's — the applicant
+   * wizard is deliberately out of this app's scope (mobile-app-plan.md § Scope) — so there is no
+   * `POST` or submit here and none should be added without that decision being revisited.
+   */
+  private get applicationUrl(): string {
+    return this.config.getEndpointFor('api/professional-application', 'professionalservice');
+  }
+
+  /**
+   * The caller's own application. 404 when they have never applied.
+   *
+   * ⚠ **On `api/professional-application` since T3** (profile.md step 4; § Other Elements:
+   * *"`api/onboarding/applications` should migrate to `api/professional-application`"*). The server
+   * mapping under `api/onboarding` is **gone**, so leaving this call where it was would be a
+   * consumer reading where nobody writes — and on the Today tab the symptom is not an error: a 404
+   * is already this call's ordinary answer for a clinician who never applied, so the whole
+   * "finish your onboarding in the portal" banner would simply have stopped appearing, for
+   * everybody, with nothing logged.
+   */
   myApplication(): Observable<OnboardingApplicationDto> {
-    return this.http.get<OnboardingApplicationDto>(`${this.resourceUrl}/applications/me`);
+    return this.http.get<OnboardingApplicationDto>(`${this.applicationUrl}/me`);
   }
 
   /** The caller's own documents. Binary is always stripped server-side. */
   myDocuments(): Observable<PersonalDocumentDto[]> {
-    return this.http.get<PersonalDocumentDto[]>(`${this.resourceUrl}/documents`);
+    return this.http.get<PersonalDocumentDto[]>(this.documentUrl);
   }
 
   /**
-   * Uploads a document as multipart/form-data.
+   * Uploads a document as the JSON `PersonalDocument` the service specifies.
    *
    * Emits progress from 0 to 1 and finally the created document. Progress is not
    * decoration: a 3 MB upload on a ward's mobile signal takes long enough that a
    * static spinner reads as a hang, and the clinician retries — producing duplicates
    * in the review queue.
    *
-   * The parts match `OnboardingDocumentResource` exactly: `file`, `type`, plus
-   * `otherLabel` when the type is OTHER and `expiryDate` when it is LICENSE. The
-   * server rejects a LICENSE without an expiry, so the form enforces it first.
+   * The body matches `OwnPersonalDocumentResource.PersonalDocumentUpload` exactly:
+   * `name`, `type`, `data`, `dataContentType`, plus `otherLabel` when the type is
+   * OTHER and `expiryDate` when it is LICENSE. The server rejects a LICENSE without
+   * an expiry, so the form enforces it first.
+   *
+   * ⚠ **This sent `multipart/form-data` until T2, and three things about the change matter here
+   * more than they do on the web.** The blob has to be read and base64-encoded before the request
+   * exists, so the first progress event arrives a beat later than it used to — the store's spinner
+   * covers it, and `fraction: null` is already its "unknown" state. Base64 is 4/3 of the file, so a
+   * capture that `ImageCompressor` brought under 4 MB now travels as ~5.3 MB: that is still inside
+   * the service's 5 MB check on the *decoded* bytes, which is what the ladder was tuned against, but
+   * the headroom against nginx's 8 MB cap is ~1.3 MB rather than 4 MB. And `dataContentType` now
+   * carries what the blob says it is rather than what a form part's header said — which is the same
+   * value, and is still verified against the magic bytes server-side, so a HEIC that slipped through
+   * as `image/jpeg` is refused exactly as before.
    */
   uploadDocument(input: {
     file: Blob;
@@ -125,20 +188,52 @@ export class OnboardingApiService {
     otherLabel?: string;
     expiryDate?: string;
   }): Observable<UploadProgress> {
-    const form = new FormData();
-    form.append('file', input.file, input.filename);
-    form.append('type', input.type);
-    if (input.otherLabel) {
-      form.append('otherLabel', input.otherLabel);
-    }
-    if (input.expiryDate) {
-      form.append('expiryDate', input.expiryDate);
-    }
-
-    return this.http
-      .post<PersonalDocumentDto>(`${this.resourceUrl}/documents`, form, { reportProgress: true, observe: 'events' })
-      .pipe(map(event => toProgress(event)));
+    return from(base64Of(input.file)).pipe(
+      switchMap(data =>
+        this.http
+          .post<PersonalDocumentDto>(
+            this.documentUrl,
+            {
+              name: input.filename,
+              type: input.type,
+              data,
+              dataContentType: input.file.type,
+              otherLabel: input.otherLabel ?? null,
+              expiryDate: input.expiryDate ?? null,
+              supersedesDocumentId: null,
+            },
+            { reportProgress: true, observe: 'events' },
+          )
+          .pipe(map(event => toProgress(event))),
+      ),
+    );
   }
+}
+
+/**
+ * The blob's bytes as base64, without the `data:` prefix a data URL carries.
+ *
+ * `FileReader.readAsDataURL` rather than `arrayBuffer()` plus `btoa`: the latter needs a binary
+ * string, and the obvious way to build one — `String.fromCharCode(...bytes)` — blows the call stack
+ * on a multi-megabyte capture. The reader encodes natively, in one pass, and exists in the Capacitor
+ * WebView and in jsdom alike.
+ */
+function base64Of(blob: Blob): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    // `reader.error` is a DOMException and is what a caller wants; the fallback is only for the case
+    // the File API allows but does not describe, and it is deliberately NOT a sentence — this never
+    // reaches a screen, and `untranslated-literals.spec.ts` rightly cannot tell a thrown message
+    // from a caption. `NotReadableError` is the File API's own name for this failure.
+    reader.onerror = () => reject(reader.error ?? new DOMException('', 'NotReadableError'));
+    reader.onload = () => {
+      const result = reader.result as string;
+      // `data:<mime>;base64,<payload>` — everything after the comma is the payload, and a comma
+      // cannot occur inside base64 itself.
+      resolve(result.slice(result.indexOf(',') + 1));
+    };
+    reader.readAsDataURL(blob);
+  });
 }
 
 export interface UploadProgress {
