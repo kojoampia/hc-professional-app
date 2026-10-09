@@ -65,8 +65,20 @@ export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 export interface OnboardingApplicationDto {
   id: string;
   accountId: string;
-  requestedRole: string;
+  /**
+   * The clinical role being applied for — `requestedRole` until T3.
+   *
+   * `profile.md` § Gap Update: *"Refactor the `String requestedRole` to `authority`"*, and
+   * *"`Authority` is a class defined in the gateway. The `api` service holds only the role
+   * string."* So this is a `string`, deliberately, even though its values are the eight
+   * professional authorities.
+   */
+  authority: string;
   status: OnboardingStatus;
+  /** Whether consent was ticked (`profile.md` step 4). */
+  agreed?: boolean | null;
+  /** When consent was given — a **server stamp**. */
+  agreedDate?: string | null;
   source?: string | null;
   submittedAt?: string | null;
 }
@@ -110,9 +122,34 @@ export class OnboardingApiService {
     return this.config.getEndpointFor('api/personal-document', 'professionalservice');
   }
 
-  /** The caller's own application. 404 when they have never applied. */
+  /**
+   * The professional application, which is no longer under `api/onboarding` (profile.md step 4, T3).
+   *
+   * A third base rather than a third service, for the reason `documentUrl` above gives: this file is
+   * also the home of `DOCUMENT_TYPES`, which `core/i18n/document-type-names.spec.ts` reads, and of
+   * the working-status helpers the Today tab uses.
+   *
+   * ⚠ **This app reads the application and never writes it.** Step 4 is the portal's — the applicant
+   * wizard is deliberately out of this app's scope (mobile-app-plan.md § Scope) — so there is no
+   * `POST` or submit here and none should be added without that decision being revisited.
+   */
+  private get applicationUrl(): string {
+    return this.config.getEndpointFor('api/professional-application', 'professionalservice');
+  }
+
+  /**
+   * The caller's own application. 404 when they have never applied.
+   *
+   * ⚠ **On `api/professional-application` since T3** (profile.md step 4; § Other Elements:
+   * *"`api/onboarding/applications` should migrate to `api/professional-application`"*). The server
+   * mapping under `api/onboarding` is **gone**, so leaving this call where it was would be a
+   * consumer reading where nobody writes — and on the Today tab the symptom is not an error: a 404
+   * is already this call's ordinary answer for a clinician who never applied, so the whole
+   * "finish your onboarding in the portal" banner would simply have stopped appearing, for
+   * everybody, with nothing logged.
+   */
   myApplication(): Observable<OnboardingApplicationDto> {
-    return this.http.get<OnboardingApplicationDto>(`${this.resourceUrl}/applications/me`);
+    return this.http.get<OnboardingApplicationDto>(`${this.applicationUrl}/me`);
   }
 
   /** The caller's own documents. Binary is always stripped server-side. */
