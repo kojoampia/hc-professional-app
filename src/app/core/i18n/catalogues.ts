@@ -503,6 +503,26 @@ export const EN = {
       title: 'Profile completion',
       complete: 'Everything is in. An administrator reviews your credentials next.',
       incomplete: 'Your profile becomes active once these are complete and an administrator has vetted them.',
+      // profile.md's four coarse steps (backlog.md row 230 unit C). ⚠ The wording is web/'s
+      // register, verbatim in all four locales, deliberately: one meter row must read the same on
+      // both clients, and `profile` was already identical here — the two were coined from the same
+      // vocabulary. Checked against this catalogue's own register before pasting; nothing here
+      // named any of the four concepts differently.
+      steps: {
+        account: 'Account details',
+        profile: 'Personal details',
+        documents: 'Credential documents',
+        consent: 'Role and consent',
+      },
+      // Read only by a screen reader. Each step row carries its state as a colour class and an
+      // aria-hidden glyph, so without these a non-sighted clinician hears four labels and no state.
+      // ⚠ These are NOT from web/'s register — web/ has no equivalent string, so the wording is
+      // this repo's own and follows the catalogue's existing status vocabulary rather than inventing
+      // a sentence.
+      stepState: {
+        done: 'Complete',
+        todo: 'Not yet complete',
+      },
       requirements: {
         consent: 'Consent',
         profile: 'Personal details',
@@ -913,6 +933,16 @@ export const ES: typeof EN = {
       title: 'Perfil completado',
       complete: 'Todo está listo. Un administrador revisará sus credenciales a continuación.',
       incomplete: 'Su perfil se activará cuando estén completos y un administrador los haya verificado.',
+      steps: {
+        account: 'Datos de la cuenta',
+        profile: 'Datos personales',
+        documents: 'Documentos acreditativos',
+        consent: 'Rol y consentimiento',
+      },
+      stepState: {
+        done: 'Completado',
+        todo: 'Todavía incompleto',
+      },
       requirements: {
         consent: 'Consentimiento',
         profile: 'Datos personales',
@@ -1325,6 +1355,16 @@ export const FR: typeof EN = {
       title: 'Profil complété',
       complete: 'Tout est là. Un administrateur va maintenant vérifier vos justificatifs.',
       incomplete: 'Votre profil deviendra actif une fois ces éléments complets et vérifiés par un administrateur.',
+      steps: {
+        account: 'Informations du compte',
+        profile: 'Informations personnelles',
+        documents: 'Pièces justificatives',
+        consent: 'Rôle et consentement',
+      },
+      stepState: {
+        done: 'Terminé',
+        todo: 'Pas encore terminé',
+      },
       requirements: {
         consent: 'Consentement',
         profile: 'Informations personnelles',
@@ -1736,6 +1776,16 @@ export const DE: typeof EN = {
       title: 'Profil vollständig',
       complete: 'Alles liegt vor. Ein Administrator prüft als Nächstes Ihre Nachweise.',
       incomplete: 'Ihr Profil wird aktiv, sobald diese vollständig sind und ein Administrator sie geprüft hat.',
+      steps: {
+        account: 'Kontodaten',
+        profile: 'Persönliche Angaben',
+        documents: 'Nachweisdokumente',
+        consent: 'Rolle und Einwilligung',
+      },
+      stepState: {
+        done: 'Abgeschlossen',
+        todo: 'Noch nicht abgeschlossen',
+      },
       requirements: {
         consent: 'Einwilligung',
         profile: 'Persönliche Angaben',

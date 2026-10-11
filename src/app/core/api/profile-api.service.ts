@@ -52,8 +52,63 @@ export interface ClinicianProfileDto {
   emergencyContact?: EmergencyContactDto;
 }
 
-/** What the server still wants before this clinician can be activated. Keys are translated. */
-export type OnboardingRequirementKey = 'consent' | 'profile' | 'address' | 'nextOfKin' | 'certificate' | 'license' | 'identity' | 'photo';
+/**
+ * What the server still wants before this clinician can be activated. Keys are translated.
+ *
+ * <p>A <b>runtime array with the union derived from it</b> rather than a bare union, for the reason
+ * `DUTY_ROSTER_SHIFTS` is one: a union cannot be enumerated at run time, so nothing can be asserted
+ * against it. `web/`'s `ONBOARDING_REQUIREMENT_KEYS` is the same shape and the same nine values.
+ *
+ * <h3>⚠ This was a bare union of EIGHT while the ninth key was already live</h3>
+ *
+ * <p>`authority` — the clinical role the applicant asked for — is counted by the server's submit and
+ * activation gate and has been reported by `GET /api/onboarding/progress` since `backlog.md` row 230
+ * unit A. The meter renders every key the server sends by translation and unit A put `authority` into
+ * all four catalogues, so it rendered correctly the whole time: <b>only the type was short.</b> That
+ * is what a bare union buys — nothing fails, nothing can be enumerated, and so nothing notices.
+ * Measured on the rolled quality stack as `nurse`: nine requirements, `authority` satisfied.
+ */
+export const ONBOARDING_REQUIREMENT_KEYS = [
+  'consent',
+  'profile',
+  'address',
+  'nextOfKin',
+  'certificate',
+  'license',
+  'identity',
+  'photo',
+  'authority',
+] as const;
+
+export type OnboardingRequirementKey = (typeof ONBOARDING_REQUIREMENT_KEYS)[number];
+
+/**
+ * `profile.md`'s four coarse onboarding steps, in its order, derived the same way as the requirement
+ * keys so that the meter can walk them and a label can be asserted for each.
+ *
+ * <p>⚠ <b>The names are the server's.</b> `web/` maps them onto its own profile tab ids — step 4 is
+ * `consent` on the wire and `application` in that UI — but this app has no such tabs and so needs no
+ * mapping: the Me tab renders the steps as a read-only row and the clinician fills the gaps in the
+ * form below it.
+ */
+export const ONBOARDING_STEP_KEYS = ['account', 'profile', 'documents', 'consent'] as const;
+
+export type OnboardingStepKey = (typeof ONBOARDING_STEP_KEYS)[number];
+
+/**
+ * One boolean per step.
+ *
+ * <p>⚠ <b>`account` reads `false` for every seeded clinician and that is correct, not a bug.</b> It
+ * is the one step `api/` cannot compute — `firstName`, `lastName`, `langKey` and `imageUrl` live on
+ * `User` in the gateway — so it comes from a stored projection fed by Kafka frames, where `false`
+ * also means "no frame has arrived yet". Three independent reasons make it `false` today: no backfill
+ * for accounts not written since unit A shipped, `InitialSetupMigration` bypassing the publish funnel,
+ * and `imageUrl` being writable by no surface in the estate until `backlog.md` row 232 builds the
+ * avatar upload. ⛔ <b>Do not build anything here that compensates for it</b> — nothing gates on it,
+ * `percent` and `complete` exclude it, and its failure direction is the safe one: it can read `false`
+ * when complete, never `true` when not. See `backlog.md` rows 232, 233 and 234.
+ */
+export type OnboardingSteps = Record<OnboardingStepKey, boolean>;
 
 /**
  * Server-computed onboarding completion.
@@ -70,6 +125,23 @@ export interface OnboardingProgressDto {
   complete: boolean;
   status: string | null;
   requirements: { key: OnboardingRequirementKey; done: boolean }[];
+  /**
+   * The four coarse steps, added to this contract by `backlog.md` row 230 unit A and consumed here
+   * by unit C.
+   *
+   * <p>Two readings of one state, and both render: {@link requirements} is the fine-grained list and
+   * `steps` is the coarse one. The server derives three of the four from the same requirement
+   * answers (`OnboardingService.stepsFrom`) rather than evaluating the predicates twice, so the two
+   * rows on screen cannot disagree about a predicate.
+   *
+   * <p>⚠ <b>Optional here, where `web/` declares it required</b> — and the difference is the
+   * deployment model rather than a difference about the contract. `web/` ships from the same
+   * `deploy/` roll as the service it talks to, so a build that knows about `steps` can only ever
+   * meet a server that sends it. This app ships through an app store: a binary stays on a phone for
+   * months and may well reach a gateway that predates unit A. `{@link CompletionMeterComponent}`
+   * therefore reads every step through this type's absence rather than assuming the object is there.
+   */
+  steps?: OnboardingSteps;
 }
 
 /**
@@ -97,8 +169,20 @@ export interface OnboardingProgressDto {
  * save is now correct rather than merely conventional — the spread is kept because it is harmless,
  * not because it is the guard.
  *
- * <p>⛔ **`progress()` below is deliberately NOT re-pointed.** `/api/onboarding/progress` is T5's
- * subject and is still served; moving it here would pre-empt that task and break this app.
+ * <h2>⭐ `progress()` stays on `/api/onboarding/**`, and there is nothing left to re-point</h2>
+ *
+ * <p>This said `progress()` was *"deliberately NOT re-pointed"* because `/api/onboarding/progress`
+ * was **T5's subject** and moving it would pre-empt that task. ⛔ **That is no longer true in either
+ * half.** `backlog.md` row 230 supersedes T5 as written — T5 wanted the eight requirements collapsed
+ * onto `profile.md`'s four steps, and row 230 decided instead that the wire carries *both*, coarse
+ * steps beside the requirement list — and row 230's units A and B each deliberately **left the path
+ * exactly where it is**. The acknowledgement endpoints stay under `/api/onboarding/**` for the same
+ * decision (`profile-addendum.md` § 5 Q13, recommended *not* to absorb).
+ *
+ * <p>⚠ **So the comment was telling a reader to expect a migration that is not coming**, which is
+ * worse than saying nothing: it marks a correct path as temporary, and the next person to tidy up
+ * moves it. The path is settled; `/api/profile` is the profile document and `/api/onboarding/progress`
+ * is the computed figure about an application, and they are different resources.
  */
 @Injectable({ providedIn: 'root' })
 export class ProfileApiService {
