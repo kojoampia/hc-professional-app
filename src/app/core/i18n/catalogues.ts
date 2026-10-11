@@ -199,8 +199,8 @@ export const EN = {
      * a value added after this release, or because the row carries no type at all.
      *
      * <p>Deliberately outside `documentTypes` below, which holds the server's enum and only that:
-     * `document-type-names.spec.ts` checks both directions over `DOCUMENT_TYPES`, so a tenth key in
-     * that group would have to be excused by name. It is deliberately vague, too — it must not
+     * `document-type-names.spec.ts` checks both directions over `DOCUMENT_TYPES`, so an eleventh
+     * key in that group would have to be excused by name. It is deliberately vague, too — it must not
      * claim a type the row does not have, which is why it is not `OTHER`'s word.
      */
     unknownType: 'Document',
@@ -225,6 +225,10 @@ export const EN = {
       PASSPHOTO: 'Passport photo',
       NHIS: 'NHIS card',
       OTHER: 'Other',
+      // The profile photo, and not a credential (backlog row 232). Its wording has to stay
+      // distinguishable from PASSPHOTO's two lines up, which is a mandatory document that counts
+      // towards activation — an avatar counts towards nothing.
+      AVATAR: 'Profile photo',
     },
   },
   tabs: {
@@ -736,6 +740,7 @@ export const ES: typeof EN = {
       PASSPHOTO: 'Foto de pasaporte',
       NHIS: 'Tarjeta NHIS',
       OTHER: 'Otro',
+      AVATAR: 'Foto de perfil',
     },
   },
   tabs: {
@@ -1157,6 +1162,7 @@ export const FR: typeof EN = {
       PASSPHOTO: "Photo d'identité",
       NHIS: 'Carte NHIS',
       OTHER: 'Autre',
+      AVATAR: 'Photo de profil',
     },
   },
   tabs: {
@@ -1578,6 +1584,7 @@ export const DE: typeof EN = {
       PASSPHOTO: 'Passfoto',
       NHIS: 'NHIS-Karte',
       OTHER: 'Sonstiges',
+      AVATAR: 'Profilfoto',
     },
   },
   tabs: {
