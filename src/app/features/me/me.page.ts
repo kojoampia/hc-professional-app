@@ -18,6 +18,7 @@ import {
   IonToggle,
   IonToolbar,
   NavController,
+  ViewWillEnter,
 } from '@ionic/angular/standalone';
 
 import { ClinicianProfileDto, OnboardingProgressDto, ProfileApiService } from '../../core/api/profile-api.service';
@@ -353,7 +354,7 @@ import { formatRosterSummary } from './roster-summary';
     </ion-content>
   `,
 })
-export class MePage implements OnInit {
+export class MePage implements OnInit, ViewWillEnter {
   private readonly profiles = inject(ProfileApiService);
   private readonly notifications = inject(NotificationsApiService);
   readonly queue = inject(WriteQueue);
@@ -442,7 +443,6 @@ export class MePage implements OnInit {
 
   ngOnInit(): void {
     this.loadPreferences();
-    this.loadProgress();
     this.profiles.mine().subscribe({
       next: profile => {
         this.profile = profile ?? {};
@@ -469,16 +469,71 @@ export class MePage implements OnInit {
   }
 
   /**
-   * Reads the completion figure.
+   * Re-reads the completion figure every time this tab is entered — `backlog.md` row 230 unit C.
    *
-   * <p>A failure is silent: an account with no application at all has no progress to report, and
-   * that is an ordinary state for a clinician who was invited rather than one who applied. Showing
-   * an error where a section simply does not apply would be noise.
+   * <h2>⭐ Why a lifecycle hook and not the SSE stream `web/` consumes</h2>
+   *
+   * <p>Row 230 unit B gave `web/` a live push. <b>The owner's decision was that `mobile/` takes
+   * none.</b> Mobile CI clones one repository, so that stream service cannot be shared — porting it
+   * would be a second copy of a five-state machine with two reconnect operators and a flag leak that
+   * took two review rounds to find, and this estate's own note is that <i>two correct-for-now copies
+   * is how an estate arrives at one wrong one</i>. A held connection also costs battery and is killed
+   * when the app backgrounds, so on a phone the push buys less than it does in a browser tab.
+   *
+   * <p>⭐ <b>And the staleness that actually bites here is a different one.</b> The figure was read in
+   * `ngOnInit` only, and Ionic caches pages: a clinician who uploads a document on the Documents tab
+   * and comes back here was shown the meter from whenever this page was first mounted. Fixing that
+   * needs one hook, duplicates no state machine, and covers the one case a push would also have
+   * covered on this screen.
+   *
+   * <h2>⚠ `ionViewWillEnter`, not `ngOnInit`, and the read lives here ALONE</h2>
+   *
+   * <p>`ionViewWillEnter` fires on <b>every</b> entry including the first, so keeping a copy of this
+   * call in `ngOnInit` would issue two reads on first open. It is `willEnter` rather than
+   * `didEnter` so the request starts before the transition animation rather than after it.
+   *
+   * <p>⭐ <b>That it fires at all is established at source rather than taken from the
+   * documentation.</b> `tabs.page.ts` renders `<ion-tabs>` with no nested outlet, and in
+   * `@ionic/angular@8.8.16` `StackController.createView` calls `bindLifecycleEvents`, which binds a
+   * handler <b>iff</b> `typeof instance['ionViewWillEnter'] === 'function'`. This class declares it,
+   * so the binding happens at view creation — before the first `setActive`, which is why the first
+   * entry fires too.
+   *
+   * <p>⚠ <b>So the whole mechanism is one `typeof` check wide.</b> Rename this method and nothing
+   * errors, nothing warns, and the meter quietly goes back to being read once per session.
+   * `me.page.spec.ts` calls the hook by hand — TestBed drives no Ionic lifecycle — so that spec
+   * cannot catch a rename either. The `ViewWillEnter` interface on the class declaration is what
+   * does, and that is why it is implemented rather than left implicit.
+   *
+   * <p>⚠ <b>There was no precedent to follow, and this tab had no refresh at all.</b> Neither
+   * `ionViewWillEnter` nor `ionViewDidEnter` appeared anywhere in this app, so this is the first
+   * Ionic lifecycle hook in the repository. ⛔ And `ion-refresher` — the manual pull the other feature
+   * pages offer — is in <b>seven of the eight</b> and <b>not in this one</b>: before this change the
+   * figure was pinned to first mount for the rest of the session, with no gesture anywhere on the
+   * screen that would move it. That makes the hook this tab's <i>only</i> refresh rather than a
+   * convenience over a pull. The seven pages that do have a refresher still carry the same
+   * cached-page staleness on entry, and closing it for them is not row 230's.
+   *
+   * <h2>⛔ A failed re-read keeps the figure on screen</h2>
+   *
+   * <p>A failure is silent — an account with no application at all has no progress to report, which
+   * is ordinary for a clinician who was invited rather than one who applied, so an error where a
+   * section does not apply would be noise. <b>But it no longer clears a figure that was there.</b>
+   * Entering a tab on a phone that has just lost signal would otherwise blank the meter, and a blank
+   * meter reads as "this does not apply to you" where a stale one reads as the number it is. The
+   * trade is accepted in one direction only: a value this app already showed is kept, and an account
+   * that never had one still renders nothing rather than 0%.
    */
+  ionViewWillEnter(): void {
+    this.loadProgress();
+  }
+
   private loadProgress(): void {
     this.profiles.progress().subscribe({
       next: progress => this.progress.set(progress),
-      error: () => this.progress.set(null),
+      // Deliberately writes nothing rather than set(null): see ionViewWillEnter's last paragraph.
+      // The signal starts null, so a first read that fails still renders nothing.
+      error: () => undefined,
     });
   }
 
@@ -563,13 +618,21 @@ export class MePage implements OnInit {
           this.saveFailed.set(false);
           this.savedMessage.set('me.saved');
           // The meter is computed from what was just written, so it must be re-read rather than
-          // left showing the figure from before the save.
+          // left showing the figure from before the save. ⭐ This predates row 230 unit C and is
+          // why a clinician who fills in next-of-kin HERE sees the percentage move without leaving
+          // the tab: the hook covers entering, this covers saving, and between them the meter is
+          // never stale on this screen. A review of unit C read the hook as the only refresh and
+          // filed the on-tab save as a gap; it is not, and the premise is recorded here because
+          // the two call sites are 100 lines apart and neither names the other.
           this.loadProgress();
         },
         error: () => {
           this.saving.set(false);
           this.saveFailed.set(true);
           this.savedMessage.set('me.saveFailed');
+          // ⛔ Deliberately NO re-read. Nothing was written, so the figure cannot have moved, and a
+          // GET here would replace a number the clinician can still act on with whatever the
+          // network is managing at the moment it already failed a PUT.
         },
       });
   }

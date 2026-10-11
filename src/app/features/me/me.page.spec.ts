@@ -21,8 +21,10 @@ describe('MePage', () => {
   // `api/profile`, not under `api/onboarding` — the server mappings moved in F8 and this app was
   // re-pointed in the same unit. ⚠ Hardcoded rather than derived, and that cuts both ways: it is
   // what notices a silent revert, and it is also why `mobile/`'s roster bug stayed green for weeks
-  // (`api/duty-rosters/my`, which 404s, is hardcoded two lines down). PROGRESS_URL below is
-  // deliberately still on `api/onboarding` — that path is T5's and is still served.
+  // (`api/duty-rosters/my`, which 404s, is hardcoded two lines down). PROGRESS_URL below stays on
+  // `api/onboarding` because that is where it belongs: row 230 superseded T5 and its units A and B
+  // each deliberately left the path alone. This comment used to call it T5's and therefore
+  // temporary, which is how a settled path gets "tidied up".
   const PROFILE_URL = 'services/professionalservice/api/profile';
   const PROGRESS_URL = 'services/professionalservice/api/onboarding/progress';
   const CHANGE_PASSWORD_URL = 'api/account/change-password';
@@ -60,13 +62,29 @@ describe('MePage', () => {
     httpMock.expectOne(request => request.method === 'GET' && request.url.endsWith(PREFERENCES_URL)).flush(body);
   };
 
-  /** ngOnInit also reads the completion figure (Phase 9); most tests do not care what it is. */
+  /**
+   * Entering the tab reads the completion figure (Phase 9; moved off `ngOnInit` by row 230 unit C).
+   * Most tests do not care what it is.
+   */
   const flushProgress = (body: unknown = { percent: 50, complete: false, status: 'SUBMITTED', requirements: [] }): void => {
     httpMock.expectOne(request => request.url.endsWith(PROGRESS_URL)).flush(body);
   };
 
-  const loadProfile = (body: unknown = { firstName: 'Ama', lastName: 'Mensah', email: 'ama@example.com', mobilePhone: '024' }): void => {
+  /**
+   * Mounts the page and enters the tab — the pair of things the Ionic router does on a tab switch.
+   *
+   * <p>⚠ `ngOnInit` reads the profile and the preferences; `ionViewWillEnter` reads the progress.
+   * TestBed drives no Ionic lifecycle at all, so the hook is called by hand here exactly as
+   * `IonTabs`' router outlet calls it — which is also what lets a test call it twice to prove
+   * re-entry.
+   */
+  const mountAndEnter = (): void => {
     fixture.detectChanges();
+    page.ionViewWillEnter();
+  };
+
+  const loadProfile = (body: unknown = { firstName: 'Ama', lastName: 'Mensah', email: 'ama@example.com', mobilePhone: '024' }): void => {
+    mountAndEnter();
     flushPreferences();
     flushProgress();
     httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush(body);
@@ -117,7 +135,7 @@ describe('MePage', () => {
 
   it('treats a missing profile as an empty form, not an error state to block on', () => {
     // Normal for an account that has registered but not completed onboarding.
-    fixture.detectChanges();
+    mountAndEnter();
     flushPreferences();
     flushProgress();
     httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({}, { status: 404, statusText: 'Not Found' });
@@ -179,7 +197,7 @@ describe('MePage', () => {
 
   describe('notification preferences (MOB10)', () => {
     it('shows what the server says, not what the switches defaulted to', () => {
-      fixture.detectChanges();
+      mountAndEnter();
       flushPreferences({ messages: false, compliance: true, showSenderName: true });
       flushProgress();
       httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
@@ -190,7 +208,7 @@ describe('MePage', () => {
 
     it('keeps the server defaults when the read fails, rather than showing everything off', () => {
       // All-off would tell a clinician they receive nothing while the server happily sends.
-      fixture.detectChanges();
+      mountAndEnter();
       httpMock
         .expectOne(request => request.method === 'GET' && request.url.endsWith(PREFERENCES_URL))
         .flush({}, { status: 503, statusText: 'Service Unavailable' });
@@ -230,7 +248,7 @@ describe('MePage', () => {
     it('renders the SERVER figure, and never derives one', () => {
       // The same number gates the transition to ACTIVE, so a locally derived percentage can read
       // 100% while the service still refuses to advance the application.
-      fixture.detectChanges();
+      mountAndEnter();
       flushPreferences();
       flushProgress({
         percent: 75,
@@ -252,7 +270,7 @@ describe('MePage', () => {
     it('renders NOTHING when there is no application, rather than 0%', () => {
       // An invited clinician who never applied has no progress to report. "0%" would tell them
       // they have done nothing wrong-but-everything, which is not what the server said.
-      fixture.detectChanges();
+      mountAndEnter();
       flushPreferences();
       httpMock.expectOne(request => request.url.endsWith(PROGRESS_URL)).flush({}, { status: 404, statusText: 'Not Found' });
       httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
@@ -260,6 +278,117 @@ describe('MePage', () => {
 
       expect(page.progress()).toBeNull();
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-test="completion-meter"]')).toBeNull();
+    });
+  });
+
+  /**
+   * ⭐ Re-entering the tab re-reads the figure — `backlog.md` row 230 unit C.
+   *
+   * <p>`mobile/` takes <b>no SSE stream</b>; that was the owner's decision and the reasoning is on
+   * {@link MePage#ionViewWillEnter}. What these cases hold is the defect a push would also have
+   * covered on this screen: the figure was read in `ngOnInit` only and Ionic caches pages, so a
+   * clinician who uploaded a document on the Documents tab and came back here saw the meter from
+   * whenever the page was first mounted.
+   */
+  describe('entering the tab re-reads the figure (row 230 unit C)', () => {
+    /** Mounts, enters, and answers the first progress read with a figure these cases pick. */
+    const enterWith = (progress: Record<string, unknown>): void => {
+      mountAndEnter();
+      flushPreferences();
+      flushProgress({ complete: false, status: 'CREDENTIAL_REVIEW', requirements: [], ...progress });
+      httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
+    };
+
+    it('reads NOTHING on mount alone — the read is on the lifecycle hook, not ngOnInit', () => {
+      // If this ever passes with the read back in ngOnInit, first entry issues two requests and the
+      // hook stops being what makes a re-entry fresh.
+      fixture.detectChanges();
+      flushPreferences();
+      httpMock.expectOne(request => request.url.endsWith(PROFILE_URL)).flush({});
+
+      httpMock.expectNone(request => request.url.endsWith(PROGRESS_URL));
+    });
+
+    it('reads again on every entry, and takes the new figure', () => {
+      enterWith({ percent: 50 });
+      expect(page.progress()?.percent).toBe(50);
+
+      page.ionViewWillEnter();
+      flushProgress({ percent: 89, complete: false, status: 'CREDENTIAL_REVIEW', requirements: [] });
+
+      expect(page.progress()?.percent).toBe(89);
+    });
+
+    it('still shows the OLD figure while the re-read is in flight, rather than blanking', () => {
+      // A meter that empties on tab entry and fills a moment later reads as a broken screen; a
+      // stale number reads as the number it is.
+      enterWith({ percent: 50 });
+      fixture.detectChanges();
+
+      page.ionViewWillEnter();
+      fixture.detectChanges();
+
+      expect(page.progress()?.percent).toBe(50);
+      expect((fixture.nativeElement as HTMLElement).textContent ?? '').toContain('50%');
+      // Flushed only now, so the assertions above ran with the request genuinely outstanding.
+      flushProgress({ percent: 89, complete: false, status: 'SUBMITTED', requirements: [] });
+      expect(page.progress()?.percent).toBe(89);
+    });
+
+    it('keeps the old figure when the re-read FAILS, rather than clearing the meter', () => {
+      // Entering the tab on a phone that has just lost signal. ⛔ The first read is different: an
+      // account that never had a figure still renders nothing rather than 0% — the case above.
+      enterWith({ percent: 89 });
+
+      page.ionViewWillEnter();
+      httpMock.expectOne(request => request.url.endsWith(PROGRESS_URL)).flush({}, { status: 503, statusText: 'Service Unavailable' });
+      fixture.detectChanges();
+
+      expect(page.progress()?.percent).toBe(89);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-test="completion-meter"]')).not.toBeNull();
+    });
+
+    /**
+     * ⭐ Saving on this tab already re-reads, and this pins the pair.
+     *
+     * <p>A review of unit C read `ionViewWillEnter` as this screen's only refresh and filed "saving
+     * here leaves the meter stale until you switch away and back" as a one-line gap. ⛔ <b>The
+     * premise was false</b>: `save()`'s success arm has called `loadProgress()` since Phase 9, and
+     * the round-trip case near the top of this file already flushes that second read and asserts the
+     * new figure. What was genuinely missing is the <b>negative</b> half, so it is here — the hook
+     * covers entering, the save covers saving, and a refused save must not spend a request proving
+     * that nothing moved.
+     */
+    it('re-reads after a SUCCESSFUL save but not after a refused one', () => {
+      enterWith({ percent: 50 });
+
+      page.kinName = 'Kofi';
+      page.save();
+      httpMock.expectOne(request => request.method === 'PUT' && request.url.endsWith(PROFILE_URL)).flush({});
+      flushProgress({ percent: 63, complete: false, status: 'SUBMITTED', requirements: [] });
+      expect(page.progress()?.percent).toBe(63);
+
+      page.save();
+      httpMock
+        .expectOne(request => request.method === 'PUT' && request.url.endsWith(PROFILE_URL))
+        .flush({}, { status: 500, statusText: 'Server Error' });
+
+      // Nothing was written, so nothing can have moved — and a GET here would replace a number the
+      // clinician can still act on with whatever the network manages at the moment it failed a PUT.
+      httpMock.expectNone(request => request.url.endsWith(PROGRESS_URL));
+      expect(page.progress()?.percent).toBe(63);
+      expect(page.saveFailed()).toBe(true);
+    });
+
+    it('renders the four coarse steps from the figure it read', () => {
+      // The step row itself is proven one flipped boolean at a time in
+      // completion-meter.component.spec.ts; this is the wiring from the page's read to that input.
+      enterWith({ percent: 89, steps: { account: false, profile: false, documents: true, consent: true } });
+      fixture.detectChanges();
+
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('[data-test="step-documents"]')?.getAttribute('data-done')).toBe('true');
+      expect(element.querySelector('[data-test="step-account"]')?.getAttribute('data-done')).toBe('false');
     });
   });
 
