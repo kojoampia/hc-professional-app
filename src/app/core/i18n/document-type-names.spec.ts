@@ -33,7 +33,8 @@ describe('document type names', () => {
 
   it('has types to check', () => {
     // A derived expectation over an empty list asserts nothing at all, quietly and forever.
-    expect(DOCUMENT_TYPES.length).toBe(9);
+    // Ten since backlog row 232 added AVATAR, which is a profile photo rather than a credential.
+    expect(DOCUMENT_TYPES.length).toBe(10);
   });
 
   it.each(SUPPORTED_LANGUAGES)('has a %s name for every type', language => {

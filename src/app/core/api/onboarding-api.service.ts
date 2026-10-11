@@ -34,7 +34,7 @@ export const isWorkingClinician = (status: OnboardingStatus | null | undefined):
   status !== null && status !== undefined && WORKING_STATUSES.includes(status);
 
 /**
- * Mirrors `api/domain/enumeration/DocumentType`, and carries the same nine values `web/`'s
+ * Mirrors `api/domain/enumeration/DocumentType`, and carries the same ten values `web/`'s
  * `healthConnect.onboarding.documentTypes.*` names.
  *
  * <p><b>An array rather than a bare union</b>, for the reason `duty-roster-api.service.ts`'s
@@ -44,6 +44,17 @@ export const isWorkingClinician = (status: OnboardingStatus | null | undefined):
  * `license` and `nhis` reached a German reader untouched and no gate could see it (backlog item
  * 58). `document-type-names.spec.ts` beside the catalogues is what asks it now, and it needs this
  * list to do so.
+ *
+ * <p><b>`AVATAR` is the tenth and is not a credential</b> (backlog row 232). It is the profile
+ * photo, and it has its own value rather than reusing `PASSPHOTO` because `api/`'s `REQ_PHOTO`
+ * predicates are `type == PASSPHOTO` — storing an avatar as a passport photo would let a selfie
+ * satisfy a mandatory credential and carry an application to `CREDENTIAL_REVIEW`. It is listed
+ * here because this array is the mirror of the server's enum and the catalogues are held to it in
+ * both directions — ⚠ and whether `api/` returns an avatar in a clinician's *own* document list is
+ * left open by row 232, so a row of one may well reach this screen and must have a name when it
+ * does. It counts towards nothing either way. It is deliberately absent from `documents.page.ts`'s
+ * `RENEWABLE_TYPES`: the upload picker offers credentials a clinician re-uploads, and an avatar has
+ * its own surface.
  */
 export const DOCUMENT_TYPES = [
   'CERTIFICATE',
@@ -55,6 +66,7 @@ export const DOCUMENT_TYPES = [
   'PASSPHOTO',
   'NHIS',
   'OTHER',
+  'AVATAR',
 ] as const;
 
 /** The union, derived from the list above rather than written twice. */

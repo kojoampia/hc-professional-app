@@ -254,6 +254,9 @@ describe('DocumentsPage — a document type reads in the reader’s language', (
       PASSPHOTO: 'Passport photo',
       NHIS: 'NHIS card',
       OTHER: 'Other',
+      // Row 232. Transcribed like the rest: web's word, not this app's choice — and deliberately
+      // unlike PASSPHOTO's, because one is a credential that counts and one is a profile photo.
+      AVATAR: 'Profile photo',
     },
     es: {
       CERTIFICATE: 'Certificado profesional',
@@ -265,6 +268,7 @@ describe('DocumentsPage — a document type reads in the reader’s language', (
       PASSPHOTO: 'Foto de pasaporte',
       NHIS: 'Tarjeta NHIS',
       OTHER: 'Otro',
+      AVATAR: 'Foto de perfil',
     },
     fr: {
       CERTIFICATE: 'Certificat professionnel',
@@ -281,6 +285,7 @@ describe('DocumentsPage — a document type reads in the reader’s language', (
       PASSPHOTO: "Photo d'identité",
       NHIS: 'Carte NHIS',
       OTHER: 'Autre',
+      AVATAR: 'Photo de profil',
     },
     de: {
       CERTIFICATE: 'Berufszertifikat',
@@ -292,6 +297,7 @@ describe('DocumentsPage — a document type reads in the reader’s language', (
       PASSPHOTO: 'Passfoto',
       NHIS: 'NHIS-Karte',
       OTHER: 'Sonstiges',
+      AVATAR: 'Profilfoto',
     },
   };
 
@@ -305,8 +311,8 @@ describe('DocumentsPage — a document type reads in the reader’s language', (
       language,
     );
 
-    // The positive control. Nine expected words checked against an empty list is nine vacuous
-    // assertions, which is how three of item 45's first-draft cases passed.
+    // The positive control. A list of expected words checked against an empty screen is that many
+    // vacuous assertions, which is how three of item 45's first-draft cases passed.
     expect(rowCount(fixture)).toBe(DOCUMENT_TYPES.length);
     expect(titles(fixture).sort()).toEqual(DOCUMENT_TYPES.map(type => WEB_WORDS[language][type]).sort());
   });
