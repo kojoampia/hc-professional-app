@@ -21,10 +21,46 @@ export interface ProfileAddressDto {
   digitalAddress?: string;
 }
 
+/**
+ * One next-of-kin contact as `GET /api/profile` serves it — the `EmergencyContact` entity shape,
+ * where the number is `phone`. The deprecated singular `emergencyContact` alias is gone from this
+ * type on purpose (T6): this app was its last consumer, and dropping it here is what lets the
+ * server retire it.
+ */
 export interface EmergencyContactDto {
+  id?: string;
   name?: string;
   relationship?: string;
   phone?: string;
+  email?: string;
+  address?: ProfileAddressDto;
+}
+
+/**
+ * The same contact as `PUT /api/profile` must carry it — `EmergencyContactDTO`, where the number is
+ * **`phoneNumber`**. See the class note on {@link ProfileApiService} for why the two shapes differ;
+ * {@link toWireContact} is the translation, and an element re-sent under the read vocabulary would
+ * have its number read as absent and blanked, with a 200.
+ */
+export interface EmergencyContactWriteDto {
+  id?: string;
+  name?: string;
+  relationship?: string;
+  phoneNumber?: string;
+  email?: string;
+  address?: ProfileAddressDto;
+}
+
+/**
+ * A stored contact, re-spoken in the PUT vocabulary so it survives a whole-list replace.
+ *
+ * <p>`contacts` replaces wholesale on the server (a per-element merge has no "which element" answer
+ * on a list with unordered members), so every save must send the full list back — and every element
+ * of it has to be translated, not just the one the form edited.
+ */
+export function toWireContact(contact: EmergencyContactDto): EmergencyContactWriteDto {
+  const { phone, ...rest } = contact;
+  return { ...rest, phoneNumber: phone };
 }
 
 export interface ClinicianProfileDto {
@@ -49,7 +85,33 @@ export interface ClinicianProfileDto {
   cardType?: string;
   cardNumber?: string;
   address?: ProfileAddressDto;
-  emergencyContact?: EmergencyContactDto;
+  /** The next-of-kin list, `contacts[0]` being what the Me card edits. Never defaulted to `[]`. */
+  contacts?: EmergencyContactDto[];
+}
+
+/**
+ * What `PUT /api/profile` accepts — `ProfileDTO`, which is **not** the shape the `GET` returns.
+ *
+ * <p>Two names differ from the read shape, and a field sent under the wrong one is dropped silently
+ * (unknown JSON properties are ignored), which is a 200 with the edit unsaved: the document's mobile
+ * is **`mobileNumber`** here for the entity's `mobilePhone`, and a contact's number is
+ * **`phoneNumber`** for the entity's `phone`. The PUT is a partial write — a field the body does not
+ * name is left as stored — so this type carries only what the Me page edits.
+ */
+export interface ClinicianProfileWriteDto {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  /** The read shape's `mobilePhone` — see the type note. */
+  mobileNumber?: string;
+  birthDate?: string;
+  sex?: string;
+  phoneNumber?: string;
+  cardType?: string;
+  cardNumber?: string;
+  address?: ProfileAddressDto;
+  /** Replaced wholesale by the server — always the full list, every element in {@link EmergencyContactWriteDto}'s vocabulary. */
+  contacts?: EmergencyContactWriteDto[];
 }
 
 /**
@@ -152,22 +214,30 @@ export interface OnboardingProgressDto {
  * is granted. The server force-sets `accountId` to the caller on write, so a client cannot edit
  * somebody else's profile by supplying an id.
  *
- * <h2>⚠ It was `/api/onboarding/profile` until F8, and this app is why the order mattered</h2>
+ * <h2>⚠ It was the onboarding-scoped profile path until F8, and this app is why the order mattered</h2>
  *
- * <p>`profile.md` § Other Elements: *"`api/onboarding/profile` should migrate to `api/profile`"*. The
- * house rule is **add before removing, and remove the consumer before the producer**, and `mobile/`
- * is the consumer that the profile migration kept stranding: it appears in no task in
- * `profile-addendum.md`, it both reads and writes this path, and the Me tab's next-of-kin card is
- * behind it. A clean server-side break would have answered **404 on the save with nothing in any
- * backlog that would fix it** — and before that, when the field was renamed, it would have answered
- * 200 with the next of kin silently not stored, which is the failure this estate keeps relearning.
- * Re-pointed in the same unit as the server change, ahead of the retirement.
+ * <p>`profile.md` § Other Elements says the old profile route under the onboarding prefix *"should
+ * migrate to `api/profile`"*. The house rule is **add before removing, and remove the consumer before
+ * the producer**, and `mobile/` is the consumer that the profile migration kept stranding: it appears
+ * in no task in `profile-addendum.md`, it both reads and writes this path, and the Me tab's
+ * next-of-kin card is behind it. A clean server-side break would have answered **404 on the save with
+ * nothing in any backlog that would fix it** — and before that, when the field was renamed, it would
+ * have answered 200 with the next of kin silently not stored, which is the failure this estate keeps
+ * relearning. Re-pointed in the same unit as the server change, ahead of the retirement.
  *
- * <p>⭐ **The semantics improved and no call site had to change.** The old `PUT` was a thirteen-field
- * whole-document replace with no null guards, so `save()` was only safe because `me.page.ts` spreads
- * the loaded profile back. `PUT /api/profile` applies only the fields the body names, so a partial
- * save is now correct rather than merely conventional — the spread is kept because it is harmless,
- * not because it is the guard.
+ * <p>⭐ **The `PUT` is a partial write** — it applies only the fields the body names — so a partial
+ * save is correct rather than merely conventional, and absent fields survive as stored.
+ *
+ * <h2>⚠ The GET and the PUT speak two vocabularies, and T6 is where this app started honouring it</h2>
+ *
+ * <p>The `GET` (and the `PUT`'s *response*) serialize the `Profile` **entity**: `mobilePhone`, and
+ * `contacts[].phone`. The `PUT`'s *request* binds **`ProfileDTO`**: `mobileNumber`, and
+ * `contacts[].phoneNumber`. Unknown properties are dropped without an error, so a body written in
+ * the read vocabulary answers 200 with those fields unsaved — which is exactly how the deprecated
+ * singular `emergencyContact` alias and a `mobilePhone` key died on this endpoint once the server
+ * froze the `ProfileDTO` write path. {@link ClinicianProfileDto} is the read shape,
+ * {@link ClinicianProfileWriteDto} the write shape, and {@link toWireContact} the per-contact
+ * translation; do not send one where the other is bound.
  *
  * <h2>⭐ `progress()` stays on `/api/onboarding/**`, and there is nothing left to re-point</h2>
  *
@@ -197,7 +267,6 @@ export class ProfileApiService {
     return this.http.get<ClinicianProfileDto>(this.resourceUrl);
   }
 
-  /** Upserts; the response is the stored document, which is what the page then shows. */
   /**
    * What the clinician still owes before activation.
    *
@@ -208,7 +277,8 @@ export class ProfileApiService {
     return this.http.get<OnboardingProgressDto>(this.config.getEndpointFor('api/onboarding/progress', 'professionalservice'));
   }
 
-  save(profile: ClinicianProfileDto): Observable<ClinicianProfileDto> {
+  /** Partial write in the `ProfileDTO` vocabulary; the response is the stored entity, read-shaped. */
+  save(profile: ClinicianProfileWriteDto): Observable<ClinicianProfileDto> {
     return this.http.put<ClinicianProfileDto>(this.resourceUrl, profile);
   }
 }

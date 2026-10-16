@@ -21,7 +21,13 @@ import {
   ViewWillEnter,
 } from '@ionic/angular/standalone';
 
-import { ClinicianProfileDto, OnboardingProgressDto, ProfileApiService } from '../../core/api/profile-api.service';
+import {
+  ClinicianProfileDto,
+  EmergencyContactWriteDto,
+  OnboardingProgressDto,
+  ProfileApiService,
+  toWireContact,
+} from '../../core/api/profile-api.service';
 import { AccountApiService, PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../core/api/account-api.service';
 import { CompletionMeterComponent } from '../../shared/completion-meter.component';
 import { NotificationsApiService } from '../../core/api/notifications-api.service';
@@ -458,9 +464,12 @@ export class MePage implements OnInit, ViewWillEnter {
         this.city = profile?.address?.city ?? '';
         this.region = profile?.address?.region ?? '';
         this.country = profile?.address?.country ?? '';
-        this.kinName = profile?.emergencyContact?.name ?? '';
-        this.kinRelationship = profile?.emergencyContact?.relationship ?? '';
-        this.kinPhone = profile?.emergencyContact?.phone ?? '';
+        // The card edits `contacts[0]` — the retired singular `emergencyContact` alias was a
+        // projection of exactly this element, and this read is what let the server drop it (T6).
+        const kin = profile?.contacts?.[0];
+        this.kinName = kin?.name ?? '';
+        this.kinRelationship = kin?.relationship ?? '';
+        this.kinPhone = kin?.phone ?? '';
       },
       // A clinician who has not completed onboarding has no profile yet; that is a normal state and
       // the form should simply start empty rather than shouting about it.
@@ -582,21 +591,25 @@ export class MePage implements OnInit, ViewWillEnter {
   save(): void {
     this.saving.set(true);
     this.savedMessage.set(null);
-    // Spread the loaded document so fields this page does not edit — identity card, address,
-    // notification preferences — are preserved rather than blanked by a partial write.
+    // The body is `ProfileDTO`'s vocabulary, NOT the loaded document's — see ProfileApiService's
+    // class note. ⛔ Do not reinstate the old `...this.profile` spread: the loaded document is the
+    // read shape, whose `mobilePhone` and `contacts[].phone` the PUT silently drops — and a
+    // read-shape `contacts` list would blank every stored number with a 200. The PUT is a partial
+    // write, so fields this page does not edit survive by being absent, not by being echoed.
     this.profiles
       .save({
-        ...this.profile,
         firstName: this.firstName,
         lastName: this.lastName,
         email: this.email,
-        mobilePhone: this.mobilePhone,
+        // `mobileNumber` on the write for the document's `mobilePhone` on the read.
+        mobileNumber: this.mobilePhone,
         birthDate: this.birthDate || undefined,
         sex: this.sex || undefined,
         cardType: this.cardType || undefined,
         cardNumber: this.cardNumber || undefined,
-        // Nested documents are spread from the loaded profile so the optional fields this form does
-        // not offer — town, district, digital address — survive a save rather than being blanked.
+        // Address replaces wholesale on the server, so it alone is spread from the loaded profile:
+        // the optional fields this form does not offer — town, district, digital address — must
+        // travel back or be blanked. Its field names match on both shapes.
         address: {
           ...this.profile.address,
           streetAddress: this.street || undefined,
@@ -604,12 +617,7 @@ export class MePage implements OnInit, ViewWillEnter {
           region: this.region || undefined,
           country: this.country || undefined,
         },
-        emergencyContact: {
-          ...this.profile.emergencyContact,
-          name: this.kinName || undefined,
-          relationship: this.kinRelationship || undefined,
-          phone: this.kinPhone || undefined,
-        },
+        contacts: this.contactsForSave(),
       })
       .subscribe({
         next: saved => {
@@ -635,6 +643,37 @@ export class MePage implements OnInit, ViewWillEnter {
           // network is managing at the moment it already failed a PUT.
         },
       });
+  }
+
+  /**
+   * The stored contact list with element 0 replaced by what the card holds, every element in the
+   * PUT vocabulary (`phoneNumber`).
+   *
+   * <p>⛔ **Never a one-element list.** The server replaces `contacts` wholesale, so sending only the
+   * card's contact would erase the others — the exact silent loss the deprecated alias was kept
+   * alive to prevent (profile-addendum.md § 3 T6). The card edits `contacts[0]`; the rest travel
+   * back untouched, translated so their numbers survive the vocabulary change.
+   *
+   * <p>`undefined` when there is nothing stored and nothing typed: the server distinguishes "the
+   * caller sent no contacts" (leave as stored) from "the caller sent an empty list", and a save that
+   * always named the field would store one empty contact for every clinician who never filled the
+   * card in.
+   */
+  private contactsForSave(): EmergencyContactWriteDto[] | undefined {
+    const stored = this.profile.contacts ?? [];
+    if (stored.length === 0 && !this.kinName && !this.kinRelationship && !this.kinPhone) {
+      return undefined;
+    }
+    const [first, ...rest] = stored.map(toWireContact);
+    return [
+      {
+        ...first,
+        name: this.kinName || undefined,
+        relationship: this.kinRelationship || undefined,
+        phoneNumber: this.kinPhone || undefined,
+      },
+      ...rest,
+    ];
   }
 
   async changeLanguage(code: SupportedLanguage): Promise<void> {
