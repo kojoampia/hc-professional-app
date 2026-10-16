@@ -98,9 +98,11 @@ describe('MePage', () => {
   });
 
   it('round-trips an edit through PUT and keeps fields it does not edit', () => {
-    // The server document carries far more than this form shows — identity card, address,
-    // notification preferences. A partial write would blank them, so the loaded document is spread
-    // into the body. This is the MOB11 gate: "profile edit round-trips".
+    // The PUT is a partial write — fields the body does not name survive as stored — and the form
+    // fields are loaded from the document, so an edit to one travels with the rest of what the form
+    // holds. The loaded document is deliberately NOT spread into the body any more (T6): it is the
+    // read shape, which the write path would partly drop and partly misread — see
+    // ProfileApiService's class note. This is the MOB11 gate: "profile edit round-trips".
     loadProfile({ id: 'p1', accountId: 'doctor', cardNumber: 'GHA-123', firstName: 'Ama', lastName: 'Mensah' });
 
     page.firstName = 'Améline';
@@ -394,15 +396,18 @@ describe('MePage', () => {
 
   describe('the fields the meter counts', () => {
     it('fills the nested address and next-of-kin from the loaded profile', () => {
+      // `contacts[0]`, not the retired singular `emergencyContact` alias — T6. The GET serves the
+      // entity shape, where a contact's number is `phone`.
       loadProfile({
         firstName: 'Ama',
         address: { streetAddress: '12 Ring Road', city: 'Accra', region: 'Greater Accra', country: 'GH', town: 'Osu' },
-        emergencyContact: { name: 'Kofi', relationship: 'Brother', phone: '024' },
+        contacts: [{ name: 'Kofi', relationship: 'Brother', phone: '024' }],
       });
 
       expect(page.street).toBe('12 Ring Road');
       expect(page.region).toBe('Greater Accra');
       expect(page.kinRelationship).toBe('Brother');
+      expect(page.kinPhone).toBe('024');
     });
 
     it('preserves nested fields the form does NOT offer', () => {
@@ -431,6 +436,87 @@ describe('MePage', () => {
       const put = httpMock.expectOne(request => request.method === 'PUT');
       expect(put.request.body.birthDate).toBeUndefined();
       expect(put.request.body.cardNumber).toBeUndefined();
+      put.flush({});
+      flushProgress();
+    });
+  });
+
+  /**
+   * ⭐ The next-of-kin card speaks `contacts[]`, never the retired singular alias (T6).
+   *
+   * <p>The server kept a deprecated `emergencyContact` wire alias alive precisely for this card
+   * (`profile-addendum.md` § 3 T6); these cases are what lets the api drop it. Two vocabularies on
+   * one endpoint, and both are asserted here because mixing them fails silently: the GET returns the
+   * `Profile` entity (`mobilePhone`, a contact's `phone`), the PUT binds `ProfileDTO`
+   * (`mobileNumber`, a contact's `phoneNumber`), and a field sent under the wrong name is dropped
+   * with a 200 — the exact failure this estate keeps relearning.
+   */
+  describe('the next-of-kin card on contacts[] (T6)', () => {
+    it('sends the WHOLE stored list with element 0 replaced — the other contacts survive', () => {
+      // `PUT /api/profile` replaces `contacts` wholesale (a per-element merge has no "which
+      // element" answer), so a one-element body would erase every contact but the card's.
+      loadProfile({
+        contacts: [
+          { id: 'c1', name: 'Kofi', relationship: 'Brother', phone: '024' },
+          { id: 'c2', name: 'Abena', relationship: 'Sister', phone: '055', email: 'abena@example.com' },
+        ],
+      });
+
+      page.kinPhone = '0244 111 222';
+      page.save();
+
+      const put = httpMock.expectOne(request => request.method === 'PUT' && request.url.endsWith(PROFILE_URL));
+      const contacts = put.request.body.contacts;
+      expect(contacts).toHaveLength(2);
+      expect(contacts[0]).toEqual(expect.objectContaining({ id: 'c1', name: 'Kofi', phoneNumber: '0244 111 222' }));
+      // The second contact survives, translated to the write vocabulary — an element re-sent as
+      // `phone` would have its number read as absent and blanked.
+      expect(contacts[1]).toEqual(expect.objectContaining({ id: 'c2', name: 'Abena', phoneNumber: '055', email: 'abena@example.com' }));
+      expect(contacts[1].phone).toBeUndefined();
+      // The retired alias is not on the body at all; `contacts` wins server-side anyway, but
+      // sending both would keep the alias looking consumed.
+      expect(put.request.body.emergencyContact).toBeUndefined();
+      put.flush({});
+      flushProgress();
+    });
+
+    it('speaks the PUT vocabulary: mobileNumber for the document mobilePhone, phoneNumber on a contact', () => {
+      loadProfile({ mobilePhone: '024', contacts: [{ name: 'Kofi', phone: '055' }] });
+
+      page.save();
+
+      const put = httpMock.expectOne(request => request.method === 'PUT' && request.url.endsWith(PROFILE_URL));
+      expect(put.request.body.mobileNumber).toBe('024');
+      // The read vocabulary must not travel back: `ProfileDTO` declares neither name, so both would
+      // be silently dropped — and a read-shape `contacts` would blank every number.
+      expect(put.request.body.mobilePhone).toBeUndefined();
+      expect(put.request.body.contacts[0].phoneNumber).toBe('055');
+      put.flush({});
+      flushProgress();
+    });
+
+    it('starts a list from the card when nothing is stored yet', () => {
+      loadProfile({});
+
+      page.kinName = 'Kofi';
+      page.kinPhone = '024';
+      page.save();
+
+      const put = httpMock.expectOne(request => request.method === 'PUT' && request.url.endsWith(PROFILE_URL));
+      expect(put.request.body.contacts).toEqual([expect.objectContaining({ name: 'Kofi', phoneNumber: '024' })]);
+      put.flush({});
+      flushProgress();
+    });
+
+    it('sends NO contacts when nothing is stored and nothing typed — absent means "leave as stored"', () => {
+      // The server distinguishes "the caller sent no contacts" from "the caller sent an empty
+      // list"; an always-present list would store one empty contact on every save.
+      loadProfile({});
+
+      page.save();
+
+      const put = httpMock.expectOne(request => request.method === 'PUT' && request.url.endsWith(PROFILE_URL));
+      expect(put.request.body.contacts).toBeUndefined();
       put.flush({});
       flushProgress();
     });
